@@ -204,13 +204,44 @@ button:hover {
 
 /* ── Footer ── */
 footer {
+    width: 100%;
     max-width: 800px;
-    margin: 4rem auto 0;
+    margin: 8rem auto 4rem; /* Generous spacing for a premium feel */
     border-top: 1px solid #1a1a1a;
-    padding-top: 1.5rem;
+    padding-top: 3rem;
+    text-align: center;
+}
+
+.footer-nav {
+    display: flex;
+    justify-content: center;
+    gap: 2.5rem;
+    margin-bottom: 2rem;
+}
+
+.footer-nav a {
+    color: #666;
+    text-decoration: none;
+    font-size: 0.8rem;
+    font-weight: 500;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    transition: color 0.2s ease;
+}
+
+.footer-nav a:hover {
+    color: #fff;
+}
+
+.footer-credits {
+    font-family: 'Fira Code', monospace;
+    font-size: 0.7rem;
     color: #333;
-    font-size: 0.85rem;
-    font-weight: 300;
+    letter-spacing: -0.2px;
+}
+
+.footer-credits span {
+    color: #555;
 }
 
 /* ── Responsive ── */
