@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"fmt"
 	"html/template"
 	"log"
 	"net/http"
@@ -47,6 +48,8 @@ func main() {
 	http.HandleFunc("/", handleHome)
 	http.HandleFunc("/simulate/404", handleSimulate404)
 	http.HandleFunc("/simulate/403", handleSimulate403)
+	http.HandleFunc("/api/stats", handleStats)
+
 
 	// 5. Start Server
 	log.Printf("🚀 404not403 Engine Online. Port %s", port)
@@ -104,7 +107,46 @@ func logEvent(statusCode int, message string) {
 	)
 	if err != nil {
 		log.Printf("⚠️  logEvent insert error: %v", err)
+		http.HandleFunc("/api/stats", handleStats)
 	} else {
 		log.Printf("✅ Logged: %d - %s", statusCode, message)
 	}
+}
+func handleStats(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+
+	if db == nil {
+		w.WriteHeader(http.StatusServiceUnavailable)
+		w.Write([]byte(`{"error": "Database offline"}`))
+		return
+	}
+
+	var total int
+	var count404 int
+	var count403 int
+
+	err := db.QueryRow("SELECT COUNT(*) FROM logs").Scan(&total)
+	if err != nil {
+		log.Printf("⚠️  Stats query error: %v", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(`{"error": "Query failed"}`))
+		return
+	}
+
+	err = db.QueryRow("SELECT COUNT(*) FROM logs WHERE status_code = 404").Scan(&count404)
+	if err != nil {
+		log.Printf("⚠️  Stats 404 query error: %v", err)
+	}
+
+	err = db.QueryRow("SELECT COUNT(*) FROM logs WHERE status_code = 403").Scan(&count403)
+	if err != nil {
+		log.Printf("⚠️  Stats 403 query error: %v", err)
+	}
+
+	w.Write([]byte(fmt.Sprintf(`{
+		"total": %d,
+		"404s": %d,
+		"403s": %d
+	}`, total, count404, count403)))
 }
