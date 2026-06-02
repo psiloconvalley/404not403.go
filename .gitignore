@@ -13,3 +13,5 @@
 # OS
 .DS_Store
 Thumbs.db
+# Compiled Go binary
+404not403
