@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>404not403 | HTTP Forensic Lab</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+
+    <header>
+        <h1>&gt; 404not403.com</h1>
+        <p class="tagline">// It's not that you're forbidden. It's just gone.</p>
+    </header>
+
+    <main>
+        <!-- The Simulator -->
+        <section class="simulator">
+            <h2>&gt; HTTP Status Simulator_</h2>
+            <p>Click a button to trigger a real HTTP response from our server.</p>
+
+            <div class="button-group">
+                <button id="btn-404" onclick="simulate(404)">
+                    Trigger 404
+                    <span>Not Found</span>
+                </button>
+                <button id="btn-403" onclick="simulate(403)">
+                    Trigger 403
+                    <span>Forbidden</span>
+                </button>
+            </div>
+
+            <!-- Response Display -->
+            <div class="response-box" id="response-box">
+                <p class="placeholder">&gt; Awaiting simulation...</p>
+            </div>
+
+            <!-- Education Panel -->
+            <div class="education-panel" id="education-panel"></div>
+
+        </section>
+    </main>
+
+    <footer>
+        <p>// Built with Go + Postgres | Deployed on Railway</p>
+    </footer>
+
+    <script src="/static/js/simulator.js"></script>
+</body>
+</html>
