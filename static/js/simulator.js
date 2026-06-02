@@ -51,7 +51,31 @@ async function simulate(code) {
             `;
         }
 
+        // Refresh stats after each simulation
+        fetchStats();
+
     } catch (err) {
         responseBox.innerHTML = `<span style="color:#ff4141">&gt; Request failed: ${err.message}</span>`;
     }
 }
+
+// Fetch live stats from the API
+async function fetchStats() {
+    const statsEl = document.getElementById('live-stats');
+    try {
+        const response = await fetch('/api/stats');
+        const data = await response.json();
+        statsEl.innerHTML = `
+            <span class="stat-total">${data.total} events logged</span>
+            <span class="stat-divider">·</span>
+            <span class="stat-404">${data["404s"]} not found</span>
+            <span class="stat-divider">·</span>
+            <span class="stat-403">${data["403s"]} forbidden</span>
+        `;
+    } catch (err) {
+        statsEl.innerHTML = '<span class="stats-loading">// Stats unavailable</span>';
+    }
+}
+
+// Load stats on page load
+fetchStats();
