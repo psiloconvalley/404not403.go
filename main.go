@@ -71,6 +71,7 @@ func handleHome(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleSimulate404(w http.ResponseWriter, r *http.Request) {
+	go logEvent(404, "Not Found - resource is missing.")
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusNotFound)
 	w.Write([]byte(`{
@@ -80,8 +81,8 @@ func handleSimulate404(w http.ResponseWriter, r *http.Request) {
 		"tip": "It is gone. Not forbidden. Just gone."
 	}`))
 }
-
 func handleSimulate403(w http.ResponseWriter, r *http.Request) {
+	go logEvent(403, "Forbidden - access denied.")
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusForbidden)
 	w.Write([]byte(`{
@@ -90,4 +91,20 @@ func handleSimulate403(w http.ResponseWriter, r *http.Request) {
 		"message": "Access denied.",
 		"tip": "It exists. You just are not on the list."
 	}`))
+}
+func logEvent(statusCode int, message string) {
+	if db == nil {
+		log.Println("⚠️  logEvent: db is nil, skipping insert.")
+		return
+	}
+	_, err := db.Exec(
+		"INSERT INTO logs (status_code, message) VALUES ($1, $2)",
+		statusCode,
+		message,
+	)
+	if err != nil {
+		log.Printf("⚠️  logEvent insert error: %v", err)
+	} else {
+		log.Printf("✅ Logged: %d - %s", statusCode, message)
+	}
 }
