@@ -1,0 +1,15 @@
+# Go
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# Environment Variables - NEVER push these
+.env
+
+# OS
+.DS_Store
+Thumbs.db
