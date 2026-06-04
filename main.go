@@ -107,7 +107,6 @@ func logEvent(statusCode int, message string) {
 	)
 	if err != nil {
 		log.Printf("⚠️  logEvent insert error: %v", err)
-		http.HandleFunc("/api/stats", handleStats)
 	} else {
 		log.Printf("✅ Logged: %d - %s", statusCode, message)
 	}
