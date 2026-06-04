@@ -1,4 +1,3 @@
-cat > static/js/inspector.js << 'JSEOF'
 // ── 404NOT403 · Header Inspector ─────────────────────────────────────────────
 // All dynamic data is set via textContent — never innerHTML.
 // XSS safe by design. No exceptions.
