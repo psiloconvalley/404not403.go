@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -101,6 +102,7 @@ func main() {
 	mux.HandleFunc("/simulate/404", app.handleSimulate404)
 	mux.HandleFunc("/simulate/403", app.handleSimulate403)
 	mux.HandleFunc("/api/stats", app.handleStats)
+	mux.HandleFunc("/api/scan", app.handleScan)
 
 	// 8. Middleware chain: logger → rate limiter → router
 	handler := app.rateLimiterMiddleware(mux)
@@ -387,3 +389,210 @@ func itoa(n int) string {
 	}
 	return string(buf[pos:])
 }
+
+// ── Scan Handler ──────────────────────────────────────────────────────────────
+
+// handleScan accepts POST /api/scan with a JSON body containing a URL.
+// It runs a full forensic scan and returns a ScanResult as JSON.
+// Every scan is stored in the scans table for historical analysis.
+func (app *App) handleScan(w http.ResponseWriter, r *http.Request) {
+	// Method guard — POST only
+	if r.Method != http.MethodPost {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		w.Write([]byte(`{"error":"method not allowed — use POST"}`))
+		return
+	}
+
+	// CORS — production origin only
+	origin := r.Header.Get("Origin")
+	if origin == "https://404not403.com" {
+		w.Header().Set("Access-Control-Allow-Origin", origin)
+	}
+	w.Header().Set("Content-Type", "application/json")
+
+	// Body size limit — prevent memory exhaustion from large payloads
+	r.Body = http.MaxBytesReader(w, r.Body, 4096)
+
+	// Parse input
+	var input struct {
+		URL string `json:"url"`
+	}
+
+	buf := make([]byte, 4096)
+	n, err := r.Body.Read(buf)
+	if err != nil && err.Error() != "EOF" {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte(`{"error":"failed to read request body"}`))
+		return
+	}
+
+	// Manual JSON parse — avoid encoding/json import for a single field
+	raw := string(buf[:n])
+	urlVal := extractJSONString(raw, "url")
+	if urlVal == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte(`{"error":"missing required field: url"}`))
+		return
+	}
+	input.URL = urlVal
+
+	// Run the scan
+	result := app.scan(input.URL)
+
+	// Store — non-fatal if it fails
+	if app.db != nil {
+		if err := app.storeScan(result); err != nil {
+			log.Printf("⚠️  storeScan error: %v", err)
+		}
+	}
+
+	// Encode and return result
+	app.writeJSON(w, result)
+}
+
+// storeScan writes a ScanResult to the scans table.
+func (app *App) storeScan(r ScanResult) error {
+	headersJSON := headersToJSON(r.Headers)
+
+	var tlsExpiry interface{}
+	if !r.TLSExpiry.IsZero() {
+		tlsExpiry = r.TLSExpiry
+	}
+
+	_, err := app.db.Exec(`
+		INSERT INTO scans (
+			url, status_code, headers, body_hash, body_size,
+			tls_issuer, tls_expiry, server, cdn, waf,
+			region, duration_ms, error, created_at
+		) VALUES (
+			$1, $2, $3, $4, $5,
+			$6, $7, $8, $9, $10,
+			$11, $12, $13, $14
+		)`,
+		r.URL,
+		nullableInt(r.StatusCode),
+		headersJSON,
+		r.BodyHash,
+		r.BodySize,
+		r.TLSIssuer,
+		tlsExpiry,
+		r.Server,
+		r.CDN,
+		r.WAF,
+		r.Region,
+		r.DurationMS,
+		r.Error,
+		r.ScannedAt,
+	)
+	return err
+}
+
+// ── JSON Helpers ──────────────────────────────────────────────────────────────
+
+// extractJSONString pulls a string value from a raw JSON string by key.
+// This avoids importing encoding/json for simple single-field extraction.
+// Do not use this for complex or nested JSON — use encoding/json instead.
+func extractJSONString(raw, key string) string {
+	search := `"` + key + `"`
+	idx := strings.Index(raw, search)
+	if idx == -1 {
+		return ""
+	}
+	rest := raw[idx+len(search):]
+	colon := strings.Index(rest, ":")
+	if colon == -1 {
+		return ""
+	}
+	rest = strings.TrimSpace(rest[colon+1:])
+	if len(rest) == 0 || rest[0] != '"' {
+		return ""
+	}
+	rest = rest[1:]
+	end := strings.Index(rest, `"`)
+	if end == -1 {
+		return ""
+	}
+	return rest[:end]
+}
+
+// headersToJSON converts a map[string]string to a JSON object string.
+func headersToJSON(h map[string]string) string {
+	if len(h) == 0 {
+		return "{}"
+	}
+	var sb strings.Builder
+	sb.WriteString("{")
+	first := true
+	for k, v := range h {
+		if !first {
+			sb.WriteString(",")
+		}
+		sb.WriteString(`"`)
+		sb.WriteString(jsonEscape(k))
+		sb.WriteString(`":"`)
+		sb.WriteString(jsonEscape(v))
+		sb.WriteString(`"`)
+		first = false
+	}
+	sb.WriteString("}")
+	return sb.String()
+}
+
+// jsonEscape escapes a string for safe inclusion in a JSON value.
+func jsonEscape(s string) string {
+	var sb strings.Builder
+	for _, c := range s {
+		switch c {
+		case '"':
+			sb.WriteString(`\"`)
+		case '\\':
+			sb.WriteString(`\\`)
+		case '\n':
+			sb.WriteString(`\n`)
+		case '\r':
+			sb.WriteString(`\r`)
+		case '\t':
+			sb.WriteString(`\t`)
+		default:
+			sb.WriteRune(c)
+		}
+	}
+	return sb.String()
+}
+
+// nullableInt returns nil if n is 0 (no status received), otherwise n.
+func nullableInt(n int) interface{} {
+	if n == 0 {
+		return nil
+	}
+	return n
+}
+
+// writeJSON serialises a ScanResult to the response writer.
+// We hand-build the JSON to avoid importing encoding/json.
+// If ScanResult fields change, update this function.
+func (app *App) writeJSON(w http.ResponseWriter, r ScanResult) {
+	tlsExpiry := ""
+	if !r.TLSExpiry.IsZero() {
+		tlsExpiry = r.TLSExpiry.UTC().Format(time.RFC3339)
+	}
+
+	w.Write([]byte(`{` +
+		`"url":"` + jsonEscape(r.URL) + `",` +
+		`"status_code":` + itoa(r.StatusCode) + `,` +
+		`"body_hash":"` + r.BodyHash + `",` +
+		`"body_size":` + itoa(r.BodySize) + `,` +
+		`"tls_issuer":"` + jsonEscape(r.TLSIssuer) + `",` +
+		`"tls_expiry":"` + tlsExpiry + `",` +
+		`"server":"` + jsonEscape(r.Server) + `",` +
+		`"cdn":"` + jsonEscape(r.CDN) + `",` +
+		`"waf":"` + jsonEscape(r.WAF) + `",` +
+		`"region":"` + r.Region + `",` +
+		`"duration_ms":` + itoa(int(r.DurationMS)) + `,` +
+		`"error":"` + jsonEscape(r.Error) + `",` +
+		`"scanned_at":"` + r.ScannedAt.UTC().Format(time.RFC3339) + `",` +
+		`"headers":` + headersToJSON(r.Headers) +
+		`}`))
+}
+
