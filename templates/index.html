@@ -3,58 +3,90 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>404not403 | HTTP Forensic Lab</title>
+    <title>404NOT403 | HTTP Forensic Lab</title>
     <link rel="stylesheet" href="/static/css/style.css">
 </head>
 <body>
 
-    <header>
-        <h1>&gt; 404not403.com</h1>
-        <p class="tagline">// It's not that you're forbidden. It's just gone.</p>
+    <header class="site-header">
+        <h1 class="logo">404NOT403</h1>
+        <p class="tagline">What did the server actually say?</p>
         <div class="live-stats" id="live-stats">
-            <span class="stats-loading">// Loading system stats...</span>
+            <span class="stats-loading">Loading system stats...</span>
         </div>
     </header>
 
     <main>
-        <!-- The Simulator -->
+
+        <div class="section-divider">
+            <span>HEADER INSPECTOR</span>
+        </div>
+
+        <section class="inspector">
+            <p class="section-desc">Inspect any public URL. Server-side forensic scan.</p>
+
+            <div class="inspector-input-group">
+                <input
+                    type="url"
+                    id="inspector-url"
+                    class="inspector-input"
+                    placeholder="https://example.com"
+                    autocomplete="off"
+                    spellcheck="false"
+                />
+                <button id="inspector-btn" onclick="inspectURL()">INSPECT</button>
+            </div>
+
+            <div class="inspector-result" id="inspector-result">
+                <div class="result-placeholder">
+                    <span>No scan yet</span>
+                </div>
+            </div>
+        </section>
+
+        <div class="section-divider">
+            <span>STATUS SIMULATOR</span>
+        </div>
+
         <section class="simulator">
-            <h2>&gt; HTTP Status Simulator_</h2>
-            <p>Click a button to trigger a real HTTP response from our server.</p>
+            <p class="section-desc">Trigger real HTTP responses from our server.</p>
 
             <div class="button-group">
                 <button id="btn-404" onclick="simulate(404)">
-                    Trigger 404
+                    TRIGGER 404
                     <span>Not Found</span>
                 </button>
                 <button id="btn-403" onclick="simulate(403)">
-                    Trigger 403
+                    TRIGGER 403
                     <span>Forbidden</span>
                 </button>
             </div>
 
-            <!-- Response Display -->
             <div class="response-box" id="response-box">
-                <p class="placeholder">&gt; Awaiting simulation...</p>
+                <p class="placeholder">Awaiting simulation...</p>
             </div>
 
-            <!-- Education Panel -->
             <div class="education-panel" id="education-panel"></div>
-
         </section>
+
     </main>
 
     <footer>
+        <div class="section-divider">
+            <span>SYSTEM</span>
+        </div>
+
         <nav class="footer-nav">
-            <a href="https://linkedin.com/in/david-vasquez-it" target="_blank">Architect</a>
-            <a href="https://github.com/psiloconvalley" target="_blank">Source</a>
-            <a href="#">Supply / Merch</a>
+            <a href="https://linkedin.com/in/david-vasquez-it" target="_blank">ARCHITECT</a>
+            <a href="https://github.com/psiloconvalley" target="_blank">SOURCE</a>
+            <a href="#">SUPPLY</a>
         </nav>
         <div class="footer-credits">
-            <p>404not403.LAB // <span>PROVISIONED_VIA_RAILWAY</span> // VERSION_1.0.0</p>
+            <p>404NOT403 // RAILWAY // V1.0.0</p>
         </div>
     </footer>
 
     <script src="/static/js/simulator.js"></script>
+    <script src="/static/js/inspector.js"></script>
 </body>
 </html>
