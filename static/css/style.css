@@ -9,12 +9,12 @@
     --bg:             #09090b;
     --surface:        #0f0f11;
     --surface-raised: #141416;
-    --border:         #1c1c1f;
+    --border:         #27272a;
     --border-bright:  #2e2e33;
 
     --text-primary:   #fafafa;
-    --text-secondary: #71717a;
-    --text-muted:     #3f3f46;
+    --text-secondary: #a1a1aa;
+    --text-muted:     #52525b;
 
     --status-ok:      #22c55e;
     --status-warn:    #f59e0b;
