@@ -1,3 +1,4 @@
+cat > static/js/inspector.js << 'JSEOF'
 // ── 404NOT403 · Header Inspector ─────────────────────────────────────────────
 // All dynamic data is set via textContent — never innerHTML.
 // XSS safe by design. No exceptions.
@@ -18,11 +19,11 @@ async function inspectURL() {
     }
 
     // Auto-prepend https:// if no scheme provided
-    // Strips accidental www. prefix without scheme
     let url = raw;
     if (!url.startsWith('http://') && !url.startsWith('https://')) {
         url = 'https://' + url.replace(/^www\./, '');
-    } 
+    }
+
     // ── Loading state ─────────────────────────────────────────────────────
     btn.textContent = 'SCANNING';
     btn.classList.add('scanning');
@@ -96,6 +97,9 @@ function renderScanResult(container, data) {
     const verdict = document.createElement('div');
     verdict.className = 'scan-verdict ' + statusClass(data.status_code);
 
+    const verdictLeft = document.createElement('div');
+    verdictLeft.className = 'verdict-left';
+
     const verdictStatus = document.createElement('div');
     verdictStatus.className = 'verdict-status';
 
@@ -110,6 +114,14 @@ function renderScanResult(container, data) {
     verdictStatus.appendChild(codeEl);
     verdictStatus.appendChild(textEl);
 
+    // Summary sentence
+    const summary = document.createElement('div');
+    summary.className = 'verdict-summary';
+    summary.textContent = statusSummary(data.status_code, data);
+
+    verdictLeft.appendChild(verdictStatus);
+    verdictLeft.appendChild(summary);
+
     const meta = document.createElement('div');
     meta.className = 'verdict-meta';
 
@@ -122,34 +134,79 @@ function renderScanResult(container, data) {
     meta.appendChild(duration);
     meta.appendChild(size);
 
-    verdict.appendChild(verdictStatus);
+    verdict.appendChild(verdictLeft);
     verdict.appendChild(meta);
 
-    // ── Evidence grid ─────────────────────────────────────────────────────
+    // ── Evidence section with annotations ─────────────────────────────────
     const evidence = document.createElement('div');
     evidence.className = 'scan-evidence';
 
     const fields = [
-        { label: 'URL',     value: data.url,        cls: '' },
-        { label: 'SERVER',  value: data.server,      cls: '' },
-        { label: 'CDN',     value: data.cdn,         cls: '' },
-        { label: 'WAF',     value: data.waf,         cls: data.waf ? 'warn' : '' },
-        { label: 'TLS',     value: tlsValue(data),   cls: tlsClass(data) },
-        { label: 'HASH',    value: data.body_hash ? data.body_hash.slice(0, 16) + '...' : '', cls: '' },
-        { label: 'REGION',  value: data.region,      cls: '' },
+        {
+            label: 'SERVER',
+            value: data.server,
+            cls:   '',
+            note:  annotateServer(data.server),
+        },
+        {
+            label: 'CDN',
+            value: data.cdn,
+            cls:   '',
+            note:  annotateCDN(data.cdn),
+        },
+        {
+            label: 'WAF',
+            value: data.waf,
+            cls:   data.waf ? 'warn' : '',
+            note:  annotateWAF(data.waf, data.status_code),
+        },
+        {
+            label: 'TLS',
+            value: tlsValue(data),
+            cls:   tlsClass(data),
+            note:  annotateTLS(data),
+        },
+        {
+            label: 'HASH',
+            value: data.body_hash ? data.body_hash.slice(0, 16) + '...' : '',
+            cls:   '',
+            note:  'SHA256 fingerprint of the response body. If this changes on a future scan, the content changed.',
+        },
+        {
+            label: 'REGION',
+            value: data.region,
+            cls:   '',
+            note:  'The geographic region this scan was performed from. Different regions may receive different responses.',
+        },
     ];
 
     fields.forEach(function(f) {
+        const row = document.createElement('div');
+        row.className = 'evidence-row';
+
         const label = document.createElement('div');
         label.className = 'evidence-label';
         label.textContent = f.label;
+
+        const content = document.createElement('div');
+        content.className = 'evidence-content';
 
         const value = document.createElement('div');
         value.className = 'evidence-value' + (f.cls ? ' ' + f.cls : '') + (!f.value ? ' empty' : '');
         value.textContent = f.value || '—';
 
-        evidence.appendChild(label);
-        evidence.appendChild(value);
+        content.appendChild(value);
+
+        if (f.note) {
+            const note = document.createElement('div');
+            note.className = 'evidence-annotation';
+            note.textContent = f.note;
+            content.appendChild(note);
+        }
+
+        row.appendChild(label);
+        row.appendChild(content);
+        evidence.appendChild(row);
     });
 
     // ── Headers section ───────────────────────────────────────────────────
@@ -175,12 +232,10 @@ function renderScanResult(container, data) {
     const headersGrid = document.createElement('div');
     headersGrid.className = 'headers-grid';
 
-    // Render first N headers
     headerKeys.slice(0, INITIAL_HEADERS_SHOWN).forEach(function(key) {
         appendHeaderRow(headersGrid, key, headers[key]);
     });
 
-    // Hidden headers container
     const hiddenHeaders = document.createElement('div');
     hiddenHeaders.className = 'headers-grid';
     hiddenHeaders.style.display = 'none';
@@ -194,7 +249,6 @@ function renderScanResult(container, data) {
     headersSection.appendChild(headersGrid);
     headersSection.appendChild(hiddenHeaders);
 
-    // Toggle button — only if there are hidden headers
     if (headerKeys.length > INITIAL_HEADERS_SHOWN) {
         const toggle = document.createElement('button');
         toggle.className = 'headers-toggle';
@@ -244,7 +298,7 @@ function statusClass(code) {
 }
 
 function statusLabel(code) {
-    const labels = {
+    var labels = {
         200: 'OK',
         201: 'CREATED',
         204: 'NO CONTENT',
@@ -265,16 +319,123 @@ function statusLabel(code) {
     return labels[code] || 'UNKNOWN';
 }
 
+// ── Status summary — one human sentence per status code ──────────────────────
+function statusSummary(code, data) {
+    var summaries = {
+        200: 'This URL is live and returned content successfully.',
+        201: 'The server created a new resource at this URL.',
+        204: 'The server responded successfully but returned no content.',
+        301: 'This URL has been permanently moved to a new location.',
+        302: 'This URL is temporarily redirecting to another location.',
+        304: 'The content has not changed since the last request.',
+        400: 'The server rejected this request as invalid.',
+        401: 'This URL requires authentication to access.',
+        403: 'This URL exists but access was denied.',
+        404: 'This URL does not exist on the server.',
+        405: 'The request method is not supported for this URL.',
+        429: 'Too many requests — the server is rate limiting.',
+        500: 'The server encountered an internal error.',
+        502: 'The upstream server returned an invalid response.',
+        503: 'The server is currently unable to handle this request.',
+        504: 'The upstream server did not respond in time.',
+    };
+
+    if (data.waf && code === 403) {
+        return 'A Web Application Firewall actively blocked this request.';
+    }
+
+    return summaries[code] || 'The server returned an unexpected status code.';
+}
+
+// ── Annotation generators ────────────────────────────────────────────────────
+// Each returns a contextual string based on the actual data.
+// These are the "translations" that make raw data meaningful.
+
+function annotateServer(server) {
+    if (!server) return 'No server header was returned. The origin server is unknown.';
+
+    var s = server.toLowerCase();
+    if (s.indexOf('cloudflare') !== -1)  return 'This site is served through Cloudflare\'s global network.';
+    if (s.indexOf('nginx') !== -1)       return 'Running on NGINX — one of the most common open-source web servers.';
+    if (s.indexOf('apache') !== -1)      return 'Running on Apache — a widely used open-source web server.';
+    if (s.indexOf('gws') !== -1)         return 'Google Web Server — this is Google infrastructure.';
+    if (s.indexOf('microsoft') !== -1 || s.indexOf('iis') !== -1)
+        return 'Running on Microsoft IIS — typically a Windows server environment.';
+    if (s.indexOf('openresty') !== -1)   return 'Running on OpenResty — an NGINX-based platform often used with Lua scripting.';
+    if (s.indexOf('gunicorn') !== -1)    return 'Running on Gunicorn — a Python WSGI HTTP server, commonly used with Django or Flask.';
+
+    return 'Server identified as "' + server + '".';
+}
+
+function annotateCDN(cdn) {
+    if (!cdn) return 'No CDN detected. Content may be served directly from the origin server.';
+
+    var notes = {
+        'Cloudflare':        'Content is distributed via Cloudflare CDN. The origin server is hidden behind a proxy.',
+        'AWS CloudFront':    'Content is distributed via Amazon CloudFront CDN.',
+        'Fastly':            'Content is distributed via Fastly CDN — often used by high-traffic media and tech companies.',
+        'Akamai':            'Content is distributed via Akamai — one of the oldest and largest CDN networks.',
+        'Vercel':            'Deployed on Vercel\'s edge network — commonly used for Next.js and frontend applications.',
+        'Netlify':           'Deployed on Netlify\'s edge network — commonly used for static sites and JAMstack.',
+        'Railway':           'Deployed on Railway\'s infrastructure.',
+        'Generic CDN Cache': 'A caching layer was detected but the specific CDN provider could not be identified.',
+    };
+
+    return notes[cdn] || 'CDN identified as "' + cdn + '".';
+}
+
+function annotateWAF(waf, statusCode) {
+    if (!waf) {
+        if (statusCode === 403) {
+            return 'No WAF was detected, but access was still denied. The server itself may be enforcing access rules.';
+        }
+        return 'No Web Application Firewall was detected on this response.';
+    }
+
+    var base = 'A Web Application Firewall is actively inspecting requests to this URL.';
+
+    if (statusCode === 403) {
+        base += ' The WAF is likely the reason access was denied — the request may have been flagged as suspicious.';
+    }
+
+    return base;
+}
+
+function annotateTLS(data) {
+    if (!data.tls_issuer) {
+        if (data.url && data.url.startsWith('http://')) {
+            return 'This URL uses plain HTTP — the connection is not encrypted. Data could be intercepted.';
+        }
+        return 'No TLS certificate information was returned.';
+    }
+
+    var exp = data.tls_expiry ? new Date(data.tls_expiry) : null;
+    var note = 'Connection is encrypted. Certificate issued by ' + data.tls_issuer + '.';
+
+    if (exp) {
+        var daysLeft = Math.floor((exp - new Date()) / (1000 * 60 * 60 * 24));
+        if (daysLeft < 0) {
+            note += ' The certificate has EXPIRED — this is a security risk.';
+        } else if (daysLeft < 30) {
+            note += ' The certificate expires in ' + daysLeft + ' days — renewal is needed soon.';
+        } else {
+            note += ' Valid for ' + daysLeft + ' more days.';
+        }
+    }
+
+    return note;
+}
+
 // ── TLS helpers ───────────────────────────────────────────────────────────────
 function tlsValue(data) {
     if (!data.tls_issuer) return '';
-    let val = data.tls_issuer;
+    var val = data.tls_issuer;
     if (data.tls_expiry) {
-        const exp = new Date(data.tls_expiry);
-        const now = new Date();
-        const daysLeft = Math.floor((exp - now) / (1000 * 60 * 60 * 24));
+        var exp = new Date(data.tls_expiry);
+        var daysLeft = Math.floor((exp - new Date()) / (1000 * 60 * 60 * 24));
         val += ' · exp ' + exp.toISOString().slice(0, 10);
-        if (daysLeft < 30) val += ' · EXPIRING SOON';
+        if (daysLeft < 0) val += ' · EXPIRED';
+        else if (daysLeft < 30) val += ' · EXPIRING SOON';
     }
     return val;
 }
@@ -282,8 +443,9 @@ function tlsValue(data) {
 function tlsClass(data) {
     if (!data.tls_issuer) return 'empty';
     if (data.tls_expiry) {
-        const exp = new Date(data.tls_expiry);
-        const daysLeft = Math.floor((exp - new Date()) / (1000 * 60 * 60 * 24));
+        var exp = new Date(data.tls_expiry);
+        var daysLeft = Math.floor((exp - new Date()) / (1000 * 60 * 60 * 24));
+        if (daysLeft < 0) return 'warn';
         if (daysLeft < 30) return 'warn';
         return 'valid';
     }
@@ -300,7 +462,7 @@ function formatBytes(bytes) {
 
 // ── Enter key support ─────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', function() {
-    const input = document.getElementById('inspector-url');
+    var input = document.getElementById('inspector-url');
     if (input) {
         input.addEventListener('keydown', function(e) {
             if (e.key === 'Enter') inspectURL();

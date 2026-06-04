@@ -638,3 +638,39 @@ button:hover {
     font-family: var(--font-mono);
     font-size: 0.78rem;
 }
+
+/* ── Verdict Summary ── */
+.verdict-left {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.verdict-summary {
+    font-size: 0.82rem;
+    font-weight: 300;
+    color: var(--text-secondary);
+    line-height: 1.4;
+}
+
+/* ── Evidence Row Layout ── */
+.evidence-row {
+    display: contents;
+}
+
+.evidence-content {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    padding: 0.15rem 0;
+    min-width: 0;
+}
+
+.evidence-annotation {
+    font-family: var(--font-sans);
+    font-size: 0.72rem;
+    font-weight: 300;
+    color: var(--text-muted);
+    line-height: 1.5;
+    padding-bottom: 0.4rem;
+}
