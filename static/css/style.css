@@ -599,3 +599,42 @@ button:hover {
         gap: 1rem;
     }
 }
+
+/* ── Simulator Response Elements ── */
+.sim-label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 2px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    margin-bottom: 0.25rem;
+}
+
+.sim-row {
+    line-height: 1.8;
+}
+
+.sim-field-label {
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    color: var(--text-secondary);
+}
+
+.sim-field-value {
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    color: var(--text-primary);
+}
+
+.sim-tip {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    font-style: italic;
+}
+
+.sim-error {
+    color: var(--status-block);
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+}

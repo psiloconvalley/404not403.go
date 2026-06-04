@@ -17,11 +17,12 @@ async function inspectURL() {
         return;
     }
 
-    if (!raw.startsWith('http://') && !raw.startsWith('https://')) {
-        showInspectorError(result, 'URL must begin with http:// or https://');
-        return;
-    }
-
+    // Auto-prepend https:// if no scheme provided
+    // Strips accidental www. prefix without scheme
+    let url = raw;
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+        url = 'https://' + url.replace(/^www\./, '');
+    } 
     // ── Loading state ─────────────────────────────────────────────────────
     btn.textContent = 'SCANNING';
     btn.classList.add('scanning');
@@ -32,7 +33,7 @@ async function inspectURL() {
         const response = await fetch('/api/scan', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ url: raw }),
+            body: JSON.stringify({ url: url }),
         });
 
         const data = await response.json();
