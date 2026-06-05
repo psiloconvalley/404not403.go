@@ -1368,3 +1368,53 @@ button:hover {
         line-height: 1.55;
     }
 }
+
+/* ── Password Toggle ── */
+.password-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.password-wrapper .form-input {
+    padding-right: 2.5rem;
+}
+
+.password-toggle {
+    position: absolute;
+    right: 0.5rem;
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 0.3rem;
+    min-width: auto;
+    width: auto;
+    border-radius: 0;
+    flex-direction: row;
+    transition: color 0.15s ease;
+}
+
+.password-toggle:hover {
+    color: var(--text-secondary);
+}
+
+.eye-icon {
+    font-size: 1rem;
+    line-height: 1;
+    letter-spacing: 0;
+    text-transform: none;
+    font-weight: 400;
+}
+
+/* ── Active Input Styling ── */
+.form-input:focus {
+    border-color: #52525b;
+    background: #111113;
+    color: var(--text-primary);
+}
+
+.inspector-input:focus,
+.monitor-input:focus {
+    background: #111113;
+}

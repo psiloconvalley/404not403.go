@@ -44,11 +44,16 @@
                 <div id="login-form">
                     <div class="form-group">
                         <label class="form-label">EMAIL OR HANDLE</label>
-                        <input type="email" id="login-email" class="form-input" placeholder="email or handle" autocomplete="username" />
+                        <input type="text" id="login-email" class="form-input" placeholder="email or handle" autocomplete="username" />
                     </div>
                     <div class="form-group">
                         <label class="form-label">PASSWORD</label>
-                        <input type="password" id="login-password" class="form-input" placeholder="minimum 12 characters" autocomplete="current-password" />
+                        <div class="password-wrapper">
+                            <input type="password" id="login-password" class="form-input" placeholder="minimum 12 characters" autocomplete="current-password" />
+                            <button type="button" class="password-toggle" onclick="togglePassword('login-password', this)" aria-label="Show password">
+                                <span class="eye-icon">◉</span>
+                            </button>
+                        </div>
                     </div>
                     <div class="form-group" id="mfa-group" style="display:none;">
                         <label class="form-label">MFA CODE</label>
@@ -68,11 +73,16 @@
                     <div class="form-group">
                         <label class="form-label">HANDLE</label>
                         <input type="text" id="register-handle" class="form-input" placeholder="3-32 characters" autocomplete="username" />
-                    <div class="handle-status" id="handle-status"></div>
+                        <div class="handle-status" id="handle-status"></div>
                     </div>
                     <div class="form-group">
                         <label class="form-label">PASSWORD</label>
-                        <input type="password" id="register-password" class="form-input" placeholder="minimum 12 characters" autocomplete="new-password" />
+                        <div class="password-wrapper">
+                            <input type="password" id="register-password" class="form-input" placeholder="minimum 12 characters" autocomplete="new-password" />
+                            <button type="button" class="password-toggle" onclick="togglePassword('register-password', this)" aria-label="Show password">
+                                <span class="eye-icon">◉</span>
+                            </button>
+                        </div>
                     </div>
                     <div class="form-error" id="register-error"></div>
                     <button class="form-submit" onclick="register()">CREATE ACCOUNT</button>
@@ -115,14 +125,12 @@
         </div>
 
         <section class="monitor-section">
-            <!-- Logged out state -->
             <div id="monitor-auth-gate">
                 <div class="result-placeholder">
                     <span>Sign in to monitor URLs and track changes</span>
                 </div>
             </div>
 
-            <!-- Logged in state -->
             <div id="monitor-controls" style="display:none;">
                 <p class="section-desc">Track any URL over time. Detect when pages disappear or change.</p>
 

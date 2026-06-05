@@ -230,3 +230,16 @@ document.addEventListener('DOMContentLoaded', function() {
         handleInput.addEventListener('input', checkHandleAvailability);
     }
 });
+
+// ── Password toggle ──────────────────────────────────────────────────────────
+function togglePassword(inputId, btn) {
+    var input = document.getElementById(inputId);
+    var icon = btn.querySelector('.eye-icon');
+    if (input.type === 'password') {
+        input.type = 'text';
+        icon.textContent = '◎';
+    } else {
+        input.type = 'password';
+        icon.textContent = '◉';
+    }
+}
