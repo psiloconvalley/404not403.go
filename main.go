@@ -48,7 +48,7 @@ func main() {
 	mux.HandleFunc("/simulate/403", handler.Simulate403(a))
 	mux.HandleFunc("/api/stats", handler.Stats(a))
 	mux.HandleFunc("/api/scan", handler.Scan(a))
-	mux.HandleFunc("/api/monitor", handler.CreateMonitor(a))
+	mux.HandleFunc("/api/monitor", handler.Monitor(a))
 	mux.HandleFunc("/api/monitors", handler.ListMonitors(a))
 	mux.HandleFunc("/api/changes", handler.ListChanges(a))
 
