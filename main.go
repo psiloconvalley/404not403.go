@@ -1,6 +1,7 @@
 package main
 
 import (
+	"html/template"
 	"log"
 	"net/http"
 	"os"
@@ -10,8 +11,8 @@ import (
 	"github.com/psiloconvalley/404not403/internal/app"
 	"github.com/psiloconvalley/404not403/internal/handler"
 	"github.com/psiloconvalley/404not403/internal/middleware"
-	"github.com/psiloconvalley/404not403/interna:l/store"
-	"html/template"
+	"github.com/psiloconvalley/404not403/internal/monitor"
+	"github.com/psiloconvalley/404not403/internal/store"
 )
 
 func main() {
@@ -30,10 +31,13 @@ func main() {
 	}
 	a.Templates = tmpl
 
-	// 3. Router
+	// 3. Ghost Link Monitor worker
+	go monitor.StartWorker(a)
+
+	// 4. Router
 	mux := http.NewServeMux()
-	
-	// Static
+
+	// Static files
 	fs := http.FileServer(http.Dir("static"))
 	mux.Handle("/static/", http.StripPrefix("/static/", fs))
 
@@ -44,23 +48,29 @@ func main() {
 	mux.HandleFunc("/simulate/403", handler.Simulate403(a))
 	mux.HandleFunc("/api/stats", handler.Stats(a))
 	mux.HandleFunc("/api/scan", handler.Scan(a))
+	mux.HandleFunc("/api/monitor", handler.CreateMonitor(a))
+	mux.HandleFunc("/api/monitors", handler.ListMonitors(a))
+	mux.HandleFunc("/api/changes", handler.ListChanges(a))
 
-	// 4. Middleware
+	// 5. Middleware chain
 	wrapped := middleware.RateLimiter(a)(mux)
 	wrapped = middleware.Logger(wrapped)
 
-	// 5. Server
+	// 6. Server
 	port := os.Getenv("PORT")
-	if port == "" { port = "8080" }
+	if port == "" {
+		port = "8080"
+	}
 
 	srv := &http.Server{
 		Addr:         ":" + port,
 		Handler:      wrapped,
 		ReadTimeout:  15 * time.Second,
 		WriteTimeout: 30 * time.Second,
+		IdleTimeout:  60 * time.Second,
 	}
 
-	log.Printf("🚀 404NOT403 Engine Online on %s", port)
+	log.Printf("🚀 404NOT403 Engine Online on port %s", port)
 	if err := srv.ListenAndServe(); err != nil {
 		log.Fatal(err)
 	}
