@@ -4,30 +4,26 @@
 
 // ── Create a new monitor ──────────────────────────────────────────────────────
 async function createMonitor() {
-    var input = document.getElementById('monitor-url');
+    var input  = document.getElementById('monitor-url');
     var select = document.getElementById('monitor-interval');
-    var btn = document.getElementById('monitor-btn');
+    var btn    = document.getElementById('monitor-btn');
 
     var raw = input.value.trim();
     if (!raw) return;
 
-    // Auto-prepend https://
     if (!raw.startsWith('http://') && !raw.startsWith('https://')) {
         raw = 'https://' + raw.replace(/^www\./, '');
     }
 
     btn.textContent = 'SAVING';
-    btn.disabled = true;
-    input.disabled = true;
+    btn.disabled    = true;
+    input.disabled  = true;
 
     try {
         var response = await fetch('/api/monitor', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                url: raw,
-                interval: select.value,
-            }),
+            body: JSON.stringify({ url: raw, interval: select.value }),
         });
 
         var data = await response.json();
@@ -44,12 +40,12 @@ async function createMonitor() {
         alert('Failed to create monitor.');
     } finally {
         btn.textContent = 'MONITOR';
-        btn.disabled = false;
-        input.disabled = false;
+        btn.disabled    = false;
+        input.disabled  = false;
     }
 }
 
-// ── Load and render active monitors ───────────────────────────────────────────
+// ── Load and render active monitors ──────────────────────────────────────────
 async function loadMonitors() {
     var container = document.getElementById('monitor-list');
 
@@ -87,7 +83,6 @@ async function loadMonitors() {
             container.appendChild(renderMonitorRow(m));
         });
 
-        // Load changes
         loadChanges();
 
     } catch (err) {
@@ -106,39 +101,41 @@ function renderMonitorRow(m) {
     var row = document.createElement('div');
     row.className = 'monitor-row';
 
-    // Status dot
     var dot = document.createElement('span');
     dot.className = 'monitor-dot ' + monitorDotClass(m);
 
-    // URL
     var url = document.createElement('span');
     url.className = 'monitor-url';
-    url.textContent = m.URL.replace('https://', '').replace('http://', '');
+    url.textContent = m.url.replace('https://', '').replace('http://', '');
 
-    // Status code
     var status = document.createElement('span');
     status.className = 'monitor-status ' + monitorStatusClass(m);
-    status.textContent = m.LastStatus ? String(m.LastStatus) : '---';
+    status.textContent = m.last_status ? String(m.last_status) : '---';
 
-    // Interval
     var interval = document.createElement('span');
     interval.className = 'monitor-interval';
-    interval.textContent = m.CheckInterval;
+    interval.textContent = m.check_interval;
 
-    // Last checked
     var checked = document.createElement('span');
     checked.className = 'monitor-checked';
-    checked.textContent = m.LastChecked ? timeAgo(m.LastChecked) : 'pending';
+    checked.textContent = m.last_checked ? timeAgo(m.last_checked) : 'pending';
 
-    // Change count
     var changes = document.createElement('span');
     changes.className = 'monitor-changes';
-    if (m.ChangeCount > 0) {
-        changes.textContent = m.ChangeCount + ' change' + (m.ChangeCount > 1 ? 's' : '');
+    if (m.change_count > 0) {
+        changes.textContent = m.change_count + ' change' + (m.change_count > 1 ? 's' : '');
         changes.classList.add('has-changes');
     } else {
         changes.textContent = 'stable';
     }
+
+    // Delete button
+    var del = document.createElement('button');
+    del.className = 'monitor-delete';
+    del.textContent = '×';
+    del.addEventListener('click', function() {
+        deleteMonitor(m.id, row);
+    });
 
     row.appendChild(dot);
     row.appendChild(url);
@@ -146,18 +143,38 @@ function renderMonitorRow(m) {
     row.appendChild(interval);
     row.appendChild(checked);
     row.appendChild(changes);
+    row.appendChild(del);
 
     return row;
 }
 
-// ── Load and render detected changes ──────────────────────────────────────────
+// ── Delete a monitor ──────────────────────────────────────────────────────────
+async function deleteMonitor(id, row) {
+    try {
+        var response = await fetch('/api/monitor?id=' + encodeURIComponent(id), {
+            method: 'DELETE',
+        });
+        var data = await response.json();
+        if (data.status === 'deactivated') {
+            row.style.opacity = '0.3';
+            row.style.pointerEvents = 'none';
+            setTimeout(function() {
+                loadMonitors();
+            }, 400);
+        }
+    } catch (err) {
+        alert('Failed to delete monitor.');
+    }
+}
+
+// ── Load and render detected changes ─────────────────────────────────────────
 async function loadChanges() {
-    var section = document.getElementById('changes-section');
+    var section   = document.getElementById('changes-section');
     var container = document.getElementById('changes-list');
 
     try {
         var response = await fetch('/api/changes');
-        var changes = await response.json();
+        var changes  = await response.json();
 
         if (!changes || changes.length === 0) {
             section.style.display = 'none';
@@ -165,7 +182,7 @@ async function loadChanges() {
         }
 
         section.style.display = 'block';
-        container.innerHTML = '';
+        container.innerHTML   = '';
 
         changes.forEach(function(c) {
             container.appendChild(renderChangeRow(c));
@@ -183,24 +200,23 @@ function renderChangeRow(c) {
 
     var url = document.createElement('span');
     url.className = 'change-url';
-    url.textContent = c.URL.replace('https://', '').replace('http://', '');
+    url.textContent = c.url.replace('https://', '').replace('http://', '');
 
     var transition = document.createElement('span');
     transition.className = 'change-transition';
-    var oldCode = c.OldStatus || '---';
-    var newCode = c.NewStatus || '---';
+    var oldCode = c.old_status || '---';
+    var newCode = c.new_status || '---';
     transition.textContent = oldCode + ' → ' + newCode;
 
-    // Color the transition based on the new status
-    if (c.NewStatus >= 400) {
+    if (c.new_status >= 400) {
         transition.classList.add('change-bad');
-    } else if (c.NewStatus >= 200 && c.NewStatus < 300) {
+    } else if (c.new_status >= 200 && c.new_status < 300) {
         transition.classList.add('change-good');
     }
 
     var when = document.createElement('span');
     when.className = 'change-when';
-    when.textContent = timeAgo(c.DetectedAt);
+    when.textContent = timeAgo(c.detected_at);
 
     row.appendChild(url);
     row.appendChild(transition);
@@ -209,41 +225,39 @@ function renderChangeRow(c) {
     return row;
 }
 
-// ── Helper: dot color class ───────────────────────────────────────────────────
+// ── Status helpers ────────────────────────────────────────────────────────────
 function monitorDotClass(m) {
-    if (!m.LastStatus) return 'dot-pending';
-    if (m.LastStatus >= 200 && m.LastStatus < 300) return 'dot-ok';
-    if (m.LastStatus >= 300 && m.LastStatus < 400) return 'dot-warn';
-    if (m.LastStatus >= 400) return 'dot-bad';
+    if (!m.last_status) return 'dot-pending';
+    if (m.last_status >= 200 && m.last_status < 300) return 'dot-ok';
+    if (m.last_status >= 300 && m.last_status < 400) return 'dot-warn';
+    if (m.last_status >= 400) return 'dot-bad';
     return 'dot-pending';
 }
 
-// ── Helper: status text color ─────────────────────────────────────────────────
 function monitorStatusClass(m) {
-    if (!m.LastStatus) return '';
-    if (m.LastStatus >= 200 && m.LastStatus < 300) return 'status-ok';
-    if (m.LastStatus >= 300 && m.LastStatus < 400) return 'status-warn';
-    if (m.LastStatus >= 400) return 'status-bad';
+    if (!m.last_status) return '';
+    if (m.last_status >= 200 && m.last_status < 300) return 'status-ok';
+    if (m.last_status >= 300 && m.last_status < 400) return 'status-warn';
+    if (m.last_status >= 400) return 'status-bad';
     return '';
 }
 
-// ── Helper: relative time ─────────────────────────────────────────────────────
+// ── Time helper ───────────────────────────────────────────────────────────────
 function timeAgo(dateStr) {
-    var now = new Date();
-    var then = new Date(dateStr);
+    var now     = new Date();
+    var then    = new Date(dateStr);
     var seconds = Math.floor((now - then) / 1000);
 
-    if (seconds < 60)   return seconds + 's ago';
+    if (seconds < 60)    return seconds + 's ago';
     if (seconds < 3600)  return Math.floor(seconds / 60) + 'm ago';
     if (seconds < 86400) return Math.floor(seconds / 3600) + 'h ago';
     return Math.floor(seconds / 86400) + 'd ago';
 }
 
-// ── Load monitors on page load ────────────────────────────────────────────────
+// ── Init ──────────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', function() {
     loadMonitors();
 
-    // Enter key support
     var input = document.getElementById('monitor-url');
     if (input) {
         input.addEventListener('keydown', function(e) {

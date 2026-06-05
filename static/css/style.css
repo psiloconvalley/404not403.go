@@ -925,3 +925,27 @@ button:hover {
         display: none;
     }
 }
+
+/* ── Monitor Delete Button ── */
+.monitor-delete {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    font-family: var(--font-sans);
+    font-size: 0.8rem;
+    font-weight: 400;
+    padding: 0.1rem 0.4rem;
+    cursor: pointer;
+    transition: color 0.15s ease, border-color 0.15s ease;
+    min-width: auto;
+    width: auto;
+    flex-direction: row;
+    border-radius: 0;
+    line-height: 1;
+    margin-left: auto;
+}
+
+.monitor-delete:hover {
+    color: var(--status-block);
+    border-color: var(--status-block);
+}

@@ -12,27 +12,27 @@ import (
 
 // ── Monitor represents a tracked URL ─────────────────────────────────────────
 type Monitor struct {
-	ID            string
-	URL           string
-	CheckInterval string
-	LastStatus    *int
-	LastHash      *string
-	ChangeCount   int
-	Active        bool
-	LastChecked   *time.Time
-	CreatedAt     time.Time
+	ID            string     `json:"id"`
+	URL           string     `json:"url"`
+	CheckInterval string     `json:"check_interval"`
+	LastStatus    *int       `json:"last_status"`
+	LastHash      *string    `json:"last_hash"`
+	ChangeCount   int        `json:"change_count"`
+	Active        bool       `json:"active"`
+	LastChecked   *time.Time `json:"last_checked"`
+	CreatedAt     time.Time  `json:"created_at"`
 }
 
 // ── Change represents a detected state change on a monitored URL ──────────────
 type Change struct {
-	ID         string
-	MonitorID  string
-	URL        string
-	OldStatus  int
-	NewStatus  int
-	OldHash    string
-	NewHash    string
-	DetectedAt time.Time
+	ID         string    `json:"id"`
+	MonitorID  string    `json:"monitor_id"`
+	URL        string    `json:"url"`
+	OldStatus  int       `json:"old_status"`
+	NewStatus  int       `json:"new_status"`
+	OldHash    string    `json:"old_hash"`
+	NewHash    string    `json:"new_hash"`
+	DetectedAt time.Time `json:"detected_at"`
 }
 
 // ── ConnectDB ─────────────────────────────────────────────────────────────────
