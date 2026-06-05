@@ -109,14 +109,14 @@ body {
     content: '';
     flex: 1;
     height: 1px;
-    background: var(--border);
+    background: #52525b;
 }
 
 .section-divider span {
     font-size: 0.65rem;
     font-weight: 600;
     letter-spacing: 3px;
-    color: var(--text-muted);
+    color: #a1a1aa;
     white-space: nowrap;
     text-transform: uppercase;
 }
@@ -412,14 +412,13 @@ button {
     font-weight: 500;
     padding: 0.85rem 1.75rem;
     cursor: pointer;
-    display: flex;
-    flex-direction: column;
+    display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 0.25rem;
     transition: border-color 0.15s ease, color 0.15s ease;
     border-radius: 0;
-    min-width: 160px;
-    flex: 1;
+    min-width: auto;
 }
 
 button span {
@@ -435,6 +434,11 @@ button:hover {
     color: var(--text-primary);
 }
 
+.button-group button {
+    flex-direction: column;
+    min-width: 160px;
+    flex: 1;
+}
 #btn-404:hover              { border-color: var(--status-block); color: var(--status-block); }
 #btn-404:hover span         { color: var(--status-block); }
 #btn-403:hover              { border-color: var(--status-warn);  color: var(--status-warn);  }
