@@ -10,7 +10,7 @@ import (
 	"github.com/psiloconvalley/404not403/internal/scanner"
 )
 
-// ── Monitor represents a tracked URL ─────────────────────────────────────────
+// ── Monitor ───────────────────────────────────────────────────────────────────
 type Monitor struct {
 	ID            string     `json:"id"`
 	URL           string     `json:"url"`
@@ -23,7 +23,7 @@ type Monitor struct {
 	CreatedAt     time.Time  `json:"created_at"`
 }
 
-// ── Change represents a detected state change on a monitored URL ──────────────
+// ── Change ────────────────────────────────────────────────────────────────────
 type Change struct {
 	ID         string    `json:"id"`
 	MonitorID  string    `json:"monitor_id"`
@@ -34,6 +34,41 @@ type Change struct {
 	NewHash    string    `json:"new_hash"`
 	DetectedAt time.Time `json:"detected_at"`
 }
+
+// ── User ──────────────────────────────────────────────────────────────────────
+type User struct {
+	ID            string     `json:"id"`
+	Email         string     `json:"email"`
+	Handle        string     `json:"handle"`
+	PasswordHash  string     `json:"-"`
+	Role          string     `json:"role"`
+	MFASecret     *string    `json:"-"`
+	MFAEnabled    bool       `json:"mfa_enabled"`
+	EmailVerified bool       `json:"email_verified"`
+	LastLogin     *time.Time `json:"last_login"`
+	CreatedAt     time.Time  `json:"created_at"`
+	UpdatedAt     time.Time  `json:"updated_at"`
+}
+
+// ── APIKey ────────────────────────────────────────────────────────────────────
+type APIKey struct {
+	ID        string     `json:"id"`
+	UserID    string     `json:"user_id"`
+	Name      string     `json:"name"`
+	KeyHash   string     `json:"-"`
+	LastUsed  *time.Time `json:"last_used"`
+	ExpiresAt *time.Time `json:"expires_at"`
+	Active    bool       `json:"active"`
+	CreatedAt time.Time  `json:"created_at"`
+}
+
+// ── Errors ────────────────────────────────────────────────────────────────────
+type storeError string
+
+func (e storeError) Error() string { return string(e) }
+
+const ErrMonitorLimitReached storeError = "monitor limit reached — maximum 10 active monitors per user"
+const ErrNotOwner storeError = "you do not own this resource"
 
 // ── ConnectDB ─────────────────────────────────────────────────────────────────
 func ConnectDB() *sql.DB {
@@ -63,7 +98,6 @@ func ConnectDB() *sql.DB {
 }
 
 // ── RunMigrations ─────────────────────────────────────────────────────────────
-// Idempotent. Safe to run on every deploy.
 func RunMigrations(db *sql.DB) {
 	if db == nil {
 		return
@@ -102,18 +136,9 @@ func RunMigrations(db *sql.DB) {
 				created_at   TIMESTAMP DEFAULT now()
 			)`,
 		},
-		{
-			name: "create_index_scans_url",
-			sql:  `CREATE INDEX IF NOT EXISTS idx_scans_url ON scans(url)`,
-		},
-		{
-			name: "create_index_scans_created",
-			sql:  `CREATE INDEX IF NOT EXISTS idx_scans_created ON scans(created_at)`,
-		},
-		{
-			name: "create_index_scans_status",
-			sql:  `CREATE INDEX IF NOT EXISTS idx_scans_status ON scans(status_code)`,
-		},
+		{name: "create_index_scans_url",     sql: `CREATE INDEX IF NOT EXISTS idx_scans_url ON scans(url)`},
+		{name: "create_index_scans_created", sql: `CREATE INDEX IF NOT EXISTS idx_scans_created ON scans(created_at)`},
+		{name: "create_index_scans_status",  sql: `CREATE INDEX IF NOT EXISTS idx_scans_status ON scans(status_code)`},
 		{
 			name: "create_monitors_table",
 			sql: `CREATE TABLE IF NOT EXISTS monitors (
@@ -128,10 +153,7 @@ func RunMigrations(db *sql.DB) {
 				created_at     TIMESTAMP NOT NULL DEFAULT now()
 			)`,
 		},
-		{
-			name: "create_index_monitors_active",
-			sql:  `CREATE INDEX IF NOT EXISTS idx_monitors_active ON monitors(active)`,
-		},
+		{name: "create_index_monitors_active", sql: `CREATE INDEX IF NOT EXISTS idx_monitors_active ON monitors(active)`},
 		{
 			name: "create_changes_table",
 			sql: `CREATE TABLE IF NOT EXISTS changes (
@@ -145,15 +167,9 @@ func RunMigrations(db *sql.DB) {
 				detected_at  TIMESTAMP NOT NULL DEFAULT now()
 			)`,
 		},
+		{name: "create_index_changes_monitor",  sql: `CREATE INDEX IF NOT EXISTS idx_changes_monitor ON changes(monitor_id)`},
+		{name: "create_index_changes_detected", sql: `CREATE INDEX IF NOT EXISTS idx_changes_detected ON changes(detected_at)`},
 		{
-			name: "create_index_changes_monitor",
-			sql:  `CREATE INDEX IF NOT EXISTS idx_changes_monitor ON changes(monitor_id)`,
-		},
-		{
-			name: "create_index_changes_detected",
-			sql:  `CREATE INDEX IF NOT EXISTS idx_changes_detected ON changes(detected_at)`,
-		},
-				{
 			name: "create_users_table",
 			sql: `CREATE TABLE IF NOT EXISTS users (
 				id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -169,14 +185,8 @@ func RunMigrations(db *sql.DB) {
 				updated_at     TIMESTAMP NOT NULL DEFAULT now()
 			)`,
 		},
-		{
-			name: "create_index_users_email",
-			sql:  `CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)`,
-		},
-		{
-			name: "create_index_users_handle",
-			sql:  `CREATE INDEX IF NOT EXISTS idx_users_handle ON users(handle)`,
-		},
+		{name: "create_index_users_email",  sql: `CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)`},
+		{name: "create_index_users_handle", sql: `CREATE INDEX IF NOT EXISTS idx_users_handle ON users(handle)`},
 		{
 			name: "create_api_keys_table",
 			sql: `CREATE TABLE IF NOT EXISTS api_keys (
@@ -190,22 +200,10 @@ func RunMigrations(db *sql.DB) {
 				created_at TIMESTAMP NOT NULL DEFAULT now()
 			)`,
 		},
-		{
-			name: "create_index_api_keys_user",
-			sql:  `CREATE INDEX IF NOT EXISTS idx_api_keys_user ON api_keys(user_id)`,
-		},
-		{
-			name: "create_index_api_keys_hash",
-			sql:  `CREATE INDEX IF NOT EXISTS idx_api_keys_hash ON api_keys(key_hash)`,
-		},
-		{
-			name: "add_user_id_to_monitors",
-			sql:  `ALTER TABLE monitors ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES users(id)`,
-		},
-		{
-			name: "add_user_id_to_scans",
-			sql:  `ALTER TABLE scans ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES users(id)`,
-		},
+		{name: "create_index_api_keys_user", sql: `CREATE INDEX IF NOT EXISTS idx_api_keys_user ON api_keys(user_id)`},
+		{name: "create_index_api_keys_hash", sql: `CREATE INDEX IF NOT EXISTS idx_api_keys_hash ON api_keys(key_hash)`},
+		{name: "add_user_id_to_monitors",    sql: `ALTER TABLE monitors ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES users(id)`},
+		{name: "add_user_id_to_scans",       sql: `ALTER TABLE scans ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES users(id)`},
 	}
 
 	for _, m := range migrations {
@@ -257,27 +255,27 @@ func StoreScan(db *sql.DB, r scanner.ScanResult) error {
 
 // ── Monitor queries ───────────────────────────────────────────────────────────
 
-// CreateMonitor inserts a new monitor. Returns error if limit reached.
-func CreateMonitor(db *sql.DB, url, interval string) (*Monitor, error) {
-	// Global limit — 50 active monitors until auth is implemented
+// CreateMonitor inserts a new monitor owned by userID.
+func CreateMonitor(db *sql.DB, userID, url, interval string) (*Monitor, error) {
 	var count int
 	if err := db.QueryRow(
-		"SELECT COUNT(*) FROM monitors WHERE active = true",
+		"SELECT COUNT(*) FROM monitors WHERE active = true AND user_id = $1",
+		userID,
 	).Scan(&count); err != nil {
 		return nil, err
 	}
-	if count >= 50 {
+	if count >= 10 {
 		return nil, ErrMonitorLimitReached
 	}
 
 	var m Monitor
 	err := db.QueryRow(`
-		INSERT INTO monitors (url, check_interval)
-		VALUES ($1, $2)
+		INSERT INTO monitors (url, check_interval, user_id)
+		VALUES ($1, $2, $3)
 		RETURNING id, url, check_interval, last_status,
 		          last_hash, change_count, active,
 		          last_checked, created_at`,
-		url, interval,
+		url, interval, userID,
 	).Scan(
 		&m.ID, &m.URL, &m.CheckInterval,
 		&m.LastStatus, &m.LastHash, &m.ChangeCount,
@@ -286,17 +284,17 @@ func CreateMonitor(db *sql.DB, url, interval string) (*Monitor, error) {
 	return &m, err
 }
 
-// ListMonitors returns all active monitors ordered by creation date.
-func ListMonitors(db *sql.DB) ([]Monitor, error) {
+// ListMonitors returns active monitors owned by userID.
+func ListMonitors(db *sql.DB, userID string) ([]Monitor, error) {
 	rows, err := db.Query(`
 		SELECT id, url, check_interval, last_status,
 		       last_hash, change_count, active,
 		       last_checked, created_at
 		FROM monitors
-		WHERE active = true
+		WHERE active = true AND user_id = $1
 		ORDER BY created_at DESC
 		LIMIT 100
-	`)
+	`, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -317,7 +315,7 @@ func ListMonitors(db *sql.DB) ([]Monitor, error) {
 	return monitors, rows.Err()
 }
 
-// DueMonitors returns monitors that are due for a check.
+// DueMonitors returns all monitors due for a check (global — for background worker).
 func DueMonitors(db *sql.DB) ([]Monitor, error) {
 	rows, err := db.Query(`
 		SELECT id, url, check_interval, last_status,
@@ -355,7 +353,7 @@ func DueMonitors(db *sql.DB) ([]Monitor, error) {
 	return monitors, rows.Err()
 }
 
-// UpdateMonitorState updates the last known state after a check.
+// UpdateMonitorState updates last known state after a check.
 func UpdateMonitorState(db *sql.DB, id string, status int, hash string) error {
 	_, err := db.Exec(`
 		UPDATE monitors
@@ -368,11 +366,10 @@ func UpdateMonitorState(db *sql.DB, id string, status int, hash string) error {
 	return err
 }
 
-// IncrementChangeCount bumps the change counter on a monitor.
+// IncrementChangeCount bumps the change counter.
 func IncrementChangeCount(db *sql.DB, id string) error {
 	_, err := db.Exec(
-		"UPDATE monitors SET change_count = change_count + 1 WHERE id = $1",
-		id,
+		"UPDATE monitors SET change_count = change_count + 1 WHERE id = $1", id,
 	)
 	return err
 }
@@ -389,17 +386,19 @@ func RecordChange(db *sql.DB, c Change) error {
 	return err
 }
 
-// ListChanges returns the most recent changes, optionally filtered by URL.
-func ListChanges(db *sql.DB, url string) ([]Change, error) {
+// ListChanges returns changes for monitors owned by userID.
+func ListChanges(db *sql.DB, userID, url string) ([]Change, error) {
 	query := `
 		SELECT c.id, c.monitor_id, c.url,
 		       c.old_status, c.new_status,
 		       c.old_hash, c.new_hash, c.detected_at
 		FROM changes c
+		JOIN monitors m ON m.id = c.monitor_id
+		WHERE m.user_id = $1
 		ORDER BY c.detected_at DESC
 		LIMIT 100
 	`
-	args := []interface{}{}
+	args := []interface{}{userID}
 
 	if url != "" {
 		query = `
@@ -407,7 +406,8 @@ func ListChanges(db *sql.DB, url string) ([]Change, error) {
 			       c.old_status, c.new_status,
 			       c.old_hash, c.new_hash, c.detected_at
 			FROM changes c
-			WHERE c.url = $1
+			JOIN monitors m ON m.id = c.monitor_id
+			WHERE m.user_id = $1 AND c.url = $2
 			ORDER BY c.detected_at DESC
 			LIMIT 100
 		`
@@ -435,59 +435,24 @@ func ListChanges(db *sql.DB, url string) ([]Change, error) {
 	return changes, rows.Err()
 }
 
-// DeactivateMonitor soft-deletes a monitor.
-func DeactivateMonitor(db *sql.DB, id string) error {
-	_, err := db.Exec(
-		"UPDATE monitors SET active = false WHERE id = $1", id,
+// DeactivateMonitor soft-deletes a monitor only if owned by userID.
+func DeactivateMonitor(db *sql.DB, id, userID string) error {
+	result, err := db.Exec(
+		"UPDATE monitors SET active = false WHERE id = $1 AND user_id = $2",
+		id, userID,
 	)
-	return err
-}
-
-// ── Errors ────────────────────────────────────────────────────────────────────
-type storeError string
-
-func (e storeError) Error() string { return string(e) }
-
-const ErrMonitorLimitReached storeError = "monitor limit reached — maximum 50 active monitors"
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
-func nullableInt(n int) interface{} {
-	if n == 0 {
-		return nil
+	if err != nil {
+		return err
 	}
-	return n
-}
-
-// ── User type ─────────────────────────────────────────────────────────────────
-type User struct {
-	ID            string     `json:"id"`
-	Email         string     `json:"email"`
-	Handle        string     `json:"handle"`
-	PasswordHash  string     `json:"-"` // never serialized
-	Role          string     `json:"role"`
-	MFASecret     *string    `json:"-"` // never serialized
-	MFAEnabled    bool       `json:"mfa_enabled"`
-	EmailVerified bool       `json:"email_verified"`
-	LastLogin     *time.Time `json:"last_login"`
-	CreatedAt     time.Time  `json:"created_at"`
-	UpdatedAt     time.Time  `json:"updated_at"`
-}
-
-// ── APIKey type ───────────────────────────────────────────────────────────────
-type APIKey struct {
-	ID        string     `json:"id"`
-	UserID    string     `json:"user_id"`
-	Name      string     `json:"name"`
-	KeyHash   string     `json:"-"` // never serialized
-	LastUsed  *time.Time `json:"last_used"`
-	ExpiresAt *time.Time `json:"expires_at"`
-	Active    bool       `json:"active"`
-	CreatedAt time.Time  `json:"created_at"`
+	rows, _ := result.RowsAffected()
+	if rows == 0 {
+		return ErrNotOwner
+	}
+	return nil
 }
 
 // ── User queries ──────────────────────────────────────────────────────────────
 
-// CreateUser inserts a new user. Returns error on duplicate email or handle.
 func CreateUser(db *sql.DB, email, handle, passwordHash string) (*User, error) {
 	var u User
 	err := db.QueryRow(`
@@ -508,7 +473,6 @@ func CreateUser(db *sql.DB, email, handle, passwordHash string) (*User, error) {
 	return &u, nil
 }
 
-// GetUserByEmail retrieves a user by email for login.
 func GetUserByEmail(db *sql.DB, email string) (*User, error) {
 	var u User
 	err := db.QueryRow(`
@@ -531,7 +495,6 @@ func GetUserByEmail(db *sql.DB, email string) (*User, error) {
 	return &u, nil
 }
 
-// GetUserByID retrieves a user by UUID.
 func GetUserByID(db *sql.DB, id string) (*User, error) {
 	var u User
 	err := db.QueryRow(`
@@ -554,7 +517,6 @@ func GetUserByID(db *sql.DB, id string) (*User, error) {
 	return &u, nil
 }
 
-// GetUserByHandle retrieves a user by handle.
 func GetUserByHandle(db *sql.DB, handle string) (*User, error) {
 	var u User
 	err := db.QueryRow(`
@@ -577,7 +539,6 @@ func GetUserByHandle(db *sql.DB, handle string) (*User, error) {
 	return &u, nil
 }
 
-// UpdateLastLogin stamps the login time.
 func UpdateLastLogin(db *sql.DB, userID string) error {
 	_, err := db.Exec(
 		"UPDATE users SET last_login = now(), updated_at = now() WHERE id = $1",
@@ -586,7 +547,6 @@ func UpdateLastLogin(db *sql.DB, userID string) error {
 	return err
 }
 
-// EnableMFA stores the encrypted TOTP secret and enables MFA.
 func EnableMFA(db *sql.DB, userID, encryptedSecret string) error {
 	_, err := db.Exec(`
 		UPDATE users
@@ -601,7 +561,6 @@ func EnableMFA(db *sql.DB, userID, encryptedSecret string) error {
 
 // ── API Key queries ───────────────────────────────────────────────────────────
 
-// CreateAPIKey stores a new API key for a user.
 func CreateAPIKey(db *sql.DB, userID, name, keyHash string) (*APIKey, error) {
 	var k APIKey
 	err := db.QueryRow(`
@@ -619,7 +578,6 @@ func CreateAPIKey(db *sql.DB, userID, name, keyHash string) (*APIKey, error) {
 	return &k, nil
 }
 
-// GetUserByAPIKey looks up a user by their hashed API key.
 func GetUserByAPIKey(db *sql.DB, keyHash string) (*User, error) {
 	var u User
 	err := db.QueryRow(`
@@ -644,7 +602,6 @@ func GetUserByAPIKey(db *sql.DB, keyHash string) (*User, error) {
 		return nil, err
 	}
 
-	// Stamp last_used on the API key
 	db.Exec(
 		"UPDATE api_keys SET last_used = now() WHERE key_hash = $1",
 		keyHash,
@@ -653,7 +610,6 @@ func GetUserByAPIKey(db *sql.DB, keyHash string) (*User, error) {
 	return &u, nil
 }
 
-// ListAPIKeys returns all active API keys for a user (hashes omitted).
 func ListAPIKeys(db *sql.DB, userID string) ([]APIKey, error) {
 	rows, err := db.Query(`
 		SELECT id, user_id, name, key_hash, last_used, expires_at, active, created_at
@@ -681,11 +637,18 @@ func ListAPIKeys(db *sql.DB, userID string) ([]APIKey, error) {
 	return keys, rows.Err()
 }
 
-// RevokeAPIKey deactivates an API key by ID.
 func RevokeAPIKey(db *sql.DB, keyID, userID string) error {
 	_, err := db.Exec(
 		"UPDATE api_keys SET active = false WHERE id = $1 AND user_id = $2",
 		keyID, userID,
 	)
 	return err
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+func nullableInt(n int) interface{} {
+	if n == 0 {
+		return nil
+	}
+	return n
 }

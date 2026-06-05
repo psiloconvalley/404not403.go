@@ -6,12 +6,11 @@ import (
 	"strings"
 
 	"github.com/psiloconvalley/404not403/internal/app"
+	"github.com/psiloconvalley/404not403/internal/middleware"
 	"github.com/psiloconvalley/404not403/internal/store"
 )
 
 // Monitor dispatches POST and DELETE on /api/monitor.
-// POST  — create a new monitor
-// DELETE — deactivate an existing monitor by ?id=
 func Monitor(a *app.App) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
@@ -27,6 +26,8 @@ func Monitor(a *app.App) http.HandlerFunc {
 }
 
 func createMonitor(a *app.App, w http.ResponseWriter, r *http.Request) {
+	userID := middleware.GetUserID(r)
+
 	var input struct {
 		URL      string `json:"url"`
 		Interval string `json:"interval"`
@@ -55,10 +56,10 @@ func createMonitor(a *app.App, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	m, err := store.CreateMonitor(a.DB, input.URL, input.Interval)
+	m, err := store.CreateMonitor(a.DB, userID, input.URL, input.Interval)
 	if err != nil {
 		if err == store.ErrMonitorLimitReached {
-			http.Error(w, `{"error":"monitor limit reached"}`, http.StatusTooManyRequests)
+			http.Error(w, `{"error":"monitor limit reached — max 10 per account"}`, http.StatusTooManyRequests)
 			return
 		}
 		http.Error(w, `{"error":"failed to create monitor"}`, http.StatusInternalServerError)
@@ -69,13 +70,19 @@ func createMonitor(a *app.App, w http.ResponseWriter, r *http.Request) {
 }
 
 func deactivateMonitor(a *app.App, w http.ResponseWriter, r *http.Request) {
+	userID := middleware.GetUserID(r)
+
 	id := r.URL.Query().Get("id")
 	if id == "" {
 		http.Error(w, `{"error":"id is required"}`, http.StatusBadRequest)
 		return
 	}
 
-	if err := store.DeactivateMonitor(a.DB, id); err != nil {
+	if err := store.DeactivateMonitor(a.DB, id, userID); err != nil {
+		if err == store.ErrNotOwner {
+			http.Error(w, `{"error":"you do not own this monitor"}`, http.StatusForbidden)
+			return
+		}
 		http.Error(w, `{"error":"failed to deactivate monitor"}`, http.StatusInternalServerError)
 		return
 	}
@@ -87,8 +94,9 @@ func deactivateMonitor(a *app.App, w http.ResponseWriter, r *http.Request) {
 func ListMonitors(a *app.App) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
+		userID := middleware.GetUserID(r)
 
-		monitors, err := store.ListMonitors(a.DB)
+		monitors, err := store.ListMonitors(a.DB, userID)
 		if err != nil {
 			http.Error(w, `{"error":"failed to list monitors"}`, http.StatusInternalServerError)
 			return
@@ -106,10 +114,10 @@ func ListMonitors(a *app.App) http.HandlerFunc {
 func ListChanges(a *app.App) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-
+		userID := middleware.GetUserID(r)
 		url := r.URL.Query().Get("url")
 
-		changes, err := store.ListChanges(a.DB, url)
+		changes, err := store.ListChanges(a.DB, userID, url)
 		if err != nil {
 			http.Error(w, `{"error":"failed to list changes"}`, http.StatusInternalServerError)
 			return
