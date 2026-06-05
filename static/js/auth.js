@@ -169,6 +169,50 @@ async function refreshSessionUI() {
     }
 }
 
+// ── Handle availability check ────────────────────────────────────────────────
+var handleTimer = null;
+
+function checkHandleAvailability() {
+    var input = document.getElementById('register-handle');
+    var status = document.getElementById('handle-status');
+    var handle = input.value.trim().toLowerCase();
+
+    if (handleTimer) clearTimeout(handleTimer);
+
+    if (handle.length < 3) {
+        status.textContent = '';
+        status.className = 'handle-status';
+        return;
+    }
+
+    if (handle.length > 32) {
+        status.textContent = 'TOO LONG';
+        status.className = 'handle-status handle-taken';
+        return;
+    }
+
+    status.textContent = 'CHECKING...';
+    status.className = 'handle-status handle-checking';
+
+    handleTimer = setTimeout(async function() {
+        try {
+            var response = await fetch('/api/auth/check-handle?handle=' + encodeURIComponent(handle));
+            var data = await response.json();
+
+            if (data.available) {
+                status.textContent = 'AVAILABLE';
+                status.className = 'handle-status handle-available';
+            } else {
+                status.textContent = data.reason ? data.reason.toUpperCase() : 'TAKEN';
+                status.className = 'handle-status handle-taken';
+            }
+        } catch (err) {
+            status.textContent = '';
+            status.className = 'handle-status';
+        }
+    }, 500);
+}
+
 // ── Modal dismiss on outside click ───────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', function() {
     var modal = document.getElementById('auth-modal');
@@ -179,4 +223,10 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     refreshSessionUI();
+
+ // Handle availability check
+    var handleInput = document.getElementById('register-handle');
+    if (handleInput) {
+        handleInput.addEventListener('input', checkHandleAvailability);
+    }
 });

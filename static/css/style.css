@@ -1181,3 +1181,25 @@ button:hover {
         margin: 0.5rem;
     }
 }
+
+/* ── Handle Availability Status ── */
+.handle-status {
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    font-weight: 600;
+    letter-spacing: 2px;
+    min-height: 1.2rem;
+    margin-top: 0.25rem;
+}
+
+.handle-available {
+    color: var(--status-ok);
+}
+
+.handle-taken {
+    color: var(--status-block);
+}
+
+.handle-checking {
+    color: var(--text-muted);
+}

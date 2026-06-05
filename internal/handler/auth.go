@@ -229,6 +229,36 @@ func Me(a *app.App) http.HandlerFunc {
 	}
 }
 
+// CheckHandle handles GET /api/auth/check-handle?handle=...
+func CheckHandle(a *app.App) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+
+		handle := strings.TrimSpace(strings.ToLower(r.URL.Query().Get("handle")))
+		if handle == "" || len(handle) < 3 {
+			w.Write([]byte(`{"available":false,"reason":"handle must be at least 3 characters"}`))
+			return
+		}
+		if len(handle) > 32 {
+			w.Write([]byte(`{"available":false,"reason":"handle must be 32 characters or less"}`))
+			return
+		}
+
+		existing, err := store.GetUserByHandle(a.DB, handle)
+		if err != nil {
+			http.Error(w, `{"error":"internal error"}`, http.StatusInternalServerError)
+			return
+		}
+
+		if existing != nil {
+			w.Write([]byte(`{"available":false,"reason":"handle is taken"}`))
+			return
+		}
+
+		w.Write([]byte(`{"available":true}`))
+	}
+}
+
 // ── Cookie helper ─────────────────────────────────────────────────────────────
 func setSessionCookie(w http.ResponseWriter, token string) {
 	http.SetCookie(w, &http.Cookie{
