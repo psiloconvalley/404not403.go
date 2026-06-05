@@ -66,14 +66,23 @@ func checkMonitor(a *app.App, m store.Monitor) {
 	}
 
 	// First check — no previous state to compare against
-	if m.LastHash == "" && m.LastStatus == 0 {
-		log.Printf("👻 Worker: first check recorded [%s] → %d", m.URL, result.StatusCode)
+	if m.LastHash == nil && m.LastStatus == nil {
+	    log.Printf("👻 Worker: first check recorded [%s] → %d", m.URL, result.StatusCode)
 		return
 	}
 
-	// Detect changes
-	statusChanged := result.StatusCode != m.LastStatus
-	hashChanged   := result.BodyHash != m.LastHash
+	// Detect changes — dereference pointers safely
+	oldStatus := 0
+	if m.LastStatus != nil {
+		oldStatus = *m.LastStatus
+	}
+	oldHash := ""
+	if m.LastHash != nil {
+		oldHash = *m.LastHash
+	}
+
+	statusChanged := result.StatusCode != oldStatus
+	hashChanged   := result.BodyHash != oldHash
 
 	if !statusChanged && !hashChanged {
 		return
@@ -83,12 +92,11 @@ func checkMonitor(a *app.App, m store.Monitor) {
 	change := store.Change{
 		MonitorID: m.ID,
 		URL:       m.URL,
-		OldStatus: m.LastStatus,
+		OldStatus: oldStatus,
 		NewStatus: result.StatusCode,
-		OldHash:   m.LastHash,
+		OldHash:   oldHash,
 		NewHash:   result.BodyHash,
 	}
-
 	if err := store.RecordChange(a.DB, change); err != nil {
 		log.Printf("⚠️  Worker: RecordChange error [%s]: %v", m.URL, err)
 		return

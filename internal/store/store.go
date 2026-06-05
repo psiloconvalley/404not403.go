@@ -15,11 +15,11 @@ type Monitor struct {
 	ID            string
 	URL           string
 	CheckInterval string
-	LastStatus    int
-	LastHash      string
+	LastStatus    *int
+	LastHash      *string
 	ChangeCount   int
 	Active        bool
-	LastChecked   time.Time
+	LastChecked   *time.Time
 	CreatedAt     time.Time
 }
 
