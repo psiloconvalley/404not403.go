@@ -72,7 +72,7 @@ async function register() {
 
 // ── Login ────────────────────────────────────────────────────────────────────
 async function login() {
-    var email = document.getElementById('login-email').value.trim();
+    var identifier = document.getElementById('login-email').value.trim();
     var password = document.getElementById('login-password').value;
     var mfaCode = document.getElementById('login-mfa').value.trim();
     var errEl = document.getElementById('login-error');
@@ -86,7 +86,7 @@ async function login() {
             headers: { 'Content-Type': 'application/json' },
             credentials: 'same-origin',
             body: JSON.stringify({
-                email: email,
+                identifier: identifier,
                 password: password,
                 mfa_code: mfaCode
             }),
@@ -149,7 +149,7 @@ async function refreshSessionUI() {
         loggedOut.style.display = 'none';
         loggedIn.style.display = 'flex';
         authHandle.textContent = me.handle;
-        authRole.textContent = me.role;
+        authRole.textContent = ({observer:"FREE TIER",analyst:"PRO",admin:"ADMIN"})[me.role] || me.role.toUpperCase();
 
         // Monitor section
         gate.style.display = 'none';

@@ -97,11 +97,10 @@ func Login(a *app.App) http.HandlerFunc {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-
 		var input struct {
-			Email    string `json:"email"`
-			Password string `json:"password"`
-			MFACode  string `json:"mfa_code"`
+		    Identifier string `json:"identifier"`
+		    Password   string `json:"password"`
+		    MFACode    string `json:"mfa_code"`
 		}
 
 		if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
@@ -109,14 +108,22 @@ func Login(a *app.App) http.HandlerFunc {
 			return
 		}
 
-		input.Email = strings.TrimSpace(strings.ToLower(input.Email))
+		input.Identifier = strings.TrimSpace(strings.ToLower(input.Identifier))
 
-		if input.Email == "" || input.Password == "" {
-			http.Error(w, `{"error":"email and password are required"}`, http.StatusBadRequest)
+		if input.Identifier == "" || input.Password == "" {
+			http.Error(w, `{"error":"identifier and password are required"}`, http.StatusBadRequest)
 			return
 		}
 
-		user, err := store.GetUserByEmail(a.DB, input.Email)
+		// Look up by email or handle
+		var user *store.User
+		var err error
+		if strings.Contains(input.Identifier, "@") {
+			user, err = store.GetUserByEmail(a.DB, input.Identifier)
+		} else {
+			user, err = store.GetUserByHandle(a.DB, input.Identifier)
+		}
+
 		if err != nil {
 			http.Error(w, `{"error":"internal error"}`, http.StatusInternalServerError)
 			return
@@ -125,7 +132,7 @@ func Login(a *app.App) http.HandlerFunc {
 			http.Error(w, `{"error":"invalid credentials"}`, http.StatusUnauthorized)
 			return
 		}
-
+			
 		valid, err := auth.VerifyPassword(input.Password, user.PasswordHash)
 		if err != nil || !valid {
 			http.Error(w, `{"error":"invalid credentials"}`, http.StatusUnauthorized)

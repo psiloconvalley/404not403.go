@@ -554,6 +554,29 @@ func GetUserByID(db *sql.DB, id string) (*User, error) {
 	return &u, nil
 }
 
+// GetUserByHandle retrieves a user by handle.
+func GetUserByHandle(db *sql.DB, handle string) (*User, error) {
+	var u User
+	err := db.QueryRow(`
+		SELECT id, email, handle, password_hash, role,
+		       mfa_secret, mfa_enabled, email_verified,
+		       last_login, created_at, updated_at
+		FROM users WHERE handle = $1`,
+		handle,
+	).Scan(
+		&u.ID, &u.Email, &u.Handle, &u.PasswordHash, &u.Role,
+		&u.MFASecret, &u.MFAEnabled, &u.EmailVerified,
+		&u.LastLogin, &u.CreatedAt, &u.UpdatedAt,
+	)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &u, nil
+}
+
 // UpdateLastLogin stamps the login time.
 func UpdateLastLogin(db *sql.DB, userID string) error {
 	_, err := db.Exec(
