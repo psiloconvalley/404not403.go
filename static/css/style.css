@@ -1203,3 +1203,168 @@ button:hover {
 .handle-checking {
     color: var(--text-muted);
 }
+
+/* ── Mobile Refinement Override ─────────────────────────────────────────────── */
+@media (max-width: 600px) {
+    .page-wrapper {
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+
+    /* Header + auth bar */
+    .header-top {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 1rem;
+    }
+
+    .auth-bar {
+        width: 100%;
+    }
+
+    .auth-logged-out,
+    .auth-logged-in {
+        width: 100%;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        align-items: stretch;
+    }
+
+    .auth-btn {
+        flex: 1;
+        justify-content: center;
+        padding: 0.65rem 0.85rem;
+    }
+
+    .auth-handle {
+        width: 100%;
+        display: block;
+    }
+
+    .auth-role {
+        width: 100%;
+        display: block;
+        margin-top: -0.15rem;
+        margin-bottom: 0.35rem;
+    }
+
+    /* Modal */
+    .modal-card {
+        width: calc(100% - 1rem);
+        max-width: none;
+        margin: 0.5rem;
+    }
+
+    .modal-header,
+    .modal-body {
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+
+    /* Ghost monitor controls */
+    .monitor-input-group {
+        display: flex;
+        flex-direction: column;
+        gap: 0;
+    }
+
+    .monitor-input,
+    .monitor-select,
+    #monitor-btn {
+        width: 100%;
+    }
+
+    .monitor-select {
+        border-left: none;
+        border-top: 1px solid var(--border);
+        padding: 0.75rem 1rem;
+    }
+
+    #monitor-btn {
+        border-left: none;
+        border-top: 1px solid var(--border);
+        padding: 0.8rem 1rem;
+        text-align: center;
+    }
+
+    /* Monitor rows become stacked cards */
+    .monitor-row {
+        display: grid;
+        grid-template-columns: auto 1fr auto;
+        align-items: start;
+        gap: 0.45rem 0.6rem;
+        padding: 0.8rem 0;
+    }
+
+    .monitor-dot {
+        margin-top: 0.25rem;
+    }
+
+    .monitor-url {
+        grid-column: 2 / 4;
+        white-space: normal;
+        overflow: visible;
+        text-overflow: unset;
+        line-height: 1.4;
+        word-break: break-word;
+    }
+
+    .monitor-status {
+        grid-column: 1 / 2;
+        grid-row: 2;
+        text-align: left;
+        min-width: 0;
+    }
+
+    .monitor-changes {
+        grid-column: 2 / 3;
+        grid-row: 2;
+        text-align: left;
+        min-width: 0;
+    }
+
+    .monitor-delete {
+        grid-column: 3 / 4;
+        grid-row: 1 / 3;
+        align-self: center;
+        justify-self: end;
+        margin-left: 0;
+    }
+
+    .monitor-checked,
+    .monitor-interval {
+        display: none;
+    }
+
+    /* Change rows */
+    .change-row {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 0.4rem 0.6rem;
+        align-items: start;
+    }
+
+    .change-url {
+        grid-column: 1 / 3;
+        white-space: normal;
+        overflow: visible;
+        text-overflow: unset;
+        word-break: break-word;
+    }
+
+    .change-transition {
+        min-width: 0;
+        text-align: left;
+    }
+
+    .change-when {
+        min-width: 0;
+        text-align: right;
+    }
+
+    /* Section copy */
+    .section-desc {
+        line-height: 1.55;
+    }
+}
