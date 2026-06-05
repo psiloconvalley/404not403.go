@@ -46,6 +46,44 @@
         </section>
 
         <div class="section-divider">
+            <span>GHOST LINK MONITOR</span>
+        </div>
+
+        <section class="monitor-section">
+            <p class="section-desc">Track any URL over time. Detect when pages disappear or change.</p>
+
+            <div class="monitor-input-group">
+                <input
+                    type="url"
+                    id="monitor-url"
+                    class="monitor-input"
+                    placeholder="https://example.com/page-to-watch"
+                    autocomplete="off"
+                    spellcheck="false"
+                />
+                <select id="monitor-interval" class="monitor-select">
+                    <option value="1h">EVERY 1H</option>
+                    <option value="6h">EVERY 6H</option>
+                    <option value="24h">EVERY 24H</option>
+                </select>
+                <button id="monitor-btn" onclick="createMonitor()">MONITOR</button>
+            </div>
+
+            <div class="monitor-list" id="monitor-list">
+                <div class="result-placeholder">
+                    <span>No monitors active</span>
+                </div>
+            </div>
+
+            <div class="changes-section" id="changes-section" style="display:none;">
+                <div class="section-divider section-divider-inner">
+                    <span>DETECTED CHANGES</span>
+                </div>
+                <div class="changes-list" id="changes-list"></div>
+            </div>
+        </section>
+
+        <div class="section-divider">
             <span>STATUS SIMULATOR</span>
         </div>
 
@@ -90,5 +128,6 @@
 </div>
     <script src="/static/js/simulator.js"></script>
     <script src="/static/js/inspector.js"></script>
+    <script src="/static/js/monitor.js"></script>
 </body>
 </html>
