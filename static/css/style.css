@@ -670,7 +670,7 @@ button:hover {
     font-family: var(--font-sans);
     font-size: 0.72rem;
     font-weight: 300;
-    color: var(--text-muted);
+    color: #a1a1aa;
     line-height: 1.5;
     padding-bottom: 0.4rem;
 }
