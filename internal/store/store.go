@@ -153,6 +153,59 @@ func RunMigrations(db *sql.DB) {
 			name: "create_index_changes_detected",
 			sql:  `CREATE INDEX IF NOT EXISTS idx_changes_detected ON changes(detected_at)`,
 		},
+				{
+			name: "create_users_table",
+			sql: `CREATE TABLE IF NOT EXISTS users (
+				id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+				email          TEXT NOT NULL UNIQUE,
+				handle         TEXT NOT NULL UNIQUE,
+				password_hash  TEXT NOT NULL,
+				role           TEXT NOT NULL DEFAULT 'observer',
+				mfa_secret     TEXT,
+				mfa_enabled    BOOLEAN NOT NULL DEFAULT false,
+				email_verified BOOLEAN NOT NULL DEFAULT false,
+				last_login     TIMESTAMP,
+				created_at     TIMESTAMP NOT NULL DEFAULT now(),
+				updated_at     TIMESTAMP NOT NULL DEFAULT now()
+			)`,
+		},
+		{
+			name: "create_index_users_email",
+			sql:  `CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)`,
+		},
+		{
+			name: "create_index_users_handle",
+			sql:  `CREATE INDEX IF NOT EXISTS idx_users_handle ON users(handle)`,
+		},
+		{
+			name: "create_api_keys_table",
+			sql: `CREATE TABLE IF NOT EXISTS api_keys (
+				id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+				user_id    UUID NOT NULL REFERENCES users(id),
+				name       TEXT NOT NULL,
+				key_hash   TEXT NOT NULL UNIQUE,
+				last_used  TIMESTAMP,
+				expires_at TIMESTAMP,
+				active     BOOLEAN NOT NULL DEFAULT true,
+				created_at TIMESTAMP NOT NULL DEFAULT now()
+			)`,
+		},
+		{
+			name: "create_index_api_keys_user",
+			sql:  `CREATE INDEX IF NOT EXISTS idx_api_keys_user ON api_keys(user_id)`,
+		},
+		{
+			name: "create_index_api_keys_hash",
+			sql:  `CREATE INDEX IF NOT EXISTS idx_api_keys_hash ON api_keys(key_hash)`,
+		},
+		{
+			name: "add_user_id_to_monitors",
+			sql:  `ALTER TABLE monitors ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES users(id)`,
+		},
+		{
+			name: "add_user_id_to_scans",
+			sql:  `ALTER TABLE scans ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES users(id)`,
+		},
 	}
 
 	for _, m := range migrations {
@@ -403,4 +456,213 @@ func nullableInt(n int) interface{} {
 		return nil
 	}
 	return n
+}
+
+// ── User type ─────────────────────────────────────────────────────────────────
+type User struct {
+	ID            string     `json:"id"`
+	Email         string     `json:"email"`
+	Handle        string     `json:"handle"`
+	PasswordHash  string     `json:"-"` // never serialized
+	Role          string     `json:"role"`
+	MFASecret     *string    `json:"-"` // never serialized
+	MFAEnabled    bool       `json:"mfa_enabled"`
+	EmailVerified bool       `json:"email_verified"`
+	LastLogin     *time.Time `json:"last_login"`
+	CreatedAt     time.Time  `json:"created_at"`
+	UpdatedAt     time.Time  `json:"updated_at"`
+}
+
+// ── APIKey type ───────────────────────────────────────────────────────────────
+type APIKey struct {
+	ID        string     `json:"id"`
+	UserID    string     `json:"user_id"`
+	Name      string     `json:"name"`
+	KeyHash   string     `json:"-"` // never serialized
+	LastUsed  *time.Time `json:"last_used"`
+	ExpiresAt *time.Time `json:"expires_at"`
+	Active    bool       `json:"active"`
+	CreatedAt time.Time  `json:"created_at"`
+}
+
+// ── User queries ──────────────────────────────────────────────────────────────
+
+// CreateUser inserts a new user. Returns error on duplicate email or handle.
+func CreateUser(db *sql.DB, email, handle, passwordHash string) (*User, error) {
+	var u User
+	err := db.QueryRow(`
+		INSERT INTO users (email, handle, password_hash)
+		VALUES ($1, $2, $3)
+		RETURNING id, email, handle, password_hash, role,
+		          mfa_secret, mfa_enabled, email_verified,
+		          last_login, created_at, updated_at`,
+		email, handle, passwordHash,
+	).Scan(
+		&u.ID, &u.Email, &u.Handle, &u.PasswordHash, &u.Role,
+		&u.MFASecret, &u.MFAEnabled, &u.EmailVerified,
+		&u.LastLogin, &u.CreatedAt, &u.UpdatedAt,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &u, nil
+}
+
+// GetUserByEmail retrieves a user by email for login.
+func GetUserByEmail(db *sql.DB, email string) (*User, error) {
+	var u User
+	err := db.QueryRow(`
+		SELECT id, email, handle, password_hash, role,
+		       mfa_secret, mfa_enabled, email_verified,
+		       last_login, created_at, updated_at
+		FROM users WHERE email = $1`,
+		email,
+	).Scan(
+		&u.ID, &u.Email, &u.Handle, &u.PasswordHash, &u.Role,
+		&u.MFASecret, &u.MFAEnabled, &u.EmailVerified,
+		&u.LastLogin, &u.CreatedAt, &u.UpdatedAt,
+	)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &u, nil
+}
+
+// GetUserByID retrieves a user by UUID.
+func GetUserByID(db *sql.DB, id string) (*User, error) {
+	var u User
+	err := db.QueryRow(`
+		SELECT id, email, handle, password_hash, role,
+		       mfa_secret, mfa_enabled, email_verified,
+		       last_login, created_at, updated_at
+		FROM users WHERE id = $1`,
+		id,
+	).Scan(
+		&u.ID, &u.Email, &u.Handle, &u.PasswordHash, &u.Role,
+		&u.MFASecret, &u.MFAEnabled, &u.EmailVerified,
+		&u.LastLogin, &u.CreatedAt, &u.UpdatedAt,
+	)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &u, nil
+}
+
+// UpdateLastLogin stamps the login time.
+func UpdateLastLogin(db *sql.DB, userID string) error {
+	_, err := db.Exec(
+		"UPDATE users SET last_login = now(), updated_at = now() WHERE id = $1",
+		userID,
+	)
+	return err
+}
+
+// EnableMFA stores the encrypted TOTP secret and enables MFA.
+func EnableMFA(db *sql.DB, userID, encryptedSecret string) error {
+	_, err := db.Exec(`
+		UPDATE users
+		SET mfa_secret  = $1,
+		    mfa_enabled = true,
+		    updated_at  = now()
+		WHERE id = $2`,
+		encryptedSecret, userID,
+	)
+	return err
+}
+
+// ── API Key queries ───────────────────────────────────────────────────────────
+
+// CreateAPIKey stores a new API key for a user.
+func CreateAPIKey(db *sql.DB, userID, name, keyHash string) (*APIKey, error) {
+	var k APIKey
+	err := db.QueryRow(`
+		INSERT INTO api_keys (user_id, name, key_hash)
+		VALUES ($1, $2, $3)
+		RETURNING id, user_id, name, key_hash, last_used, expires_at, active, created_at`,
+		userID, name, keyHash,
+	).Scan(
+		&k.ID, &k.UserID, &k.Name, &k.KeyHash,
+		&k.LastUsed, &k.ExpiresAt, &k.Active, &k.CreatedAt,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &k, nil
+}
+
+// GetUserByAPIKey looks up a user by their hashed API key.
+func GetUserByAPIKey(db *sql.DB, keyHash string) (*User, error) {
+	var u User
+	err := db.QueryRow(`
+		SELECT u.id, u.email, u.handle, u.password_hash, u.role,
+		       u.mfa_secret, u.mfa_enabled, u.email_verified,
+		       u.last_login, u.created_at, u.updated_at
+		FROM users u
+		JOIN api_keys k ON k.user_id = u.id
+		WHERE k.key_hash = $1
+		  AND k.active = true
+		  AND (k.expires_at IS NULL OR k.expires_at > now())`,
+		keyHash,
+	).Scan(
+		&u.ID, &u.Email, &u.Handle, &u.PasswordHash, &u.Role,
+		&u.MFASecret, &u.MFAEnabled, &u.EmailVerified,
+		&u.LastLogin, &u.CreatedAt, &u.UpdatedAt,
+	)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	// Stamp last_used on the API key
+	db.Exec(
+		"UPDATE api_keys SET last_used = now() WHERE key_hash = $1",
+		keyHash,
+	)
+
+	return &u, nil
+}
+
+// ListAPIKeys returns all active API keys for a user (hashes omitted).
+func ListAPIKeys(db *sql.DB, userID string) ([]APIKey, error) {
+	rows, err := db.Query(`
+		SELECT id, user_id, name, key_hash, last_used, expires_at, active, created_at
+		FROM api_keys
+		WHERE user_id = $1 AND active = true
+		ORDER BY created_at DESC`,
+		userID,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var keys []APIKey
+	for rows.Next() {
+		var k APIKey
+		if err := rows.Scan(
+			&k.ID, &k.UserID, &k.Name, &k.KeyHash,
+			&k.LastUsed, &k.ExpiresAt, &k.Active, &k.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		keys = append(keys, k)
+	}
+	return keys, rows.Err()
+}
+
+// RevokeAPIKey deactivates an API key by ID.
+func RevokeAPIKey(db *sql.DB, keyID, userID string) error {
+	_, err := db.Exec(
+		"UPDATE api_keys SET active = false WHERE id = $1 AND user_id = $2",
+		keyID, userID,
+	)
+	return err
 }
