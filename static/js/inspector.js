@@ -44,6 +44,7 @@ async function inspectURL() {
         }
 
         renderScanResult(result, data);
+        loadScanHistory();
 
     } catch (err) {
         showInspectorError(result, 'Request failed. Check your connection.');
@@ -467,4 +468,109 @@ document.addEventListener('DOMContentLoaded', function() {
             if (e.key === 'Enter') inspectURL();
         });
     }
+});
+
+// ── Scan History ──────────────────────────────────────────────────────────────
+async function loadScanHistory() {
+    var container = document.getElementById('scan-history-list');
+    if (!container) return;
+
+    try {
+        var response = await fetch('/api/scans?limit=8');
+        var scans = await response.json();
+
+        container.innerHTML = '';
+
+        if (!scans || scans.length === 0) {
+            var empty = document.createElement('div');
+            empty.className = 'result-placeholder';
+            var span = document.createElement('span');
+            span.textContent = 'No scans yet';
+            empty.appendChild(span);
+            container.appendChild(empty);
+            return;
+        }
+
+        scans.forEach(function(s) {
+            container.appendChild(renderScanHistoryRow(s));
+        });
+
+    } catch (err) {
+        // Silent fail — history is non-critical
+    }
+}
+
+function renderScanHistoryRow(s) {
+    var row = document.createElement('div');
+    row.className = 'scan-history-row';
+
+    // Status dot
+    var dot = document.createElement('span');
+    dot.className = 'monitor-dot ' + historyDotClass(s.status_code);
+
+    // URL
+    var url = document.createElement('span');
+    url.className = 'scan-history-url';
+    url.textContent = s.url.replace('https://', '').replace('http://', '');
+
+    // Status code
+    var status = document.createElement('span');
+    status.className = 'scan-history-status ' + historyStatusClass(s.status_code);
+    status.textContent = s.status_code ? String(s.status_code) : '---';
+
+    // Duration
+    var duration = document.createElement('span');
+    duration.className = 'scan-history-meta';
+    duration.textContent = s.duration_ms + 'ms';
+
+    // Time ago
+    var when = document.createElement('span');
+    when.className = 'scan-history-meta';
+    when.textContent = timeAgoFromISO(s.created_at);
+
+    // Server
+    var server = document.createElement('span');
+    server.className = 'scan-history-server';
+    server.textContent = s.server || '—';
+
+    row.appendChild(dot);
+    row.appendChild(url);
+    row.appendChild(status);
+    row.appendChild(duration);
+    row.appendChild(server);
+    row.appendChild(when);
+
+    return row;
+}
+
+function historyDotClass(code) {
+    if (!code) return 'dot-pending';
+    if (code >= 200 && code < 300) return 'dot-ok';
+    if (code >= 300 && code < 400) return 'dot-warn';
+    if (code >= 400) return 'dot-bad';
+    return 'dot-pending';
+}
+
+function historyStatusClass(code) {
+    if (!code) return '';
+    if (code >= 200 && code < 300) return 'status-ok';
+    if (code >= 300 && code < 400) return 'status-warn';
+    if (code >= 400) return 'status-bad';
+    return '';
+}
+
+function timeAgoFromISO(iso) {
+    var now = new Date();
+    var then = new Date(iso);
+    var seconds = Math.floor((now - then) / 1000);
+    if (seconds < 60)    return seconds + 's ago';
+    if (seconds < 3600)  return Math.floor(seconds / 60) + 'm ago';
+    if (seconds < 86400) return Math.floor(seconds / 3600) + 'h ago';
+    return Math.floor(seconds / 86400) + 'd ago';
+}
+
+// Call loadScanHistory after every successful scan
+// and on page load
+document.addEventListener('DOMContentLoaded', function() {
+    loadScanHistory();
 });
