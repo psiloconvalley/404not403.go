@@ -212,7 +212,106 @@ function checkHandleAvailability() {
         }
     }, 500);
 }
+// ── Forgot Password ──────────────────────────────────────────────────────────
+function showForgotPassword() {
+    var title = document.getElementById('modal-title');
+    var body = document.getElementById('modal-body');
 
+    title.textContent = 'RESET PASSWORD';
+
+    body.innerHTML = '';
+
+    var group = document.createElement('div');
+    group.className = 'form-group';
+
+    var label = document.createElement('label');
+    label.className = 'form-label';
+    label.textContent = 'EMAIL';
+
+    var input = document.createElement('input');
+    input.type = 'email';
+    input.id = 'forgot-email';
+    input.className = 'form-input';
+    input.placeholder = 'you@example.com';
+
+    group.appendChild(label);
+    group.appendChild(input);
+
+    var errEl = document.createElement('div');
+    errEl.className = 'form-error';
+    errEl.id = 'forgot-error';
+
+    var btn = document.createElement('button');
+    btn.className = 'form-submit';
+    btn.textContent = 'SEND RESET LINK';
+    btn.onclick = sendResetLink;
+
+    var back = document.createElement('p');
+    back.className = 'form-switch';
+    var backLink = document.createElement('a');
+    backLink.href = '#';
+    backLink.textContent = 'Back to sign in';
+    backLink.onclick = function(e) {
+        e.preventDefault();
+        closeAuthModal();
+        showAuthModal('login');
+    };
+    back.appendChild(backLink);
+
+    body.appendChild(group);
+    body.appendChild(errEl);
+    body.appendChild(btn);
+    body.appendChild(back);
+}
+
+async function sendResetLink() {
+    var email = document.getElementById('forgot-email').value.trim();
+    var errEl = document.getElementById('forgot-error');
+
+    errEl.textContent = '';
+
+    if (!email) {
+        errEl.textContent = 'Enter your email address';
+        return;
+    }
+
+    try {
+        var response = await fetch('/api/auth/forgot', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: email }),
+        });
+
+        var data = await response.json();
+
+        var body = document.getElementById('modal-body');
+        body.innerHTML = '';
+
+        var msg = document.createElement('div');
+        msg.className = 'result-placeholder';
+        var span = document.createElement('span');
+        span.textContent = 'If an account exists, a reset link has been sent.';
+        msg.appendChild(span);
+        body.appendChild(msg);
+
+        var back = document.createElement('p');
+        back.className = 'form-switch';
+        back.style.marginTop = '1rem';
+        var backLink = document.createElement('a');
+        backLink.href = '#';
+        backLink.textContent = 'Back to sign in';
+        backLink.onclick = function(e) {
+            e.preventDefault();
+            closeAuthModal();
+            showAuthModal('login');
+        };
+        back.appendChild(backLink);
+        body.appendChild(back);
+
+    } catch (err) {
+        errEl.textContent = 'Request failed';
+    }
+}
 // ── Modal dismiss on outside click ───────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', function() {
     var modal = document.getElementById('auth-modal');

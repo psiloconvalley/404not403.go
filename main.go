@@ -64,6 +64,9 @@ func main() {
 	mux.HandleFunc("/api/auth/logout", handler.Logout)
 	mux.HandleFunc("/api/auth/me", middleware.RequireAuth(a, handler.Me(a)))
 	mux.HandleFunc("/api/auth/check-handle", handler.CheckHandle(a))
+	mux.HandleFunc("/api/auth/forgot", handler.ForgotPassword(a))
+	mux.HandleFunc("/api/auth/reset", handler.ResetPassword(a))
+	mux.HandleFunc("/reset", handler.ResetPage(a))
 
 	// ── Protected routes — require authentication ─────────────────────
 	mux.HandleFunc("/api/monitor", middleware.RequireAuth(a, handler.Monitor(a)))

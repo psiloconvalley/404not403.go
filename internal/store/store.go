@@ -204,6 +204,19 @@ func RunMigrations(db *sql.DB) {
 		{name: "create_index_api_keys_hash", sql: `CREATE INDEX IF NOT EXISTS idx_api_keys_hash ON api_keys(key_hash)`},
 		{name: "add_user_id_to_monitors",    sql: `ALTER TABLE monitors ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES users(id)`},
 		{name: "add_user_id_to_scans",       sql: `ALTER TABLE scans ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES users(id)`},
+			{
+			name: "create_password_resets_table",
+			sql: `CREATE TABLE IF NOT EXISTS password_resets (
+				id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+				user_id    UUID NOT NULL REFERENCES users(id),
+				token_hash TEXT NOT NULL UNIQUE,
+				expires_at TIMESTAMP NOT NULL,
+				used       BOOLEAN NOT NULL DEFAULT false,
+				created_at TIMESTAMP NOT NULL DEFAULT now()
+			)`,
+		},
+		{name: "create_index_resets_token", sql: `CREATE INDEX IF NOT EXISTS idx_resets_token ON password_resets(token_hash)`},
+		{name: "create_index_resets_user",  sql: `CREATE INDEX IF NOT EXISTS idx_resets_user ON password_resets(user_id)`},
 	}
 
 	for _, m := range migrations {
@@ -751,4 +764,48 @@ func GlobalFeed(db *sql.DB, limit int) ([]ScanRecord, error) {
 		scans = append(scans, s)
 	}
 	return scans, rows.Err()
+}
+
+// ── Password Reset queries ────────────────────────────────────────────────────
+
+// CreatePasswordReset stores a hashed reset token.
+func CreatePasswordReset(db *sql.DB, userID, tokenHash string, expiresAt time.Time) error {
+	_, err := db.Exec(`
+		INSERT INTO password_resets (user_id, token_hash, expires_at)
+		VALUES ($1, $2, $3)`,
+		userID, tokenHash, expiresAt,
+	)
+	return err
+}
+
+// GetPasswordReset looks up a valid, unused reset token.
+func GetPasswordReset(db *sql.DB, tokenHash string) (id string, userID string, err error) {
+	err = db.QueryRow(`
+		SELECT id, user_id FROM password_resets
+		WHERE token_hash = $1
+		  AND used = false
+		  AND expires_at > now()`,
+		tokenHash,
+	).Scan(&id, &userID)
+	if err == sql.ErrNoRows {
+		return "", "", nil
+	}
+	return id, userID, err
+}
+
+// MarkResetUsed marks a reset token as consumed.
+func MarkResetUsed(db *sql.DB, id string) error {
+	_, err := db.Exec(
+		"UPDATE password_resets SET used = true WHERE id = $1", id,
+	)
+	return err
+}
+
+// UpdatePassword changes a user's password hash.
+func UpdatePassword(db *sql.DB, userID, newHash string) error {
+	_, err := db.Exec(
+		"UPDATE users SET password_hash = $1, updated_at = now() WHERE id = $2",
+		newHash, userID,
+	)
+	return err
 }

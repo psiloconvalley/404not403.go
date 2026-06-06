@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/psiloconvalley/404not403/internal/app"
 	"github.com/psiloconvalley/404not403/internal/auth"
@@ -270,4 +271,126 @@ func setSessionCookie(w http.ResponseWriter, token string) {
 		Secure:   true,
 		SameSite: http.SameSiteStrictMode,
 	})
+}
+
+// ForgotPassword handles POST /api/auth/forgot
+func ForgotPassword(a *app.App) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, `{"error":"use POST"}`, http.StatusMethodNotAllowed)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+
+		var input struct {
+			Email string `json:"email"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+			http.Error(w, `{"error":"invalid json"}`, http.StatusBadRequest)
+			return
+		}
+
+		input.Email = strings.TrimSpace(strings.ToLower(input.Email))
+		if input.Email == "" {
+			http.Error(w, `{"error":"email is required"}`, http.StatusBadRequest)
+			return
+		}
+
+		// Always return success — never reveal if email exists
+		w.Write([]byte(`{"status":"if an account exists, a reset link has been sent"}`))
+
+		// Process in background so response is instant
+		go func() {
+			user, err := store.GetUserByEmail(a.DB, input.Email)
+			if err != nil || user == nil {
+				return
+			}
+
+			// Generate random token
+			raw, hash, err := auth.GenerateAPIKey()
+			if err != nil {
+				return
+			}
+
+			// Store hashed token — expires in 1 hour
+			expiry := time.Now().Add(1 * time.Hour)
+			if err := store.CreatePasswordReset(a.DB, user.ID, hash, expiry); err != nil {
+				return
+			}
+
+			// Send email with raw token
+			auth.SendPasswordResetEmail(user.Email, raw)
+		}()
+	}
+}
+
+// ResetPassword handles POST /api/auth/reset
+func ResetPassword(a *app.App) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, `{"error":"use POST"}`, http.StatusMethodNotAllowed)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+
+		var input struct {
+			Token    string `json:"token"`
+			Password string `json:"password"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+			http.Error(w, `{"error":"invalid json"}`, http.StatusBadRequest)
+			return
+		}
+
+		if input.Token == "" || input.Password == "" {
+			http.Error(w, `{"error":"token and password are required"}`, http.StatusBadRequest)
+			return
+		}
+
+		if len(input.Password) < 12 {
+			http.Error(w, `{"error":"password must be at least 12 characters"}`, http.StatusBadRequest)
+			return
+		}
+
+		// Hash the token to look it up
+		tokenHash := auth.HashAPIKey(input.Token)
+
+		resetID, userID, err := store.GetPasswordReset(a.DB, tokenHash)
+		if err != nil {
+			http.Error(w, `{"error":"internal error"}`, http.StatusInternalServerError)
+			return
+		}
+		if resetID == "" {
+			http.Error(w, `{"error":"invalid or expired reset link"}`, http.StatusUnauthorized)
+			return
+		}
+
+		// Hash new password
+		newHash, err := auth.HashPassword(input.Password)
+		if err != nil {
+			http.Error(w, `{"error":"internal error"}`, http.StatusInternalServerError)
+			return
+		}
+
+		// Update password
+		if err := store.UpdatePassword(a.DB, userID, newHash); err != nil {
+			http.Error(w, `{"error":"failed to update password"}`, http.StatusInternalServerError)
+			return
+		}
+
+		// Mark token as used
+		store.MarkResetUsed(a.DB, resetID)
+
+		w.Write([]byte(`{"status":"password updated successfully"}`))
+	}
+}
+// ResetPage serves the password reset form.
+func ResetPage(a *app.App) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if err := a.Templates.ExecuteTemplate(w, "reset.html", nil); err != nil {
+			http.Error(w, "System Error", http.StatusInternalServerError)
+		}
+	}
 }

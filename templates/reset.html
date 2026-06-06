@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reset Password | 404NOT403</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+<div class="page-wrapper">
+
+    <header class="site-header">
+        <div class="header-top">
+            <div>
+                <h1 class="logo"><span class="logo-404">404</span><span class="logo-not">NOT</span><span class="logo-403">403</span></h1>
+                <p class="tagline">What did the server actually say?</p>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <div class="section-divider">
+            <span>RESET PASSWORD</span>
+        </div>
+
+        <section class="inspector">
+            <div class="modal-card" style="max-width:100%;margin:0;">
+                <div class="modal-body" id="reset-body">
+                    <div class="form-group">
+                        <label class="form-label">NEW PASSWORD</label>
+                        <div class="password-wrapper">
+                            <input type="password" id="reset-password" class="form-input" placeholder="minimum 12 characters" autocomplete="new-password" />
+                            <button type="button" class="password-toggle" onclick="toggleResetPassword()" aria-label="Show password">
+                                <span class="eye-icon" id="reset-eye">◉</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">CONFIRM PASSWORD</label>
+                        <input type="password" id="reset-confirm" class="form-input" placeholder="re-enter password" autocomplete="new-password" />
+                    </div>
+                    <div class="form-error" id="reset-error"></div>
+                    <button class="form-submit" onclick="submitReset()">SET NEW PASSWORD</button>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="site-footer">
+        <div class="section-divider">
+            <span>SYSTEM</span>
+        </div>
+        <nav class="footer-nav">
+            <a href="/">HOME</a>
+            <a href="https://github.com/psiloconvalley" target="_blank">SOURCE</a>
+            <a href="/health" target="_blank">STATUS</a>
+        </nav>
+        <div class="footer-credits">
+            <p>404NOT403 // RAILWAY // V2.0.0</p>
+        </div>
+    </footer>
+
+</div>
+<script>
+function toggleResetPassword() {
+    var input = document.getElementById('reset-password');
+    var icon = document.getElementById('reset-eye');
+    if (input.type === 'password') {
+        input.type = 'text';
+        icon.textContent = '◎';
+    } else {
+        input.type = 'password';
+        icon.textContent = '◉';
+    }
+}
+
+async function submitReset() {
+    var password = document.getElementById('reset-password').value;
+    var confirm = document.getElementById('reset-confirm').value;
+    var errEl = document.getElementById('reset-error');
+
+    errEl.textContent = '';
+
+    if (!password || !confirm) {
+        errEl.textContent = 'Both fields are required';
+        return;
+    }
+
+    if (password !== confirm) {
+        errEl.textContent = 'Passwords do not match';
+        return;
+    }
+
+    if (password.length < 12) {
+        errEl.textContent = 'Password must be at least 12 characters';
+        return;
+    }
+
+    // Extract token from URL query string
+    var params = new URLSearchParams(window.location.search);
+    var token = params.get('token');
+
+    if (!token) {
+        errEl.textContent = 'Invalid reset link — no token found';
+        return;
+    }
+
+    try {
+        var response = await fetch('/api/auth/reset', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token: token, password: password }),
+        });
+
+        var data = await response.json();
+
+        if (!response.ok) {
+            errEl.textContent = data.error || 'Reset failed';
+            return;
+        }
+
+        // Success — replace the form with a success message
+        var body = document.getElementById('reset-body');
+        body.innerHTML = '';
+
+        var msg = document.createElement('div');
+        msg.className = 'result-placeholder';
+        var span = document.createElement('span');
+        span.textContent = 'Password updated successfully';
+        msg.appendChild(span);
+        body.appendChild(msg);
+
+        var link = document.createElement('p');
+        link.className = 'form-switch';
+        link.style.marginTop = '1rem';
+        var a = document.createElement('a');
+        a.href = '/';
+        a.textContent = 'Return to 404NOT403';
+        link.appendChild(a);
+        body.appendChild(link);
+
+    } catch (err) {
+        errEl.textContent = 'Request failed';
+    }
+}
+</script>
+</body>
+</html>
