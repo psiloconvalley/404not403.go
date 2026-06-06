@@ -70,14 +70,38 @@ body {
 }
 
 .logo {
-    font-size: 2.4rem;
+    font-size: 2.8rem;
     font-weight: 700;
     letter-spacing: 4px;
-    color: var(--text-primary);
     line-height: 1;
-    text-shadow: 0 0 40px var(--accent-glow);
+    display: inline-block;
 }
 
+.logo-404 {
+    color: var(--status-block);
+    text-shadow:
+        0 1px 0 #b91c1c,
+        0 2px 0 #991b1b,
+        0 3px 0 #7f1d1d,
+        0 0 30px rgba(239, 68, 68, 0.3);
+}
+
+.logo-not {
+    color: var(--text-primary);
+    text-shadow:
+        0 1px 0 #a1a1aa,
+        0 2px 0 #71717a,
+        0 0 20px rgba(240, 240, 240, 0.15);
+}
+
+.logo-403 {
+    color: var(--status-warn);
+    text-shadow:
+        0 1px 0 #d97706,
+        0 2px 0 #b45309,
+        0 3px 0 #92400e,
+        0 0 30px rgba(245, 158, 11, 0.3);
+}
 .tagline {
     margin-top: 0.75rem;
     font-size: 1.05rem;
@@ -1025,7 +1049,7 @@ button:hover {
     font-size: 0.6rem;
     font-weight: 600;
     letter-spacing: 2px;
-    color: var(--text-muted);
+    color: var(--accent);
     text-transform: uppercase;
 }
 
