@@ -55,7 +55,7 @@ func main() {
 	mux.HandleFunc("/simulate/403", handler.Simulate403(a))
 	mux.HandleFunc("/api/stats", handler.Stats(a))
 	mux.HandleFunc("/api/scan", handler.Scan(a))
-	mux.HandleFunc("/api/scans", handler.RecentScans(a))
+	mux.HandleFunc("/api/scans", middleware.RequireAuth(a, handler.RecentScans(a)))
 	mux.HandleFunc("/api/feed", handler.GlobalFeed(a))
 
 	// ── Auth routes ───────────────────────────────────────────────────
