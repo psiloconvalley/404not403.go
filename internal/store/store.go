@@ -652,3 +652,67 @@ func nullableInt(n int) interface{} {
 	}
 	return n
 }
+
+// ── ScanRecord represents a stored scan result from the database ─────────────
+type ScanRecord struct {
+	ID         string    `json:"id"`
+	URL        string    `json:"url"`
+	StatusCode *int      `json:"status_code"`
+	Server     string    `json:"server"`
+	CDN        string    `json:"cdn"`
+	WAF        string    `json:"waf"`
+	TLSIssuer  string    `json:"tls_issuer"`
+	BodySize   int       `json:"body_size"`
+	BodyHash   string    `json:"body_hash"`
+	DurationMS int       `json:"duration_ms"`
+	Error      string    `json:"error"`
+	Region     string    `json:"region"`
+	CreatedAt  time.Time `json:"created_at"`
+}
+
+// RecentScans returns the last N scans, optionally filtered by URL.
+func RecentScans(db *sql.DB, limit int, url string) ([]ScanRecord, error) {
+	query := `
+		SELECT id, url, status_code, server, cdn, waf,
+		       tls_issuer, body_size, body_hash, duration_ms,
+		       error, region, created_at
+		FROM scans
+		ORDER BY created_at DESC
+		LIMIT $1
+	`
+	args := []interface{}{limit}
+
+	if url != "" {
+		query = `
+			SELECT id, url, status_code, server, cdn, waf,
+			       tls_issuer, body_size, body_hash, duration_ms,
+			       error, region, created_at
+			FROM scans
+			WHERE url = $2
+			ORDER BY created_at DESC
+			LIMIT $1
+		`
+		args = append(args, url)
+	}
+
+	rows, err := db.Query(query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var scans []ScanRecord
+	for rows.Next() {
+		var s ScanRecord
+		if err := rows.Scan(
+			&s.ID, &s.URL, &s.StatusCode, &s.Server,
+			&s.CDN, &s.WAF, &s.TLSIssuer, &s.BodySize,
+			&s.BodyHash, &s.DurationMS, &s.Error,
+			&s.Region, &s.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		scans = append(scans, s)
+	}
+	return scans, rows.Err()
+}
