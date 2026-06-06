@@ -473,33 +473,56 @@ document.addEventListener('DOMContentLoaded', function() {
 // ── Scan History ──────────────────────────────────────────────────────────────
 async function loadScanHistory() {
     var container = document.getElementById('scan-history-list');
+    var titleEl = document.querySelector('#scan-history-section .section-divider-inner span');
     if (!container) return;
 
+    // Try private history first (requires auth)
+    var scans = null;
+    var isPrivate = false;
+
     try {
-        var response = await fetch('/api/scans?limit=8');
-        var scans = await response.json();
-
-        container.innerHTML = '';
-
-        if (!scans || scans.length === 0) {
-            var empty = document.createElement('div');
-            empty.className = 'result-placeholder';
-            var span = document.createElement('span');
-            span.textContent = 'No scans yet';
-            empty.appendChild(span);
-            container.appendChild(empty);
-            return;
-        }
-
-        scans.forEach(function(s) {
-            container.appendChild(renderScanHistoryRow(s));
+        var response = await fetch('/api/scans?limit=8', {
+            credentials: 'same-origin'
         });
+        if (response.ok) {
+            scans = await response.json();
+            if (scans && scans.length > 0) {
+                isPrivate = true;
+            }
+        }
+    } catch (err) {}
 
-    } catch (err) {
-        // Silent fail — history is non-critical
+    // Fall back to global feed
+    if (!scans || scans.length === 0) {
+        try {
+            var response = await fetch('/api/feed?limit=8');
+            if (response.ok) {
+                scans = await response.json();
+            }
+        } catch (err) {}
     }
-}
 
+    // Update section title
+    if (titleEl) {
+        titleEl.textContent = isPrivate ? 'YOUR SCANS' : 'GLOBAL ACTIVITY';
+    }
+
+    container.innerHTML = '';
+
+    if (!scans || scans.length === 0) {
+        var empty = document.createElement('div');
+        empty.className = 'result-placeholder';
+        var span = document.createElement('span');
+        span.textContent = 'No scans yet';
+        empty.appendChild(span);
+        container.appendChild(empty);
+        return;
+    }
+
+    scans.forEach(function(s) {
+        container.appendChild(renderScanHistoryRow(s));
+    });
+}
 function renderScanHistoryRow(s) {
     var row = document.createElement('div');
     row.className = 'scan-history-row';
