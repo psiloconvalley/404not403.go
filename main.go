@@ -56,6 +56,7 @@ func main() {
 	mux.HandleFunc("/api/stats", handler.Stats(a))
 	mux.HandleFunc("/api/scan", handler.Scan(a))
 	mux.HandleFunc("/api/scans", handler.RecentScans(a))
+	mux.HandleFunc("/api/feed", handler.GlobalFeed(a))
 
 	// ── Auth routes ───────────────────────────────────────────────────
 	mux.HandleFunc("/api/auth/register", handler.Register(a))

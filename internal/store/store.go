@@ -229,26 +229,33 @@ func LogEvent(db *sql.DB, statusCode int, message string) {
 }
 
 // ── StoreScan ─────────────────────────────────────────────────────────────────
-func StoreScan(db *sql.DB, r scanner.ScanResult) error {
+func StoreScan(db *sql.DB, userID string, r scanner.ScanResult) error {
 	if db == nil {
 		return nil
 	}
+
 	var tlsExpiry interface{}
 	if !r.TLSExpiry.IsZero() {
 		tlsExpiry = r.TLSExpiry
 	}
+
+	var uid interface{}
+	if userID != "" {
+		uid = userID
+	}
+
 	_, err := db.Exec(`
 		INSERT INTO scans (
 			url, status_code, headers, body_hash, body_size,
 			tls_issuer, tls_expiry, server, cdn, waf,
-			region, duration_ms, error, created_at
+			region, duration_ms, error, created_at, user_id
 		) VALUES (
-			$1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14
+			$1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15
 		)`,
 		r.URL, nullableInt(r.StatusCode), r.Headers,
 		r.BodyHash, r.BodySize, r.TLSIssuer, tlsExpiry,
 		r.Server, r.CDN, r.WAF, r.Region,
-		r.DurationMS, r.Error, r.ScannedAt,
+		r.DurationMS, r.Error, r.ScannedAt, uid,
 	)
 	return err
 }
@@ -671,31 +678,45 @@ type ScanRecord struct {
 }
 
 // RecentScans returns the last N scans, optionally filtered by URL.
-func RecentScans(db *sql.DB, limit int, url string) ([]ScanRecord, error) {
-	query := `
+func RecentScans(db *sql.DB, userID string, limit int) ([]ScanRecord, error) {
+	rows, err := db.Query(`
+		SELECT id, url, status_code, server, cdn, waf,
+		       tls_issuer, body_size, body_hash, duration_ms,
+		       error, region, created_at
+		FROM scans
+		WHERE user_id = $1
+		ORDER BY created_at DESC
+		LIMIT $2
+	`, userID, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var scans []ScanRecord
+	for rows.Next() {
+		var s ScanRecord
+		if err := rows.Scan(
+			&s.ID, &s.URL, &s.StatusCode, &s.Server,
+			&s.CDN, &s.WAF, &s.TLSIssuer, &s.BodySize,
+			&s.BodyHash, &s.DurationMS, &s.Error,
+			&s.Region, &s.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		scans = append(scans, s)
+	}
+	return scans, rows.Err()
+}
+func GlobalFeed(db *sql.DB, limit int) ([]ScanRecord, error) {
+	rows, err := db.Query(`
 		SELECT id, url, status_code, server, cdn, waf,
 		       tls_issuer, body_size, body_hash, duration_ms,
 		       error, region, created_at
 		FROM scans
 		ORDER BY created_at DESC
 		LIMIT $1
-	`
-	args := []interface{}{limit}
-
-	if url != "" {
-		query = `
-			SELECT id, url, status_code, server, cdn, waf,
-			       tls_issuer, body_size, body_hash, duration_ms,
-			       error, region, created_at
-			FROM scans
-			WHERE url = $2
-			ORDER BY created_at DESC
-			LIMIT $1
-		`
-		args = append(args, url)
-	}
-
-	rows, err := db.Query(query, args...)
+	`, limit)
 	if err != nil {
 		return nil, err
 	}
