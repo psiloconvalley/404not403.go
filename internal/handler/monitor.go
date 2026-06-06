@@ -59,7 +59,7 @@ func createMonitor(a *app.App, w http.ResponseWriter, r *http.Request) {
 	m, err := store.CreateMonitor(a.DB, userID, role, input.URL, input.Interval)
 	if err != nil {
 		if err == store.ErrMonitorLimitReached {
-			http.Error(w, `{"error":"monitor limit reached — max 10 per account"}`, http.StatusTooManyRequests)
+			http.Error(w, `{"error":"monitor limit reached — upgrade for more monitors"}`, http.StatusTooManyRequests)
 			return
 		}
 		http.Error(w, `{"error":"failed to create monitor"}`, http.StatusInternalServerError)
