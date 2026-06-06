@@ -27,7 +27,7 @@ func Monitor(a *app.App) http.HandlerFunc {
 
 func createMonitor(a *app.App, w http.ResponseWriter, r *http.Request) {
 	userID := middleware.GetUserID(r)
-
+	role := middleware.GetRole(r)
 	var input struct {
 		URL      string `json:"url"`
 		Interval string `json:"interval"`
@@ -56,7 +56,7 @@ func createMonitor(a *app.App, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	m, err := store.CreateMonitor(a.DB, userID, input.URL, input.Interval)
+	m, err := store.CreateMonitor(a.DB, userID, role, input.URL, input.Interval)
 	if err != nil {
 		if err == store.ErrMonitorLimitReached {
 			http.Error(w, `{"error":"monitor limit reached — max 10 per account"}`, http.StatusTooManyRequests)

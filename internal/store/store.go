@@ -263,7 +263,18 @@ func StoreScan(db *sql.DB, userID string, r scanner.ScanResult) error {
 // ── Monitor queries ───────────────────────────────────────────────────────────
 
 // CreateMonitor inserts a new monitor owned by userID.
-func CreateMonitor(db *sql.DB, userID, url, interval string) (*Monitor, error) {
+// CreateMonitor inserts a new monitor owned by userID.
+// Enforces per-tier limits based on user role.
+func CreateMonitor(db *sql.DB, userID, role, url, interval string) (*Monitor, error) {
+	// Tier limits
+	maxMonitors := 3
+	switch role {
+	case "analyst":
+		maxMonitors = 50
+	case "admin":
+		maxMonitors = 500
+	}
+
 	var count int
 	if err := db.QueryRow(
 		"SELECT COUNT(*) FROM monitors WHERE active = true AND user_id = $1",
@@ -271,8 +282,13 @@ func CreateMonitor(db *sql.DB, userID, url, interval string) (*Monitor, error) {
 	).Scan(&count); err != nil {
 		return nil, err
 	}
-	if count >= 10 {
+	if count >= maxMonitors {
 		return nil, ErrMonitorLimitReached
+	}
+
+	// Enforce interval limits for free tier
+	if role == "observer" && interval != "24h" {
+		interval = "24h"
 	}
 
 	var m Monitor
@@ -290,7 +306,6 @@ func CreateMonitor(db *sql.DB, userID, url, interval string) (*Monitor, error) {
 	)
 	return &m, err
 }
-
 // ListMonitors returns active monitors owned by userID.
 func ListMonitors(db *sql.DB, userID string) ([]Monitor, error) {
 	rows, err := db.Query(`
