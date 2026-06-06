@@ -322,6 +322,27 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     refreshSessionUI();
+	    // Enter key support for auth forms
+    var loginPassword = document.getElementById('login-password');
+    if (loginPassword) {
+        loginPassword.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') login();
+        });
+    }
+
+    var loginEmail = document.getElementById('login-email');
+    if (loginEmail) {
+        loginEmail.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') login();
+        });
+    }
+
+    var registerPassword = document.getElementById('register-password');
+    if (registerPassword) {
+        registerPassword.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') register();
+        });
+    }
 
  // Handle availability check
     var handleInput = document.getElementById('register-handle');

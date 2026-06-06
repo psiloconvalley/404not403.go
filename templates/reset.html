@@ -143,6 +143,20 @@ async function submitReset() {
         errEl.textContent = 'Request failed';
     }
 }
+document.addEventListener('DOMContentLoaded', function() {
+    var resetPassword = document.getElementById('reset-password');
+    var resetConfirm = document.getElementById('reset-confirm');
+    if (resetPassword) {
+        resetPassword.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') document.getElementById('reset-confirm').focus();
+        });
+    }
+    if (resetConfirm) {
+        resetConfirm.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') submitReset();
+        });
+    }
+});
 </script>
 </body>
 </html>
