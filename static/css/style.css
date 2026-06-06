@@ -7,14 +7,20 @@
 /* ── Design Tokens ── */
 :root {
     --bg:             #09090b;
-    --surface:        #0f0f11;
-    --surface-raised: #141416;
-    --border:         #27272a;
-    --border-bright:  #2e2e33;
+    --bg-gradient:    linear-gradient(180deg, #0c1117 0%, #09090b 40%);
+    --surface:        #0f1115;
+    --surface-raised: #151920;
+    --border:         #1e2530;
+    --border-bright:  #2a3442;
 
-    --text-primary:   #fafafa;
-    --text-secondary: #a1a1aa;
-    --text-muted:     #52525b;
+    --text-primary:   #f0f0f0;
+    --text-secondary: #94a3b8;
+    --text-muted:     #64748b;
+
+    --accent:         #14b8a6;
+    --accent-dim:     #0d9488;
+    --accent-subtle:  #134e4a;
+    --accent-glow:    rgba(20, 184, 166, 0.12);
 
     --status-ok:      #22c55e;
     --status-warn:    #f59e0b;
@@ -24,10 +30,9 @@
     --font-sans: 'Space Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
     --font-mono: 'Fira Code', monospace;
 
-    --page-width: 680px;
+    --page-width: 720px;
     --page-pad:   2rem;
 }
-
 /* ── Reset ── */
 *, *::before, *::after {
     margin: 0;
@@ -41,14 +46,15 @@ html, body {
 }
 
 body {
+    background: var(--bg-gradient);
     background-color: var(--bg);
+    background-attachment: fixed;
     color: var(--text-secondary);
     font-family: var(--font-sans);
     line-height: 1.6;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
 }
-
 /* ── Page Wrapper — single centering context ── */
 .page-wrapper {
     width: 100%;
@@ -61,25 +67,25 @@ body {
 .site-header {
     margin-bottom: 3rem;
     padding-bottom: 2rem;
-    border-bottom: 1px solid var(--border);
+    border-bottom: 1px solid var(--accent-subtle);
 }
 
 .logo {
-    font-size: 2rem;
+    font-size: 2.4rem;
     font-weight: 700;
-    letter-spacing: 3px;
+    letter-spacing: 4px;
     color: var(--text-primary);
     line-height: 1;
+    text-shadow: 0 0 40px var(--accent-glow);
 }
 
 .tagline {
-    margin-top: 0.6rem;
-    font-size: 1rem;
-    font-weight: 300;
-    font-style: italic;
-    color: var(--text-secondary);
+    margin-top: 0.75rem;
+    font-size: 1.05rem;
+    font-weight: 400;
+    color: var(--text-primary);
+    opacity: 0.85;
 }
-
 /* ── Live Stats ── */
 .live-stats {
     margin-top: 1.2rem;
@@ -109,14 +115,15 @@ body {
     content: '';
     flex: 1;
     height: 1px;
-    background: #134e4a;
+    background: var(--accent-subtle);
+
 }
 
 .section-divider span {
     font-size: 0.65rem;
     font-weight: 600;
     letter-spacing: 3px;
-    color: #a1a1aa;
+    color: var(--accent);
     white-space: nowrap;
     text-transform: uppercase;
 }
@@ -140,9 +147,9 @@ body {
 }
 
 .inspector-input-group:focus-within {
-    border-color: var(--border-bright);
+    border-color: var(--accent-dim);
+    box-shadow: 0 0 15px var(--accent-glow);
 }
-
 .inspector-input {
     flex: 1;
     min-width: 0;
@@ -177,10 +184,10 @@ body {
 }
 
 #inspector-btn:hover {
-    background: var(--text-primary);
+    background: var(--accent);
     color: var(--bg);
+    border-color: var(--accent);
 }
-
 #inspector-btn.scanning {
     color: var(--text-muted);
     pointer-events: none;
@@ -694,9 +701,9 @@ button:hover {
 }
 
 .monitor-input-group:focus-within {
-    border-color: var(--border-bright);
+    border-color: var(--accent-dim);
+    box-shadow: 0 0 15px var(--accent-glow);
 }
-
 .monitor-input {
     flex: 1;
     min-width: 0;
@@ -755,10 +762,10 @@ button:hover {
 }
 
 #monitor-btn:hover {
-    background: var(--text-primary);
+    background: var(--accent);
     color: var(--bg);
+    border-color: var(--accent);
 }
-
 /* ── Monitor List ── */
 .monitor-list-header {
     display: flex;
@@ -996,14 +1003,14 @@ button:hover {
 }
 
 .auth-btn-primary {
-    background: var(--text-primary);
+    background: var(--accent);
     color: var(--bg);
-    border-color: var(--text-primary);
+    border-color: var(--accent);
 }
 
 .auth-btn-primary:hover {
-    background: var(--text-secondary);
-    border-color: var(--text-secondary);
+    background: var(--accent-dim);
+    border-color: var(--accent-dim);
     color: var(--bg);
 }
 
@@ -1128,9 +1135,9 @@ button:hover {
 
 .form-submit {
     width: 100%;
-    background: var(--text-primary);
+    background: var(--accent);
     color: var(--bg);
-    border: 1px solid var(--text-primary);
+    border: 1px solid var(--accent);
     font-family: var(--font-sans);
     font-size: 0.65rem;
     font-weight: 600;
@@ -1144,10 +1151,9 @@ button:hover {
 }
 
 .form-submit:hover {
-    background: var(--text-secondary);
-    border-color: var(--text-secondary);
+    background: var(--accent-dim);
+    border-color: var(--accent-dim);
 }
-
 .form-switch {
     text-align: center;
     margin-top: 1rem;
