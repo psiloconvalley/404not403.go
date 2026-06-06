@@ -473,7 +473,7 @@ document.addEventListener('DOMContentLoaded', function() {
 // ── Scan History ──────────────────────────────────────────────────────────────
 async function loadScanHistory() {
     var container = document.getElementById('scan-history-list');
-    var titleEl = document.querySelector('#scan-history-section .section-divider-inner span');
+    var titleEl = document.getElementById('scan-feed-title');
     if (!container) return;
 
     // Try private history first (requires auth)
@@ -505,6 +505,10 @@ async function loadScanHistory() {
     // Update section title
     if (titleEl) {
         titleEl.textContent = isPrivate ? 'YOUR SCANS' : 'GLOBAL ACTIVITY';
+    var descEl = document.getElementById("scan-feed-desc");
+    if (descEl) {
+        descEl.textContent = isPrivate ? "Your private forensic scan history." : "Recent forensic events observed across the platform.";
+    }
     }
 
     container.innerHTML = '';

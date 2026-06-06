@@ -1495,3 +1495,9 @@ button:hover {
         display: none;
     }
 }
+
+/* ── Feed Section ── */
+.feed-section {
+    max-width: var(--page-width);
+    margin: 0 auto;
+}
