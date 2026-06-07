@@ -1510,3 +1510,17 @@ button:hover {
     max-width: var(--page-width);
     margin: 0 auto;
 }
+
+/* ── Upgrade Button ── */
+.auth-btn-upgrade {
+    background: var(--accent);
+    color: var(--bg);
+    border-color: var(--accent);
+    font-size: 0.55rem;
+    padding: 0.4rem 0.8rem;
+}
+
+.auth-btn-upgrade:hover {
+    background: var(--accent-dim);
+    border-color: var(--accent-dim);
+}

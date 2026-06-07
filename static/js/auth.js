@@ -149,8 +149,18 @@ async function refreshSessionUI() {
         loggedOut.style.display = 'none';
         loggedIn.style.display = 'flex';
         authHandle.textContent = me.handle;
-        authRole.textContent = ({observer:"FREE TIER",analyst:"PRO",admin:"ADMIN"})[me.role] || me.role.toUpperCase();
+	var roleMap = {
+            observer: 'OBSERVER · FREE TIER',
+            analyst:  'ANALYST · PRO',
+            admin:    'ADMIN'
+        };
+        authRole.textContent = roleMap[me.role] || me.role.toUpperCase();
 
+        // Show upgrade button only for free tier
+        var upgradeBtn = document.getElementById('upgrade-btn');
+        if (upgradeBtn) {
+            upgradeBtn.style.display = (me.role === 'observer') ? 'inline-flex' : 'none';
+        }
         // Monitor section
         gate.style.display = 'none';
         controls.style.display = 'block';
@@ -313,6 +323,25 @@ async function sendResetLink() {
 
     } catch (err) {
         errEl.textContent = 'Request failed';
+    }
+}
+// ── Upgrade to Pro ───────────────────────────────────────────────────────────
+async function upgradeToPro() {
+    try {
+        var response = await fetch('/api/billing/checkout', {
+            method: 'POST',
+            credentials: 'same-origin'
+        });
+
+        var data = await response.json();
+
+        if (data.url) {
+            window.location.href = data.url;
+        } else {
+            alert('Failed to start checkout');
+        }
+    } catch (err) {
+        alert('Failed to connect to billing');
     }
 }
 // ── Modal dismiss on outside click ───────────────────────────────────────────
