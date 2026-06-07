@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>STATUS | 404NOT403</title>
+    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+    <meta name="theme-color" content="#09090b">
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+<div class="page-wrapper">
+
+    <header class="site-header">
+        <div class="header-top">
+            <div>
+                <a href="/" style="text-decoration: none;"><h1 class="logo"><span class="logo-404">404</span><span class="logo-not">NOT</span><span class="logo-403">403</span></h1></a>
+                <p class="tagline">What did the server actually say?</p>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <div class="section-divider">
+            <span>SYSTEM STATUS</span>
+        </div>
+
+        <section class="inspector">
+            <p class="section-desc">Real-time health check of all 404NOT403 systems.</p>
+
+            <div class="scan-card">
+                <div class="scan-verdict status-2xx">
+                    <div class="verdict-left">
+                        <div class="verdict-status">
+                            <span class="status-code">{{if eq .DBStatus "ok"}}OK{{else}}ERR{{end}}</span>
+                            <span class="status-text">{{if eq .DBStatus "ok"}}ALL SYSTEMS OPERATIONAL{{else}}DEGRADED{{end}}</span>
+                        </div>
+                        <div class="verdict-summary">
+                            {{if eq .DBStatus "ok"}}All core systems are responding normally.{{else}}One or more systems are experiencing issues.{{end}}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="scan-evidence">
+                    <div class="evidence-row">
+                        <div class="evidence-label">ENGINE</div>
+                        <div class="evidence-content">
+                            <div class="evidence-value valid">● OPERATIONAL</div>
+                            <div class="evidence-annotation">Go server responding to requests.</div>
+                        </div>
+                    </div>
+
+                    <div class="evidence-row">
+                        <div class="evidence-label">DATABASE</div>
+                        <div class="evidence-content">
+			<div class="evidence-value {{if eq .DBStatus "ok"}}valid{{else}}warn{{end}}">● {{if eq .DBStatus "ok"}}OPERATIONAL{{else}}DEGRADED{{end}}</div>
+                            <div class="evidence-annotation">PostgreSQL connection pool.</div>
+                        </div>
+                    </div>
+
+                    <div class="evidence-row">
+                        <div class="evidence-label">WORKER</div>
+                        <div class="evidence-content">
+                            <div class="evidence-value valid">● OPERATIONAL</div>
+                            <div class="evidence-annotation">Ghost Link Monitor background goroutine.</div>
+                        </div>
+                    </div>
+
+                    <div class="evidence-row">
+                        <div class="evidence-label">AUTH</div>
+                        <div class="evidence-content">
+                            <div class="evidence-value valid">● OPERATIONAL</div>
+                            <div class="evidence-annotation">RS256 JWT signing active.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <div class="section-divider">
+            <span>SYSTEM INFO</span>
+        </div>
+
+        <section class="inspector">
+            <div class="scan-card">
+                <div class="scan-evidence">
+                    <div class="evidence-row">
+                        <div class="evidence-label">VERSION</div>
+                        <div class="evidence-content">
+                            <div class="evidence-value">V2.0.0</div>
+                        </div>
+                    </div>
+
+                    <div class="evidence-row">
+                        <div class="evidence-label">REGION</div>
+                        <div class="evidence-content">
+                            <div class="evidence-value">Railway · US</div>
+                        </div>
+                    </div>
+
+                    <div class="evidence-row">
+                        <div class="evidence-label">CHECKED</div>
+                        <div class="evidence-content">
+                            <div class="evidence-value">Just now</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="site-footer">
+        <div class="section-divider">
+            <span>SYSTEM</span>
+        </div>
+
+        <nav class="footer-nav">
+            <a href="/">HOME</a>
+            <a href="/about">ABOUT</a>
+            <a href="https://github.com/psiloconvalley" target="_blank">SOURCE</a>
+        </nav>
+        <div class="footer-credits">
+            <p>404NOT403 · V2.0.0</p>
+        </div>
+    </footer>
+
+</div>
+</body>
+</html>

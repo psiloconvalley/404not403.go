@@ -74,6 +74,7 @@ func main() {
 	mux.HandleFunc("/", handler.Home(a))
 	mux.HandleFunc("/about", handler.About(a))
 	mux.HandleFunc("/health", handler.Health(a))
+	mux.HandleFunc("/status", handler.Status(a))
 	mux.HandleFunc("/simulate/404", handler.Simulate404(a))
 	mux.HandleFunc("/simulate/403", handler.Simulate403(a))
 	mux.HandleFunc("/api/stats", handler.Stats(a))

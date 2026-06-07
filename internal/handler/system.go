@@ -34,3 +34,21 @@ func Health(a *app.App) http.HandlerFunc {
 		w.Write([]byte(`{"status":"` + dbStatus + `"}`))
 	}
 }
+func Status(a *app.App) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		dbStatus := "ok"
+		if a.DB == nil {
+			dbStatus = "offline"
+		} else if err := a.DB.Ping(); err != nil {
+			dbStatus = "error"
+		}
+
+		data := map[string]string{
+			"DBStatus": dbStatus,
+		}
+
+		if err := a.Templates.ExecuteTemplate(w, "status.html", data); err != nil {
+			http.Error(w, "System Error", http.StatusInternalServerError)
+		}
+	}
+}
