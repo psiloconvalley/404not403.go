@@ -1525,6 +1525,17 @@ button:hover {
     border-color: var(--accent-dim);
 }
 
+/* ── Feed Legend ── */
+.feed-legend {
+    font-family: var(--font-mono);
+    font-size: 0.62rem;
+    font-weight: 600;
+    letter-spacing: 2px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    margin-bottom: 0.5rem;
+    padding-left: 0.25rem;
+}
 /* ── Mobile: Global Activity Feed ───────────────────────────────────────────── */
 @media (max-width: 600px) {
 
