@@ -1499,8 +1499,7 @@ button:hover {
         word-break: break-word;
     }
 
-    .scan-history-server,
-    .scan-history-meta:last-child {
+    .scan-history-server {
         display: none;
     }
 }
