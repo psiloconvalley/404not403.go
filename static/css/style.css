@@ -1528,73 +1528,74 @@ button:hover {
 /* ── Mobile: Global Activity Feed ───────────────────────────────────────────── */
 @media (max-width: 600px) {
 
-    /* Feed card — add internal breathing room */
+    /* Feed card — scrollable container */
     .feed-section .scan-card {
-        padding: 0.25rem 0;
+        padding: 0;
+        overflow: hidden;
     }
 
+    /* Scroll wrapper — horizontal + vertical */
     .scan-history-list {
-        padding: 0 0.25rem;
+        overflow-x: auto;
+        overflow-y: auto;
+        max-height: 340px;
+        -webkit-overflow-scrolling: touch;
+        padding: 0;
     }
 
-    /* Explicit grid layout for scan history rows
-       DOM order: dot · url · status · duration · server · time-ago
-       Row 1: [dot] [url]    [status]
-       Row 2:       [time-ago]               */
+    /* Rows — single line, full width, no wrapping */
     .scan-history-row {
-        display: grid;
-        grid-template-columns: 8px 1fr auto;
-        grid-template-rows: auto auto;
-        gap: 0.2rem 0.6rem;
-        padding: 0.65rem 0.5rem;
-        align-items: start;
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.6rem 0.75rem;
+        min-width: 560px;
+        border-bottom: 1px solid var(--border);
+        flex-wrap: nowrap;
     }
 
-    /* dot — row 1, col 1 */
-    .scan-history-row .monitor-dot {
-        grid-column: 1 / 2;
-        grid-row: 1 / 2;
-        margin-top: 0.35rem;
-        flex-shrink: 0;
+    .scan-history-row:last-child {
+        border-bottom: none;
     }
 
-    /* url — row 1, col 2 — wraps cleanly */
+    /* All columns visible — user scrolls to see them */
     .scan-history-url {
-        grid-column: 2 / 3;
-        grid-row: 1 / 2;
-        white-space: normal;
-        overflow: visible;
-        text-overflow: unset;
-        word-break: break-all;
-        line-height: 1.4;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        min-width: 160px;
+        max-width: 200px;
+        flex: 1;
     }
 
-    /* status — row 1, col 3 */
     .scan-history-status {
-        grid-column: 3 / 4;
-        grid-row: 1 / 2;
-        text-align: right;
-        min-width: 2.5rem;
-    }
-
-    /* duration (4th span) — hide it */
-    .scan-history-row span:nth-child(4) {
-        display: none;
-    }
-
-    /* server — hide it */
-    .scan-history-server {
-        display: none;
-    }
-
-    /* time-ago (6th span, last-child) — override old hide rule, place row 2 */
-    .scan-history-row .scan-history-meta:last-child {
-        display: block;
-        grid-column: 2 / 4;
-        grid-row: 2 / 3;
+        white-space: nowrap;
+        min-width: 80px;
         text-align: left;
+        font-size: 0.7rem;
+    }
+
+    .scan-history-meta {
+        white-space: nowrap;
+        min-width: 50px;
         font-size: 0.65rem;
         color: var(--text-muted);
+    }
+
+    .scan-history-server {
+        display: block;
+        white-space: nowrap;
+        min-width: 80px;
+        font-size: 0.65rem;
+        color: var(--text-secondary);
+        text-overflow: ellipsis;
+        overflow: hidden;
+    }
+
+    /* Scroll hint — faint right fade indicating more content */
+    .feed-section .scan-card {
+        position: relative;
     }
 
     /* Live stats — wrap gracefully */

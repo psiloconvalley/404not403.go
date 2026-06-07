@@ -543,7 +543,7 @@ function renderScanHistoryRow(s) {
     // Status code
     var status = document.createElement('span');
     status.className = 'scan-history-status ' + historyStatusClass(s.status_code);
-    status.textContent = s.status_code ? String(s.status_code) : '---';
+    status.textContent = s.status_code ? String(s.status_code) + ' ' + statusLabel(s.status_code) : '---';
 
     // Duration
     var duration = document.createElement('span');
