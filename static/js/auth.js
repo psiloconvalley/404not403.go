@@ -233,6 +233,9 @@ function showForgotPassword() {
     input.id = 'forgot-email';
     input.className = 'form-input';
     input.placeholder = 'you@example.com';
+    input.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') sendResetLink();
+});
 
     group.appendChild(label);
     group.appendChild(input);

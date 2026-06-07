@@ -4,7 +4,9 @@ import (
 	"encoding/json"
 	"net/http"
 	"strings"
+	"log"
 	"time"
+
 
 	"github.com/psiloconvalley/404not403/internal/app"
 	"github.com/psiloconvalley/404not403/internal/auth"
@@ -303,26 +305,34 @@ func ForgotPassword(a *app.App) http.HandlerFunc {
 		// Process in background so response is instant
 		go func() {
 			user, err := store.GetUserByEmail(a.DB, input.Email)
-			if err != nil || user == nil {
+			if err != nil {
+				log.Printf("⚠️  ForgotPassword: user lookup error: %v", err)
+				return
+			}
+			if user == nil {
 				return
 			}
 
-			// Generate random token
 			raw, hash, err := auth.GenerateAPIKey()
 			if err != nil {
+				log.Printf("⚠️  ForgotPassword: token generation error: %v", err)
 				return
 			}
 
-			// Store hashed token — expires in 1 hour
 			expiry := time.Now().Add(1 * time.Hour)
 			if err := store.CreatePasswordReset(a.DB, user.ID, hash, expiry); err != nil {
+				log.Printf("⚠️  ForgotPassword: store reset error: %v", err)
 				return
 			}
 
-			// Send email with raw token
-			auth.SendPasswordResetEmail(user.Email, raw)
+			if err := auth.SendPasswordResetEmail(user.Email, raw); err != nil {
+				log.Printf("⚠️  ForgotPassword: email send error: %v", err)
+				return
+			}
+
+			log.Printf("✅ ForgotPassword: reset email sent to %s", user.Email)
 		}()
-	}
+		}
 }
 
 // ResetPassword handles POST /api/auth/reset
