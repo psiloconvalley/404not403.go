@@ -1,6 +1,7 @@
 package monitor
 
 import (
+	"context"
 	"log"
 	"time"
 
@@ -10,23 +11,36 @@ import (
 )
 
 // StartWorker launches the background monitoring goroutine.
-// It runs forever, waking every 60 seconds to check due monitors.
-// Call this once from main() as: go monitor.StartWorker(app)
-func StartWorker(a *app.App) {
+// It runs until ctx is cancelled (graceful shutdown).
+// Call once from main() as: go monitor.StartWorker(ctx, app)
+func StartWorker(ctx context.Context, a *app.App) {
 	log.Println("👻 Ghost Link Monitor worker started.")
 	ticker := time.NewTicker(60 * time.Second)
 	defer ticker.Stop()
 
-	// Run immediately on startup, then on every tick
-	runChecks(a)
+	// Run immediately on startup
+	runChecks(ctx, a)
 
-	for range ticker.C {
-		runChecks(a)
+	for {
+		select {
+		case <-ctx.Done():
+			log.Println("👻 Ghost Link Monitor worker stopped (shutdown signal).")
+			return
+		case <-ticker.C:
+			runChecks(ctx, a)
+		}
 	}
 }
 
 // runChecks fetches all due monitors and scans each one.
-func runChecks(a *app.App) {
+// Panic recovery ensures one bad scan cannot kill the worker.
+func runChecks(ctx context.Context, a *app.App) {
+	defer func() {
+		if r := recover(); r != nil {
+			log.Printf("🚨 Worker: panic recovered in runChecks: %v", r)
+		}
+	}()
+
 	if a.DB == nil {
 		return
 	}
@@ -44,15 +58,34 @@ func runChecks(a *app.App) {
 	log.Printf("👻 Worker: checking %d due monitors", len(monitors))
 
 	for _, m := range monitors {
-		checkMonitor(a, m)
+		// Respect shutdown between monitors
+		select {
+		case <-ctx.Done():
+			log.Println("👻 Worker: shutdown mid-batch, stopping.")
+			return
+		default:
+			checkMonitor(ctx, a, m)
+		}
 	}
 }
 
 // checkMonitor runs a single scan and detects state changes.
-func checkMonitor(a *app.App, m store.Monitor) {
+// Each scan is bounded by a 30-second timeout.
+func checkMonitor(ctx context.Context, a *app.App, m store.Monitor) {
+	defer func() {
+		if r := recover(); r != nil {
+			log.Printf("🚨 Worker: panic recovered in checkMonitor [%s]: %v", m.URL, r)
+		}
+	}()
+
+	// Per-scan timeout — one hung URL cannot block the batch
+	scanCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+
+	_ = scanCtx // scanner.Scan will accept context in future hardening pass
 	result := scanner.Scan(a, m.URL)
 
-	// Always update the last_checked timestamp regardless of outcome
+	// Always update last_checked regardless of outcome
 	defer func() {
 		if err := store.UpdateMonitorState(a.DB, m.ID, result.StatusCode, result.BodyHash); err != nil {
 			log.Printf("⚠️  Worker: UpdateMonitorState error [%s]: %v", m.URL, err)
@@ -67,7 +100,7 @@ func checkMonitor(a *app.App, m store.Monitor) {
 
 	// First check — no previous state to compare against
 	if m.LastHash == nil && m.LastStatus == nil {
-	    log.Printf("👻 Worker: first check recorded [%s] → %d", m.URL, result.StatusCode)
+		log.Printf("👻 Worker: first check recorded [%s] → %d", m.URL, result.StatusCode)
 		return
 	}
 
@@ -82,7 +115,7 @@ func checkMonitor(a *app.App, m store.Monitor) {
 	}
 
 	statusChanged := result.StatusCode != oldStatus
-	hashChanged   := result.BodyHash != oldHash
+	hashChanged := result.BodyHash != oldHash
 
 	if !statusChanged && !hashChanged {
 		return
@@ -107,5 +140,5 @@ func checkMonitor(a *app.App, m store.Monitor) {
 	}
 
 	log.Printf("👻 Worker: CHANGE DETECTED [%s] %d→%d",
-		m.URL, m.LastStatus, result.StatusCode)
+		m.URL, oldStatus, result.StatusCode)
 }

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"html/template"
 	"log"
 	"net/http"
@@ -14,21 +15,38 @@ import (
 	"github.com/psiloconvalley/404not403/internal/middleware"
 	"github.com/psiloconvalley/404not403/internal/monitor"
 	"github.com/psiloconvalley/404not403/internal/store"
+	"os/signal"
+	"syscall"
 )
 
 func main() {
+	// 0. Validate required environment variables — fail fast, not fail later
+	validateEnv(
+		"DATABASE_URL",
+		"JWT_PRIVATE_KEY",
+		"JWT_PUBLIC_KEY",
+		"STRIPE_SECRET_KEY",
+		"STRIPE_WEBHOOK_SECRET",
+	)
+
 	a := &app.App{}
 
 	// 1. Infrastructure
 	a.DB = store.ConnectDB()
+	if err := a.DB.Ping(); err != nil {
+		log.Fatalf("❌ Database unreachable: %v", err)
+	}
+	log.Println("✅ Database connected and reachable.")
+
 	store.RunMigrations(a.DB)
 	a.HTTPClient = app.NewHTTPClient()
 	a.Limiter = app.NewLimiterMap()
 
 	// 2. JWT Keys — must be set in environment
 	if err := auth.InitKeys(); err != nil {
-		log.Printf("⚠️  JWT init: %v — auth endpoints will not work", err)
+		log.Fatalf("❌ JWT init failed: %v — cannot start without auth keys", err)
 	}
+	log.Println("✅ JWT keys loaded.")
 
 	// 3. Templates
 	tmpl, err := template.ParseGlob(filepath.Join("templates", "*.html"))
@@ -36,11 +54,16 @@ func main() {
 		log.Fatalf("❌ Template error: %v", err)
 	}
 	a.Templates = tmpl
+	log.Println("✅ Templates parsed.")
 
-	// 4. Ghost Link Monitor worker
-	go monitor.StartWorker(a)
+	// 4. Shutdown context — cancelled on SIGTERM or SIGINT
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
 
-	// 5. Router
+	// 5. Ghost Link Monitor worker — context-aware, exits cleanly on shutdown
+	go monitor.StartWorker(ctx, a)
+
+	// 6. Router
 	mux := http.NewServeMux()
 
 	// Static files
@@ -75,11 +98,11 @@ func main() {
 	mux.HandleFunc("/api/billing/checkout", middleware.RequireAuth(a, handler.CreateCheckoutSession(a)))
 	mux.HandleFunc("/api/webhooks/stripe", handler.StripeWebhook(a))
 
-	// 6. Middleware chain
+	// 7. Middleware chain
 	wrapped := middleware.RateLimiter(a)(mux)
 	wrapped = middleware.Logger(wrapped)
 
-	// 7. Server
+	// 8. Server
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
@@ -93,8 +116,42 @@ func main() {
 		IdleTimeout:  60 * time.Second,
 	}
 
-	log.Printf("🚀 404NOT403 Engine Online on port %s", port)
-	if err := srv.ListenAndServe(); err != nil {
-		log.Fatal(err)
+	// 9. Start server in goroutine — main goroutine waits for shutdown signal
+	go func() {
+		log.Printf("🚀 404NOT403 Engine Online — port %s", port)
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("❌ Server error: %v", err)
+		}
+	}()
+
+	// 10. Block until shutdown signal received
+	<-ctx.Done()
+	log.Println("⏳ Shutdown signal received — draining connections...")
+
+	// 11. Graceful shutdown — 30 second drain window
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	if err := srv.Shutdown(shutdownCtx); err != nil {
+		log.Printf("⚠️  Server forced to close: %v", err)
+	}
+
+	log.Println("✅ 404NOT403 shut down cleanly.")
+}
+
+// validateEnv checks that all required environment variables are set.
+// Logs all missing vars before fatally exiting — fail fast, not fail later.
+func validateEnv(keys ...string) {
+	missing := []string{}
+	for _, k := range keys {
+		if os.Getenv(k) == "" {
+			missing = append(missing, k)
+		}
+	}
+	if len(missing) > 0 {
+		for _, k := range missing {
+			log.Printf("❌ Missing required environment variable: %s", k)
+		}
+		log.Fatalf("❌ Cannot start — %d required environment variable(s) missing.", len(missing))
 	}
 }
