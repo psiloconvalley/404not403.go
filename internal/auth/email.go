@@ -18,7 +18,7 @@ func SendPasswordResetEmail(toEmail, resetToken string) error {
 	resetURL := "https://404not403.com/reset?token=" + resetToken
 
 	body := map[string]interface{}{
-		"from":    "404NOT403 <onboarding@resend.dev>",
+		"from":    "404NOT403 <auth@404not403.com>",
 		"to":      []string{toEmail},
 		"subject": "Password Reset — 404NOT403",
 		"html": "<div style=\"font-family:monospace;background:#09090b;color:#f0f0f0;padding:2rem;\">" +
