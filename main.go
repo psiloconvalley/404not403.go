@@ -72,6 +72,8 @@ func main() {
 	mux.HandleFunc("/api/monitor", middleware.RequireAuth(a, handler.Monitor(a)))
 	mux.HandleFunc("/api/monitors", middleware.RequireAuth(a, handler.ListMonitors(a)))
 	mux.HandleFunc("/api/changes", middleware.RequireAuth(a, handler.ListChanges(a)))
+	mux.HandleFunc("/api/billing/checkout", middleware.RequireAuth(a, handler.CreateCheckoutSession(a)))
+	mux.HandleFunc("/api/webhooks/stripe", handler.StripeWebhook(a))
 
 	// 6. Middleware chain
 	wrapped := middleware.RateLimiter(a)(mux)

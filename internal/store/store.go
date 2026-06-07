@@ -809,3 +809,11 @@ func UpdatePassword(db *sql.DB, userID, newHash string) error {
 	)
 	return err
 }
+// UpgradeUser promotes a user to a new role (e.g., 'analyst').
+func UpgradeUser(db *sql.DB, userID, newRole string) error {
+	_, err := db.Exec(
+		"UPDATE users SET role = $1, updated_at = now() WHERE id = $2",
+		newRole, userID,
+	)
+	return err
+}
