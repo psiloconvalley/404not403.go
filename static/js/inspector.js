@@ -266,13 +266,26 @@ function renderScanResult(container, data) {
         headersSection.appendChild(toggle);
     }
 
+     // ── Collapse toggle ───────────────────────────────────────────────────
+    var collapseBtn = document.createElement('button');
+    collapseBtn.className = 'headers-toggle scan-collapse-btn';
+    collapseBtn.textContent = 'COLLAPSE RESULT';
+
+    var collapsed = false;
+    collapseBtn.addEventListener('click', function() {
+        collapsed = !collapsed;
+        evidence.style.display = collapsed ? 'none' : '';
+        headersSection.style.display = collapsed ? 'none' : '';
+        collapseBtn.textContent = collapsed ? 'EXPAND RESULT' : 'COLLAPSE RESULT';
+    });
+
     // ── Assemble card ─────────────────────────────────────────────────────
     card.appendChild(verdict);
     card.appendChild(evidence);
     card.appendChild(headersSection);
+    card.appendChild(collapseBtn);
     container.appendChild(card);
-}
-
+} 
 // ── DOM helper: append one header row ────────────────────────────────────────
 function appendHeaderRow(grid, key, value) {
     const k = document.createElement('div');
