@@ -19,75 +19,145 @@
     </header>
 
     <main>
+
         <div class="section-divider">
             <span>ABOUT</span>
         </div>
 
         <section class="inspector">
             <p class="section-desc">
-                404NOT403 is an HTTP forensic instrument built to provide deterministic, server-side truth about the public web.
+                404NOT403 is a forensic HTTP instrument. It bypasses browser interpretation and captures what a server actually returned — status codes, headers, TLS certificates, CDN layers, and WAF behavior — directly from the source.
             </p>
+            <p class="section-desc">
+                Most tools show you what the browser decided to render. This tool shows you what the server actually said.
+            </p>
+        </section>
 
+        <div class="section-divider">
+            <span>WHO THIS IS FOR</span>
+        </div>
+
+        <section class="inspector">
+            <div class="scan-card">
+                <div class="scan-evidence">
+                    <div class="evidence-row">
+                        <div class="evidence-label">SECURITY</div>
+                        <div class="evidence-content">
+                            <div class="evidence-value">Security researchers and penetration testers</div>
+                            <div class="evidence-annotation">
+                                Verify how a server responds before and after configuration changes. Detect WAF interference, certificate expiry, and header misconfiguration.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="evidence-row">
+                        <div class="evidence-label">DEVOPS</div>
+                        <div class="evidence-content">
+                            <div class="evidence-value">Engineers monitoring production endpoints</div>
+                            <div class="evidence-annotation">
+                                Track status code changes over time. Know when a 200 becomes a 403, or when a page silently disappears behind a CDN cache.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="evidence-row">
+                        <div class="evidence-label">LEGAL</div>
+                        <div class="evidence-content">
+                            <div class="evidence-value">Compliance teams and digital investigators</div>
+                            <div class="evidence-annotation">
+                                Capture forensic evidence of what a URL returned at a specific point in time. Body hash fingerprinting proves whether content changed.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="evidence-row">
+                        <div class="evidence-label">FOUNDERS</div>
+                        <div class="evidence-content">
+                            <div class="evidence-value">Product builders watching competitors and dependencies</div>
+                            <div class="evidence-annotation">
+                                Monitor third-party URLs your product depends on. Get notified when APIs, landing pages, or documentation endpoints change or go down.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <div class="section-divider">
+            <span>SECURITY ARCHITECTURE</span>
+        </div>
+
+        <section class="inspector">
             <div class="scan-card">
                 <div class="scan-verdict status-2xx">
                     <div class="verdict-left">
                         <div class="verdict-status">
-                            <span class="status-code">01</span>
-                            <span class="status-text">MISSION</span>
+                            <span class="status-code">256</span>
+                            <span class="status-text">BIT SECURITY</span>
                         </div>
                         <div class="verdict-summary">
-                            Record what a server actually returned — not what the browser inferred, cached, or hid.
+                            Enterprise-grade identity and session security. No shortcuts. No compromises.
                         </div>
                     </div>
                 </div>
 
                 <div class="scan-evidence">
                     <div class="evidence-row">
-                        <div class="evidence-label">STACK</div>
+                        <div class="evidence-label">PASSWORDS</div>
                         <div class="evidence-content">
-                            <div class="evidence-value">Go 1.25 · PostgreSQL · Railway · Vanilla JS</div>
+                            <div class="evidence-value">Argon2id — OWASP 2024+ recommended</div>
                             <div class="evidence-annotation">
-                                Low overhead, high-control architecture. Built for deterministic behavior and long-term maintainability.
+                                Memory-hard password hashing. Resistant to GPU and ASIC brute-force attacks.
                             </div>
                         </div>
                     </div>
 
                     <div class="evidence-row">
-                        <div class="evidence-label">ENGINE</div>
+                        <div class="evidence-label">SESSIONS</div>
                         <div class="evidence-content">
-                            <div class="evidence-value">Server-side scan engine with TLS, header, CDN, WAF, and body hash analysis</div>
+                            <div class="evidence-value">RS256 JWT — 4096-bit RSA, HttpOnly, Secure, SameSite=Strict</div>
                             <div class="evidence-annotation">
-                                Every scan bypasses browser interpretation and captures the raw server response directly.
+                                Asymmetric JWT signing. Cookies are invisible to JavaScript and locked to the origin domain.
                             </div>
                         </div>
                     </div>
 
                     <div class="evidence-row">
-                        <div class="evidence-label">MONITORING</div>
+                        <div class="evidence-label">MFA</div>
                         <div class="evidence-content">
-                            <div class="evidence-value">Background worker with state drift detection</div>
+                            <div class="evidence-value">TOTP (RFC 6238) + AES-256-GCM encryption at rest</div>
                             <div class="evidence-annotation">
-                                A Go worker checks monitored URLs on interval and records status or content changes as forensic evidence.
+                                Time-based one-time passwords with secrets encrypted before storage. Compatible with any authenticator app.
                             </div>
                         </div>
                     </div>
 
                     <div class="evidence-row">
-                        <div class="evidence-label">SECURITY</div>
+                        <div class="evidence-label">SSRF</div>
                         <div class="evidence-content">
-                            <div class="evidence-value">Argon2id · RS256 JWT · TOTP MFA · AES-256-GCM · SSRF Shield</div>
+                            <div class="evidence-value">Private IP blocking, metadata endpoint protection, DNS rebinding defense</div>
                             <div class="evidence-annotation">
-                                Identity and session security follow enterprise-grade patterns. Inputs are protected against private-network SSRF and DNS rebinding.
+                                The scan engine cannot be weaponized against internal networks. All targets are validated before connection.
                             </div>
                         </div>
                     </div>
 
                     <div class="evidence-row">
-                        <div class="evidence-label">TESTING</div>
+                        <div class="evidence-label">XSS</div>
                         <div class="evidence-content">
-                            <div class="evidence-value">38 passing tests</div>
+                            <div class="evidence-value">Zero innerHTML with external data — textContent only</div>
                             <div class="evidence-annotation">
-                                Scanner and auth layers are regression-tested across password hashing, API key generation, URL validation, SSRF blocking, and CDN/WAF detection.
+                                All user-facing data is rendered via safe DOM APIs. No injection vector exists in the rendering pipeline.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="evidence-row">
+                        <div class="evidence-label">RBAC</div>
+                        <div class="evidence-content">
+                            <div class="evidence-value">Observer → Analyst → Admin</div>
+                            <div class="evidence-annotation">
+                                Role-based access control enforced at the middleware layer. Every protected route checks identity and permission level.
                             </div>
                         </div>
                     </div>
@@ -106,79 +176,105 @@
                         <span>REQUEST FLOW</span>
                     </div>
                     <div class="headers-grid">
-                        <div class="header-key">USER</div>
-                        <div class="header-val">404not403.com</div>
+                        <div class="header-key">CLIENT</div>
+                        <div class="header-val">Browser or API key</div>
 
                         <div class="header-key">EDGE</div>
-                        <div class="header-val">Railway load balancer (HTTPS)</div>
+                        <div class="header-val">Railway load balancer — TLS termination</div>
 
-                        <div class="header-key">APP</div>
-                        <div class="header-val">Go server — routes, auth middleware, background worker</div>
+                        <div class="header-key">MIDDLEWARE</div>
+                        <div class="header-val">Rate limiter → Logger → Auth (JWT or API key) → RBAC</div>
 
-                        <div class="header-key">SCANNER</div>
-                        <div class="header-val">Header/TLS/CDN/WAF/body hash engine</div>
+                        <div class="header-key">HANDLER</div>
+                        <div class="header-val">Route-specific logic — scan, monitor, auth, billing</div>
+
+                        <div class="header-key">ENGINE</div>
+                        <div class="header-val">Forensic scanner — headers, TLS, CDN, WAF, body hash</div>
 
                         <div class="header-key">STORE</div>
-                        <div class="header-val">PostgreSQL — scans, monitors, changes, users, api_keys</div>
+                        <div class="header-val">PostgreSQL — scans, monitors, changes, users, API keys</div>
 
                         <div class="header-key">WORKER</div>
-                        <div class="header-val">Ghost Link Monitor goroutine — scheduled checks + change evidence</div>
+                        <div class="header-val">Background goroutine — scheduled checks, change detection, graceful shutdown</div>
                     </div>
                 </div>
             </div>
         </section>
 
         <div class="section-divider">
-            <span>ROADMAP</span>
+            <span>BUILT BY</span>
         </div>
 
         <section class="inspector">
             <div class="scan-card">
                 <div class="scan-evidence">
                     <div class="evidence-row">
-                        <div class="evidence-label">LAYER 1</div>
+                        <div class="evidence-label">BUILDER</div>
                         <div class="evidence-content">
-                            <div class="evidence-value valid">Scan Engine</div>
-                            <div class="evidence-annotation">Live</div>
-                        </div>
-                    </div>
-
-                    <div class="evidence-row">
-                        <div class="evidence-label">LAYER 2</div>
-                        <div class="evidence-content">
-                            <div class="evidence-value valid">Header Inspector + Simulator</div>
-                            <div class="evidence-annotation">Live</div>
-                        </div>
-                    </div>
-
-                    <div class="evidence-row">
-                        <div class="evidence-label">LAYER 3</div>
-                        <div class="evidence-content">
-                            <div class="evidence-value valid">Ghost Link Monitor</div>
-                            <div class="evidence-annotation">Live</div>
-                        </div>
-                    </div>
-
-                    <div class="evidence-row">
-                        <div class="evidence-label">LAYER 4</div>
-                        <div class="evidence-content">
-                            <div class="evidence-value valid">Identity Layer</div>
-                            <div class="evidence-annotation">Live — Argon2, JWT, MFA-ready, RBAC</div>
-                        </div>
-                    </div>
-
-                    <div class="evidence-row">
-                        <div class="evidence-label">NEXT</div>
-                        <div class="evidence-content">
-                            <div class="evidence-value">Multi-region scanning · API subscriptions · Web3 proof layer</div>
+                            <div class="evidence-value">David Vasquez</div>
                             <div class="evidence-annotation">
-                                The system is designed to scale from single-scan inspection to distributed change evidence and long-term archival proof.
+                                Systems engineer. 5+ years securing enterprise identity infrastructure at scale. DARPA-funded training. Built 404NOT403 from first commit to production — every line of Go, every security decision, every deploy.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="evidence-row">
+                        <div class="evidence-label">STACK</div>
+                        <div class="evidence-content">
+                            <div class="evidence-value">Go · PostgreSQL · Railway · Stripe · Resend</div>
+                            <div class="evidence-annotation">
+                                No frameworks. No abstractions. Direct HTTP, raw SQL, manual JWT signing. Built for control, not convenience.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="evidence-row">
+                        <div class="evidence-label">SOURCE</div>
+                        <div class="evidence-content">
+                            <div class="evidence-value"><a href="https://github.com/psiloconvalley" target="_blank" style="color: var(--accent); text-decoration: none;">github.com/psiloconvalley</a></div>
+                        </div>
+                    </div>
+
+                    <div class="evidence-row">
+                        <div class="evidence-label">CONTACT</div>
+                        <div class="evidence-content">
+                            <div class="evidence-value"><a href="https://linkedin.com/in/david-vasquez-it" target="_blank" style="color: var(--accent); text-decoration: none;">linkedin.com/in/david-vasquez-it</a></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <div class="section-divider">
+            <span>PRICING</span>
+        </div>
+
+        <section class="inspector">
+            <div class="scan-card">
+                <div class="scan-evidence">
+                    <div class="evidence-row">
+                        <div class="evidence-label">FREE</div>
+                        <div class="evidence-content">
+                            <div class="evidence-value">Observer Tier</div>
+                            <div class="evidence-annotation">
+                                Unlimited public scans. Global activity feed. Up to 3 monitors with 24-hour check intervals.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="evidence-row">
+                        <div class="evidence-label">$19/MO</div>
+                        <div class="evidence-content">
+                            <div class="evidence-value valid">Analyst Tier — Pro</div>
+                            <div class="evidence-annotation">
+                                Private scan history. Up to 50 monitors. 1-hour, 6-hour, or 24-hour check intervals. Priority support.
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
         </section>
+
     </main>
 
     <footer class="site-footer">
@@ -192,7 +288,7 @@
             <a href="/health" target="_blank">STATUS</a>
         </nav>
         <div class="footer-credits">
-            <p>404NOT403 // RAILWAY // V2.0.0</p>
+            <p>404NOT403 · V2.0.0</p>
         </div>
     </footer>
 
