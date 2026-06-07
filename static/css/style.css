@@ -1538,8 +1538,9 @@ button:hover {
     }
 
     /* Explicit grid layout for scan history rows
-       Row 1: [dot] [url truncated]  [status]
-       Row 2:       [when]           [        ]               */
+       DOM order: dot · url · status · duration · server · time-ago
+       Row 1: [dot] [url]    [status]
+       Row 2:       [time-ago]               */
     .scan-history-row {
         display: grid;
         grid-template-columns: 8px 1fr auto;
@@ -1568,7 +1569,7 @@ button:hover {
         line-height: 1.4;
     }
 
-    /* status code — row 1, col 3 */
+    /* status — row 1, col 3 */
     .scan-history-status {
         grid-column: 3 / 4;
         grid-row: 1 / 2;
@@ -1576,26 +1577,27 @@ button:hover {
         min-width: 2.5rem;
     }
 
-    /* time ago — row 2, col 2 */
-    .scan-history-row .scan-history-meta {
-        grid-column: 2 / 3;
+    /* duration (4th span) — hide it */
+    .scan-history-row span:nth-child(4) {
+        display: none;
+    }
+
+    /* server — hide it */
+    .scan-history-server {
+        display: none;
+    }
+
+    /* time-ago (6th span, last-child) — override old hide rule, place row 2 */
+    .scan-history-row .scan-history-meta:last-child {
+        display: block;
+        grid-column: 2 / 4;
         grid-row: 2 / 3;
         text-align: left;
         font-size: 0.65rem;
         color: var(--text-muted);
     }
 
-    /* hide duration (first meta) — keep only time ago (second meta) */
-    .scan-history-row .scan-history-meta:first-of-type {
-        display: none;
-    }
-
-    /* hide server entirely on mobile */
-    .scan-history-server {
-        display: none;
-    }
-
-    /* Live stats — wrap gracefully, smaller text */
+    /* Live stats — wrap gracefully */
     .live-stats {
         flex-wrap: wrap;
         gap: 0.4rem;
@@ -1603,7 +1605,7 @@ button:hover {
         row-gap: 0.25rem;
     }
 
-    /* Footer nav — tighten gap on narrow screens */
+    /* Footer nav — tighten gap */
     .footer-nav {
         gap: 1.25rem;
         flex-wrap: wrap;
@@ -1616,7 +1618,7 @@ button:hover {
         letter-spacing: 2px;
     }
 
-    /* Upgrade button — full width on mobile when logged in */
+    /* Upgrade button — full width on mobile */
     .auth-logged-in {
         flex-wrap: wrap;
     }
