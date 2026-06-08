@@ -489,39 +489,51 @@ async function loadScanHistory() {
     var titleEl = document.getElementById('scan-feed-title');
     if (!container) return;
 
-    // Try private history first (requires auth)
     var scans = null;
     var isPrivate = false;
+    var retries = 2;
 
-    try {
-        var response = await fetch('/api/scans?limit=8', {
-            credentials: 'same-origin'
-        });
-        if (response.ok) {
-            scans = await response.json();
-            if (scans && scans.length > 0) {
-                isPrivate = true;
-            }
-        }
-    } catch (err) {}
-
-    // Fall back to global feed
-    if (!scans || scans.length === 0) {
+    async function tryLoad() {
+        // Try private history first (requires auth)
         try {
-            var response = await fetch('/api/feed?limit=8');
+            var response = await fetch('/api/scans?limit=8', {
+                credentials: 'same-origin'
+            });
             if (response.ok) {
                 scans = await response.json();
+                if (scans && scans.length > 0) {
+                    isPrivate = true;
+                }
             }
         } catch (err) {}
+
+        // Fall back to global feed
+        if (!scans || scans.length === 0) {
+            try {
+                var response = await fetch('/api/feed?limit=8');
+                if (response.ok) {
+                    scans = await response.json();
+                }
+            } catch (err) {}
+        }
+    }
+
+    await tryLoad();
+
+    // Retry once after short delay if empty (handles cold start)
+    if ((!scans || scans.length === 0) && retries > 0) {
+        retries--;
+        await new Promise(function(resolve) { setTimeout(resolve, 1500); });
+        await tryLoad();
     }
 
     // Update section title
     if (titleEl) {
         titleEl.textContent = isPrivate ? 'YOUR SCANS' : 'GLOBAL ACTIVITY';
+    }
     var descEl = document.getElementById("scan-feed-desc");
     if (descEl) {
         descEl.textContent = isPrivate ? "Your private forensic scan history." : "Recent forensic events observed across the platform.";
-    }
     }
 
     container.innerHTML = '';
