@@ -8,7 +8,10 @@ import (
 func Home(a *app.App) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/" {
-			http.NotFound(w, r)
+			w.WriteHeader(http.StatusNotFound)
+			if err := a.Templates.ExecuteTemplate(w, "404.html", nil); err != nil {
+				http.Error(w, "Not Found", http.StatusNotFound)
+			}
 			return
 		}
 		if err := a.Templates.ExecuteTemplate(w, "index.html", nil); err != nil {

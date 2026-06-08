@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>404 | 404NOT403</title>
+    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+    <meta name="theme-color" content="#09090b">
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+<div class="page-wrapper">
+
+    <header class="site-header">
+        <div class="header-top">
+            <div>
+                <a href="/" style="text-decoration: none;"><h1 class="logo"><span class="logo-404">404</span><span class="logo-not">NOT</span><span class="logo-403">403</span></h1></a>
+                <p class="tagline">What did the server actually say?</p>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <div class="section-divider">
+            <span>VERDICT</span>
+        </div>
+
+        <section class="inspector">
+            <div class="scan-card">
+                <div class="scan-verdict status-4xx">
+                    <div class="verdict-left">
+                        <div class="verdict-status">
+                            <span class="status-code">404</span>
+                            <span class="status-text">NOT FOUND</span>
+                        </div>
+                        <div class="verdict-summary">
+                            The forensic engine confirmed this path does not exist on this server.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="scan-evidence">
+                    <div class="evidence-row">
+                        <div class="evidence-label">SERVER</div>
+                        <div class="evidence-content">
+                            <div class="evidence-value">404NOT403 · Go</div>
+                            <div class="evidence-annotation">This is a confirmed server-side 404. Not a CDN cache. Not a WAF block. The path genuinely does not exist.</div>
+                        </div>
+                    </div>
+
+                    <div class="evidence-row">
+                        <div class="evidence-label">NEXT</div>
+                        <div class="evidence-content">
+                            <div class="evidence-value">Return to the lab and inspect a real URL.</div>
+                            <div class="evidence-annotation">Use the Header Inspector to forensically scan any public URL and see what its server actually returns.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <div class="section-divider">
+            <span>NAVIGATE</span>
+        </div>
+
+        <section class="inspector">
+            <p class="section-desc">
+                <a href="/" style="color: var(--accent); text-decoration: none;">← Return to the forensic lab</a>
+            </p>
+        </section>
+    </main>
+
+    <footer class="site-footer">
+        <div class="section-divider">
+            <span>SYSTEM</span>
+        </div>
+        <nav class="footer-nav">
+            <a href="/">HOME</a>
+            <a href="/about">ABOUT</a>
+            <a href="/status">STATUS</a>
+        </nav>
+        <div class="footer-credits">
+            <p>404NOT403 · V2.0.0</p>
+        </div>
+    </footer>
+
+</div>
+</body>
+</html>
