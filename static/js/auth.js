@@ -162,11 +162,19 @@ async function refreshSessionUI() {
             upgradeBtn.style.display = (me.role === 'observer') ? 'inline-flex' : 'none';
         }
 	// Show MFA button only if not enabled
+	// MFA button — toggle between enable and disable
         var mfaBtn = document.getElementById('mfa-btn');
         if (mfaBtn) {
-            mfaBtn.style.display = me.mfa_enabled ? 'none' : 'inline-flex';
+            mfaBtn.style.display = 'inline-flex';
+            if (me.mfa_enabled) {
+                mfaBtn.textContent = 'DISABLE MFA';
+                mfaBtn.onclick = disableMFA;
+            } else {
+                mfaBtn.textContent = 'ENABLE MFA';
+                mfaBtn.onclick = setupMFA;
+            }
         }
-	// Monitor section
+     	// Monitor section
         gate.style.display = 'none';
         controls.style.display = 'block';
 
