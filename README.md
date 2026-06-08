@@ -224,3 +224,92 @@ Run tests with:
 
 ```bash
 go test ./...
+undefined
+go build ./...
+Running Locally
+Prerequisites
+Go
+PostgreSQL
+required environment variables
+Required Environment Variables
+Bash
+
+DATABASE_URL=
+JWT_PRIVATE_KEY=
+JWT_PUBLIC_KEY=
+JWT_ISSUER=
+MFA_ENCRYPTION_KEY=
+RESEND_API_KEY=
+STRIPE_SECRET_KEY=
+STRIPE_PRICE_ID=
+STRIPE_WEBHOOK_SECRET=
+PORT=
+Start
+Bash
+
+go build ./...
+go test ./...
+go run main.go
+Routes
+Public
+GET /
+GET /about
+GET /status
+GET /health
+GET /simulate/404
+GET /simulate/403
+GET /api/stats
+POST /api/scan
+GET /api/feed
+GET /reset
+Auth
+POST /api/auth/register
+POST /api/auth/login
+POST /api/auth/logout
+GET /api/auth/me
+GET /api/auth/check-handle
+POST /api/auth/forgot
+POST /api/auth/reset
+Protected
+GET /api/scans
+POST /api/monitor
+DELETE /api/monitor?id=
+GET /api/monitors
+GET /api/changes
+POST /api/billing/checkout
+Webhooks
+POST /api/webhooks/stripe
+Roadmap
+Completed:
+
+Layer 1: scan engine + database
+Layer 2: header inspector + simulator + scan history
+Layer 3: ghost link monitor
+Layer 4: identity + auth + password reset
+Layer 5: Stripe monetization
+Next:
+
+handler tests
+store tests
+subscription cancellation webhook
+MFA UI
+API key UI
+multi-region scanning
+API-first expansion
+Built By
+David Vasquez
+
+Systems-focused builder with startup IT and infrastructure experience across identity, automation, endpoint management, and secure systems.
+
+404NOT403 was built from first commit to production as a live forensic web product.
+
+Links:
+
+Live product: https://404not403.com
+GitHub: https://github.com/psiloconvalley
+Philosophy
+Every layer answers one question at a different scale:
+
+What did the server actually say?
+
+
