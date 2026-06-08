@@ -155,13 +155,18 @@ async function refreshSessionUI() {
             admin:    'ADMIN'
         };
         authRole.textContent = roleMap[me.role] || me.role.toUpperCase();
-
+	
         // Show upgrade button only for free tier
         var upgradeBtn = document.getElementById('upgrade-btn');
         if (upgradeBtn) {
             upgradeBtn.style.display = (me.role === 'observer') ? 'inline-flex' : 'none';
         }
-        // Monitor section
+	// Show MFA button only if not enabled
+        var mfaBtn = document.getElementById('mfa-btn');
+        if (mfaBtn) {
+            mfaBtn.style.display = me.mfa_enabled ? 'none' : 'inline-flex';
+        }
+	// Monitor section
         gate.style.display = 'none';
         controls.style.display = 'block';
 
@@ -393,5 +398,151 @@ function togglePassword(inputId, btn) {
     } else {
         input.type = 'password';
         icon.textContent = '◉';
+    }
+}
+// ── MFA Setup ───────────────────────────────────────────────────────────────
+async function setupMFA() {
+    var modal = document.getElementById('auth-modal');
+    var title = document.getElementById('modal-title');
+    var body = document.getElementById('modal-body');
+
+    title.textContent = 'ENABLE MFA';
+    body.innerHTML = '';
+
+    var loading = document.createElement('div');
+    loading.className = 'result-placeholder';
+    var loadSpan = document.createElement('span');
+    loadSpan.textContent = 'Generating secret...';
+    loading.appendChild(loadSpan);
+    body.appendChild(loading);
+
+    modal.style.display = 'flex';
+
+    try {
+        var response = await fetch('/api/auth/mfa/setup', {
+            method: 'POST',
+            credentials: 'same-origin'
+        });
+
+        var data = await response.json();
+
+        if (!response.ok) {
+            body.innerHTML = '';
+            var errDiv = document.createElement('div');
+            errDiv.className = 'form-error';
+            errDiv.textContent = data.error || 'Failed to set up MFA';
+            body.appendChild(errDiv);
+            return;
+        }
+
+        body.innerHTML = '';
+
+        // QR instruction
+        var desc = document.createElement('p');
+        desc.className = 'section-desc';
+        desc.textContent = 'Scan this QR code with your authenticator app (Google Authenticator, Authy, etc.)';
+        body.appendChild(desc);
+
+        // QR code image
+        var qrImg = document.createElement('img');
+        qrImg.src = 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=' + encodeURIComponent(data.qr_url);
+        qrImg.alt = 'MFA QR Code';
+        qrImg.style.display = 'block';
+        qrImg.style.margin = '1rem auto';
+        qrImg.style.border = '1px solid var(--border)';
+        body.appendChild(qrImg);
+
+        // Code input
+        var group = document.createElement('div');
+        group.className = 'form-group';
+
+        var label = document.createElement('label');
+        label.className = 'form-label';
+        label.textContent = 'ENTER 6-DIGIT CODE';
+
+        var input = document.createElement('input');
+        input.type = 'text';
+        input.id = 'mfa-code';
+        input.className = 'form-input';
+        input.placeholder = '000000';
+        input.maxLength = 6;
+        input.autocomplete = 'one-time-code';
+        input.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') verifyMFA();
+        });
+
+        group.appendChild(label);
+        group.appendChild(input);
+        body.appendChild(group);
+
+        var errEl = document.createElement('div');
+        errEl.className = 'form-error';
+        errEl.id = 'mfa-error';
+        body.appendChild(errEl);
+
+        var btn = document.createElement('button');
+        btn.className = 'form-submit';
+        btn.textContent = 'VERIFY & ENABLE';
+        btn.onclick = verifyMFA;
+        body.appendChild(btn);
+
+    } catch (err) {
+        body.innerHTML = '';
+        var errDiv = document.createElement('div');
+        errDiv.className = 'form-error';
+        errDiv.textContent = 'Failed to connect to server';
+        body.appendChild(errDiv);
+    }
+}
+
+async function verifyMFA() {
+    var code = document.getElementById('mfa-code').value.trim();
+    var errEl = document.getElementById('mfa-error');
+
+    errEl.textContent = '';
+
+    if (!code || code.length !== 6) {
+        errEl.textContent = 'Enter the 6-digit code from your app';
+        return;
+    }
+
+    try {
+        var response = await fetch('/api/auth/mfa/verify', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
+            body: JSON.stringify({ code: code })
+        });
+
+        var data = await response.json();
+
+        if (!response.ok) {
+            errEl.textContent = data.error || 'Verification failed';
+            return;
+        }
+
+        // Success
+        var body = document.getElementById('modal-body');
+        body.innerHTML = '';
+
+        var success = document.createElement('div');
+        success.className = 'result-placeholder';
+        var span = document.createElement('span');
+        span.textContent = 'MFA ENABLED — your account is now protected';
+        success.appendChild(span);
+        body.appendChild(success);
+
+        // Hide the MFA button
+        var mfaBtn = document.getElementById('mfa-btn');
+        if (mfaBtn) mfaBtn.style.display = 'none';
+
+        // Auto-close after 2 seconds
+        setTimeout(function() {
+            closeAuthModal();
+            refreshSessionUI();
+        }, 2000);
+
+    } catch (err) {
+        errEl.textContent = 'Failed to connect to server';
     }
 }

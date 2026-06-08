@@ -396,11 +396,120 @@ func ResetPassword(a *app.App) http.HandlerFunc {
 		w.Write([]byte(`{"status":"password updated successfully"}`))
 	}
 }
+
 // ResetPage serves the password reset form.
 func ResetPage(a *app.App) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if err := a.Templates.ExecuteTemplate(w, "reset.html", nil); err != nil {
 			http.Error(w, "System Error", http.StatusInternalServerError)
 		}
+	}
+}
+
+// MFASetup handles POST /api/auth/mfa/setup
+func MFASetup(a *app.App) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, `{"error":"use POST"}`, http.StatusMethodNotAllowed)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+
+		userID := middleware.GetUserID(r)
+		if userID == "" {
+			http.Error(w, `{"error":"not authenticated"}`, http.StatusUnauthorized)
+			return
+		}
+
+		user, err := store.GetUserByID(a.DB, userID)
+		if err != nil || user == nil {
+			http.Error(w, `{"error":"user not found"}`, http.StatusNotFound)
+			return
+		}
+
+		if user.MFAEnabled {
+			http.Error(w, `{"error":"MFA is already enabled"}`, http.StatusConflict)
+			return
+		}
+
+		_, encrypted, qrURL, err := auth.GenerateTOTPSecret(user.Handle)
+		if err != nil {
+			http.Error(w, `{"error":"failed to generate MFA secret"}`, http.StatusInternalServerError)
+			return
+		}
+
+		// Store secret only — MFA not enabled until code is verified
+		if err := store.StoreMFASecret(a.DB, user.ID, encrypted); err != nil {
+			http.Error(w, `{"error":"failed to store MFA secret"}`, http.StatusInternalServerError)
+			return
+		}
+
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"qr_url": qrURL,
+		})
+	}
+}
+
+// MFAVerify handles POST /api/auth/mfa/verify
+func MFAVerify(a *app.App) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, `{"error":"use POST"}`, http.StatusMethodNotAllowed)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+
+		userID := middleware.GetUserID(r)
+		if userID == "" {
+			http.Error(w, `{"error":"not authenticated"}`, http.StatusUnauthorized)
+			return
+		}
+
+		var input struct {
+			Code string `json:"code"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+			http.Error(w, `{"error":"invalid json"}`, http.StatusBadRequest)
+			return
+		}
+
+		if input.Code == "" || len(input.Code) != 6 {
+			http.Error(w, `{"error":"6-digit code required"}`, http.StatusBadRequest)
+			return
+		}
+
+		user, err := store.GetUserByID(a.DB, userID)
+		if err != nil || user == nil {
+			http.Error(w, `{"error":"user not found"}`, http.StatusNotFound)
+			return
+		}
+
+		if user.MFASecret == nil {
+			http.Error(w, `{"error":"MFA not set up — call /api/auth/mfa/setup first"}`, http.StatusBadRequest)
+			return
+		}
+
+		valid, err := auth.VerifyTOTP(*user.MFASecret, input.Code)
+		if err != nil {
+			http.Error(w, `{"error":"verification failed"}`, http.StatusInternalServerError)
+			return
+		}
+
+		if !valid {
+			http.Error(w, `{"error":"invalid code — try again"}`, http.StatusUnauthorized)
+			return
+		}
+
+		if err := store.EnableMFA(a.DB, user.ID, *user.MFASecret); err != nil {
+			http.Error(w, `{"error":"failed to enable MFA"}`, http.StatusInternalServerError)
+			return
+		}
+
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"status":      "mfa_enabled",
+			"mfa_enabled": true,
+		})
 	}
 }

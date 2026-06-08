@@ -582,6 +582,18 @@ func UpdateLastLogin(db *sql.DB, userID string) error {
 	return err
 }
 
+// StoreMFASecret saves the encrypted secret without enabling MFA.
+// Call this during setup. Call EnableMFA after code verification.
+func StoreMFASecret(db *sql.DB, userID, encryptedSecret string) error {
+	_, err := db.Exec(`
+		UPDATE users
+		SET mfa_secret = $1,
+		    updated_at = now()
+		WHERE id = $2`,
+		encryptedSecret, userID,
+	)
+	return err
+}
 func EnableMFA(db *sql.DB, userID, encryptedSecret string) error {
 	_, err := db.Exec(`
 		UPDATE users
