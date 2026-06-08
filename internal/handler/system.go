@@ -19,6 +19,21 @@ func Home(a *app.App) http.HandlerFunc {
 		}
 	}
 }
+func BillingSuccess(a *app.App) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if err := a.Templates.ExecuteTemplate(w, "billing-success.html", nil); err != nil {
+			http.Error(w, "System Error", http.StatusInternalServerError)
+		}
+	}
+}
+
+func BillingCancel(a *app.App) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if err := a.Templates.ExecuteTemplate(w, "billing-cancel.html", nil); err != nil {
+			http.Error(w, "System Error", http.StatusInternalServerError)
+		}
+	}
+}
 
 func Health(a *app.App) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -55,3 +70,5 @@ func Status(a *app.App) http.HandlerFunc {
 		}
 	}
 }
+
+

@@ -22,8 +22,8 @@ func CreateCheckoutSession(a *app.App) http.HandlerFunc {
 		userID := middleware.GetUserID(r)
 
 		params := &stripe.CheckoutSessionParams{
-			SuccessURL: stripe.String("https://404not403.com/?payment=success"),
-			CancelURL:  stripe.String("https://404not403.com/?payment=cancelled"),
+			SuccessURL: stripe.String("https://404not403.com/billing/success"),
+			CancelURL:  stripe.String("https://404not403.com/billing/cancel"),
 			Mode:       stripe.String(string(stripe.CheckoutSessionModeSubscription)),
 			LineItems: []*stripe.CheckoutSessionLineItemParams{
 				{
