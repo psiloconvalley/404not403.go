@@ -513,3 +513,60 @@ func MFAVerify(a *app.App) http.HandlerFunc {
 		})
 	}
 }
+// MFADisable handles POST /api/auth/mfa/disable
+func MFADisable(a *app.App) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, `{"error":"use POST"}`, http.StatusMethodNotAllowed)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+
+		userID := middleware.GetUserID(r)
+		if userID == "" {
+			http.Error(w, `{"error":"not authenticated"}`, http.StatusUnauthorized)
+			return
+		}
+
+		var input struct {
+			Password string `json:"password"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+			http.Error(w, `{"error":"invalid json"}`, http.StatusBadRequest)
+			return
+		}
+
+		if input.Password == "" {
+			http.Error(w, `{"error":"password is required to disable MFA"}`, http.StatusBadRequest)
+			return
+		}
+
+		user, err := store.GetUserByID(a.DB, userID)
+		if err != nil || user == nil {
+			http.Error(w, `{"error":"user not found"}`, http.StatusNotFound)
+			return
+		}
+
+		if !user.MFAEnabled {
+			http.Error(w, `{"error":"MFA is not enabled"}`, http.StatusBadRequest)
+			return
+		}
+
+		valid, err := auth.VerifyPassword(input.Password, user.PasswordHash)
+		if err != nil || !valid {
+			http.Error(w, `{"error":"incorrect password"}`, http.StatusUnauthorized)
+			return
+		}
+
+		if err := store.DisableMFA(a.DB, user.ID); err != nil {
+			http.Error(w, `{"error":"failed to disable MFA"}`, http.StatusInternalServerError)
+			return
+		}
+
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"status":      "mfa_disabled",
+			"mfa_enabled": false,
+		})
+	}
+}

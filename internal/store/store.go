@@ -605,6 +605,18 @@ func EnableMFA(db *sql.DB, userID, encryptedSecret string) error {
 	)
 	return err
 }
+// DisableMFA clears the MFA secret and disables MFA for a user.
+func DisableMFA(db *sql.DB, userID string) error {
+	_, err := db.Exec(`
+		UPDATE users
+		SET mfa_secret  = NULL,
+		    mfa_enabled = false,
+		    updated_at  = now()
+		WHERE id = $1`,
+		userID,
+	)
+	return err
+}
 
 // ── API Key queries ───────────────────────────────────────────────────────────
 

@@ -546,3 +546,96 @@ async function verifyMFA() {
         errEl.textContent = 'Failed to connect to server';
     }
 }
+// ── MFA Disable ─────────────────────────────────────────────────────────────
+function disableMFA() {
+    var modal = document.getElementById('auth-modal');
+    var title = document.getElementById('modal-title');
+    var body = document.getElementById('modal-body');
+
+    title.textContent = 'DISABLE MFA';
+    body.innerHTML = '';
+
+    var desc = document.createElement('p');
+    desc.className = 'section-desc';
+    desc.textContent = 'Enter your password to disable MFA. You will no longer need a code to sign in.';
+    body.appendChild(desc);
+
+    var group = document.createElement('div');
+    group.className = 'form-group';
+
+    var label = document.createElement('label');
+    label.className = 'form-label';
+    label.textContent = 'PASSWORD';
+
+    var input = document.createElement('input');
+    input.type = 'password';
+    input.id = 'mfa-disable-password';
+    input.className = 'form-input';
+    input.placeholder = 'your current password';
+    input.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') confirmDisableMFA();
+    });
+
+    group.appendChild(label);
+    group.appendChild(input);
+    body.appendChild(group);
+
+    var errEl = document.createElement('div');
+    errEl.className = 'form-error';
+    errEl.id = 'mfa-disable-error';
+    body.appendChild(errEl);
+
+    var btn = document.createElement('button');
+    btn.className = 'form-submit';
+    btn.textContent = 'DISABLE MFA';
+    btn.onclick = confirmDisableMFA;
+    body.appendChild(btn);
+
+    modal.style.display = 'flex';
+}
+
+async function confirmDisableMFA() {
+    var password = document.getElementById('mfa-disable-password').value;
+    var errEl = document.getElementById('mfa-disable-error');
+
+    errEl.textContent = '';
+
+    if (!password) {
+        errEl.textContent = 'Enter your password';
+        return;
+    }
+
+    try {
+        var response = await fetch('/api/auth/mfa/disable', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
+            body: JSON.stringify({ password: password })
+        });
+
+        var data = await response.json();
+
+        if (!response.ok) {
+            errEl.textContent = data.error || 'Failed to disable MFA';
+            return;
+        }
+
+        var body = document.getElementById('modal-body');
+        body.innerHTML = '';
+
+        var success = document.createElement('div');
+        success.className = 'result-placeholder';
+        var span = document.createElement('span');
+        span.textContent = 'MFA DISABLED — code is no longer required to sign in';
+        success.appendChild(span);
+        body.appendChild(success);
+
+        setTimeout(function() {
+            closeAuthModal();
+            refreshSessionUI();
+        }, 2000);
+
+    } catch (err) {
+        errEl.textContent = 'Failed to connect to server';
+    }
+}

@@ -95,6 +95,8 @@ func main() {
 	mux.HandleFunc("/reset", handler.ResetPage(a))
 	mux.HandleFunc("/api/auth/mfa/setup", middleware.RequireAuth(a, handler.MFASetup(a)))
 	mux.HandleFunc("/api/auth/mfa/verify", middleware.RequireAuth(a, handler.MFAVerify(a)))
+	mux.HandleFunc("/api/auth/mfa/disable", middleware.RequireAuth(a, handler.MFADisable(a)))
+
 
 
 	// ── Protected routes — require authentication ─────────────────────
