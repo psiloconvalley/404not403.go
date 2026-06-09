@@ -6,31 +6,31 @@
 
 /* ── Design Tokens ── */
 :root {
-    --bg:             #07080b;
-    --bg-gradient:    linear-gradient(180deg, #0b1220 0%, #07080b 42%);
-    --surface:        #0d1117;
-    --surface-raised: #131c27;
-    --border:         #1e3448;
-    --border-bright:  #2d5070;
+    --bg:             #050608;
+    --bg-gradient:    linear-gradient(180deg, #0a111a 0%, #050608 45%);
+    --surface:        #0d121a;
+    --surface-raised: #151c27;
+    --border:         #223a4d;
+    --border-bright:  #3b637d;
 
-    --text-primary:   #f0f6fc;
-    --text-secondary: #c9d8e8;
-    --text-muted:     #7a9bb5;
+    --text-primary:   #ffffff;
+    --text-secondary: #e2e8f0;
+    --text-muted:     #94a3b8;
 
-    --accent:         #2dd4bf;
-    --accent-dim:     #14b8a6;
-    --accent-subtle:  #0f4f4a;
-    --accent-glow:    rgba(45, 212, 191, 0.2);
+    --accent:         #33ffda; /* Ultra bright teal */
+    --accent-dim:     #2dd4bf;
+    --accent-subtle:  #0d9488;
+    --accent-glow:    rgba(51, 255, 218, 0.35);
 
-    --status-ok:      #3fffa2;
-    --status-warn:    #ffd060;
-    --status-block:   #ff6b7a;
+    --status-ok:      #50ffab;
+    --status-warn:    #ffce47;
+    --status-block:   #ff4d5e;
     --status-error:   #ff8c42;
 
-    --glow-ok:        rgba(63, 255, 162, 0.18);
-    --glow-warn:      rgba(255, 208, 96, 0.18);
-    --glow-block:     rgba(255, 107, 122, 0.18);
-    --glow-accent:    rgba(45, 212, 191, 0.18);
+    --glow-ok:        rgba(80, 255, 171, 0.4);
+    --glow-warn:      rgba(255, 206, 71, 0.4);
+    --glow-block:     rgba(255, 77, 94, 0.4);
+    --glow-accent:    rgba(51, 255, 218, 0.4);
 
     --font-sans: 'Space Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
     --font-mono: 'Fira Code', monospace;
@@ -85,19 +85,19 @@ body {
 
 .logo-404 {
     color: var(--status-block);
-    text-shadow: 0 0 20px var(--glow-block);
+    text-shadow: 0 0 25px var(--glow-block), 0 0 10px var(--glow-block);
 }
 
 .logo-not {
     color: var(--text-primary);
-    opacity: 0.8;
+    opacity: 0.9;
+    text-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
 }
 
 .logo-403 {
     color: var(--status-warn);
-    text-shadow: 0 0 20px var(--glow-warn);
+    text-shadow: 0 0 25px var(--glow-warn), 0 0 10px var(--glow-warn);
 }
-
 .tagline {
     margin-top: 0.75rem;
     font-size: 1.05rem;
