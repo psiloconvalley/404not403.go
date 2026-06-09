@@ -39,7 +39,7 @@ func (lm *LimiterMap) Get(ip string) *rate.Limiter {
 	defer lm.mu.Unlock()
 	l, exists := lm.limiters[ip]
 	if !exists {
-		l = rate.NewLimiter(rate.Every(200*time.Millisecond), 10)
+		l = rate.NewLimiter(rate.Every(100*time.Millisecond), 30)
 		lm.limiters[ip] = l
 	}
 	return l
