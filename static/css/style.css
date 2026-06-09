@@ -85,18 +85,18 @@ body {
 
 .logo-404 {
     color: var(--status-block);
-    text-shadow: 0 0 25px var(--glow-block), 0 0 10px var(--glow-block);
+    text-shadow: 0 0 30px currentColor, 0 0 60px currentColor;
 }
 
 .logo-not {
     color: var(--text-primary);
     opacity: 0.9;
-    text-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
+    text-shadow: 0 0 20px currentColor;
 }
 
 .logo-403 {
     color: var(--status-warn);
-    text-shadow: 0 0 25px var(--glow-warn), 0 0 10px var(--glow-warn);
+    text-shadow: 0 0 30px currentColor, 0 0 60px currentColor;
 }
 .tagline {
     margin-top: 0.75rem;
