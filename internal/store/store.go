@@ -310,6 +310,44 @@ func RunMigrations(db *sql.DB) {
 		},
 		{name: "idx_jobs_pending", sql: `CREATE INDEX IF NOT EXISTS idx_jobs_pending ON jobs(status, available_at) WHERE status IN ('pending', 'failed')`},
 		{name: "idx_jobs_org",     sql: `CREATE INDEX IF NOT EXISTS idx_jobs_org     ON jobs(org_id)`},
+
+		// ── AI Analysis ───────────────────────────────────────────────────────
+		{
+			name: "create_ai_analysis_table",
+			sql: `CREATE TABLE IF NOT EXISTS ai_analysis (
+				id                   UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+				ticket_id            UUID NOT NULL REFERENCES tickets(id),
+				org_id               UUID NOT NULL REFERENCES organizations(id),
+				model                TEXT NOT NULL,
+				model_version        TEXT,
+				input_hash           TEXT NOT NULL,
+				category             TEXT,
+				subcategory          TEXT,
+				suggested_priority   TEXT,
+				confidence           FLOAT,
+				sentiment            TEXT,
+				time_sensitive       BOOLEAN NOT NULL DEFAULT false,
+				time_reference       TEXT,
+				is_potential_p0      BOOLEAN NOT NULL DEFAULT false,
+				reasoning            TEXT,
+				entities             JSONB NOT NULL DEFAULT '[]',
+				summary              TEXT,
+				draft_response       TEXT,
+				resolution_steps     TEXT[],
+				estimated_minutes    INT,
+				kb_articles_used     UUID[],
+				human_priority       TEXT,
+				priority_delta       INT,
+				draft_accepted       BOOLEAN,
+				draft_edit_distance  INT,
+				resolution_matched   BOOLEAN,
+				raw_output           JSONB,
+				created_at           TIMESTAMPTZ NOT NULL DEFAULT now(),
+				reviewed_at          TIMESTAMPTZ
+			)`,
+		},
+		{name: "idx_ai_ticket", sql: `CREATE INDEX IF NOT EXISTS idx_ai_ticket ON ai_analysis(ticket_id)`},
+		{name: "idx_ai_org",    sql: `CREATE INDEX IF NOT EXISTS idx_ai_org    ON ai_analysis(org_id)`},
 	}
 
 	for _, m := range migrations {

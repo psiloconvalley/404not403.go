@@ -15,6 +15,7 @@ import (
 	"github.com/psiloconvalley/404not403/internal/auth"
 	"github.com/psiloconvalley/404not403/internal/handler"
 	"github.com/psiloconvalley/404not403/internal/middleware"
+	"github.com/psiloconvalley/404not403/internal/provider/ai"
 	"github.com/psiloconvalley/404not403/internal/store"
 )
 
@@ -39,13 +40,17 @@ func main() {
 	a.HTTPClient = app.NewHTTPClient()
 	a.Limiter = app.NewLimiterMap()
 
-	// 2. JWT Keys — must be set in environment
+	// 2. AI Provider — disabled until OPENAI_API_KEY is configured
+	a.AI = ai.NewDisabled()
+	log.Println("✅ AI provider initialized (disabled — no API key configured).")
+
+	// 3. JWT Keys — must be set in environment
 	if err := auth.InitKeys(); err != nil {
 		log.Fatalf("❌ JWT init failed: %v — cannot start without auth keys", err)
 	}
 	log.Println("✅ JWT keys loaded.")
 
-	// 3. Templates
+	// 4. Templates
 	tmpl, err := template.ParseGlob(filepath.Join("templates", "*.html"))
 	if err != nil {
 		log.Fatalf("❌ Template error: %v", err)
@@ -53,11 +58,11 @@ func main() {
 	a.Templates = tmpl
 	log.Println("✅ Templates parsed.")
 
-	// 4. Shutdown context — cancelled on SIGTERM or SIGINT
+	// 5. Shutdown context — cancelled on SIGTERM or SIGINT
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	// 5. Router
+	// 6. Router
 	mux := http.NewServeMux()
 
 	// Static files
@@ -85,11 +90,11 @@ func main() {
 	mux.HandleFunc("/api/billing/checkout", middleware.RequireAuth(a, handler.CreateCheckoutSession(a)))
 	mux.HandleFunc("/api/webhooks/stripe", handler.StripeWebhook(a))
 
-	// 6. Middleware chain
+	// 7. Middleware chain
 	wrapped := middleware.RateLimiter(a)(mux)
 	wrapped = middleware.Logger(wrapped)
 
-	// 7. Server
+	// 8. Server
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
@@ -103,7 +108,7 @@ func main() {
 		IdleTimeout:  60 * time.Second,
 	}
 
-	// 8. Start server in goroutine — main goroutine waits for shutdown signal
+	// 9. Start server in goroutine — main goroutine waits for shutdown signal
 	go func() {
 		log.Printf("🚀 404NOT403 Online — port %s", port)
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
@@ -111,11 +116,11 @@ func main() {
 		}
 	}()
 
-	// 9. Block until shutdown signal received
+	// 10. Block until shutdown signal received
 	<-ctx.Done()
 	log.Println("⏳ Shutdown signal received — draining connections...")
 
-	// 10. Graceful shutdown — 30 second drain window
+	// 11. Graceful shutdown — 30 second drain window
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 

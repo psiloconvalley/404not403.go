@@ -8,19 +8,22 @@ import (
 	"time"
 
 	"golang.org/x/time/rate"
+	"github.com/psiloconvalley/404not403/internal/provider/ai"
 )
 
 // App carries all shared dependencies.
 // Every handler and middleware receives a pointer to this struct.
+// Add new dependencies here — never pass them individually through handler chains.
 type App struct {
 	DB         *sql.DB
 	Templates  *template.Template
 	HTTPClient *http.Client
 	Limiter    *LimiterMap
+	AI         ai.Provider
 }
 
 // LimiterMap is a per-IP rate limiter store. Thread-safe.
-// Each IP gets: 5 requests per second, burst of 10.
+// Each IP gets 10 requests per second, burst of 30.
 type LimiterMap struct {
 	mu       sync.Mutex
 	limiters map[string]*rate.Limiter
@@ -45,8 +48,8 @@ func (lm *LimiterMap) Get(ip string) *rate.Limiter {
 	return l
 }
 
-// NewHTTPClient creates the outbound HTTP client with strict timeout
-// and redirect limits. Used by the scan engine.
+// NewHTTPClient creates the outbound HTTP client with strict timeouts.
+// Used for provider calls — email, webhooks, external APIs.
 func NewHTTPClient() *http.Client {
 	return &http.Client{
 		Timeout: 10 * time.Second,
