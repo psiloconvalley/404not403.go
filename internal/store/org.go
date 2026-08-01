@@ -31,8 +31,11 @@ type OrgMember struct {
 }
 
 // OrgMemberDetail joins org_members with users for display purposes.
+// OrgMemberDetail joins org_members with users and organizations for display.
 type OrgMemberDetail struct {
 	OrgID     string    `json:"org_id"`
+	OrgName   string    `json:"org_name"`
+	OrgSlug   string    `json:"org_slug"`
 	UserID    string    `json:"user_id"`
 	Email     string    `json:"email"`
 	Handle    string    `json:"handle"`
@@ -161,7 +164,7 @@ func GetOrgByInboundEmail(db *sql.DB, email string) (*Organization, error) {
 // including their role in each org.
 func GetOrgsForUser(db *sql.DB, userID string) ([]OrgMemberDetail, error) {
 	rows, err := db.Query(`
-		SELECT o.id, u.id, u.email, u.handle, m.role, m.created_at
+		SELECT o.id, o.name, o.slug, u.id, u.email, u.handle, m.role, m.created_at
 		FROM org_members m
 		JOIN organizations o ON o.id = m.org_id
 		JOIN users u ON u.id = m.user_id
@@ -178,7 +181,7 @@ func GetOrgsForUser(db *sql.DB, userID string) ([]OrgMemberDetail, error) {
 	for rows.Next() {
 		var d OrgMemberDetail
 		if err := rows.Scan(
-			&d.OrgID, &d.UserID, &d.Email, &d.Handle,
+			&d.OrgID, &d.OrgName, &d.OrgSlug, &d.UserID, &d.Email, &d.Handle,
 			&d.Role, &d.CreatedAt,
 		); err != nil {
 			return nil, err
@@ -210,7 +213,7 @@ func GetOrgMember(db *sql.DB, orgID, userID string) (*OrgMember, error) {
 // ListOrgMembers returns all members of an organization.
 func ListOrgMembers(db *sql.DB, orgID string) ([]OrgMemberDetail, error) {
 	rows, err := db.Query(`
-		SELECT o.id, u.id, u.email, u.handle, m.role, m.created_at
+		SELECT o.id, o.name, o.slug, u.id, u.email, u.handle, m.role, m.created_at
 		FROM org_members m
 		JOIN organizations o ON o.id = m.org_id
 		JOIN users u ON u.id = m.user_id
@@ -227,7 +230,7 @@ func ListOrgMembers(db *sql.DB, orgID string) ([]OrgMemberDetail, error) {
 	for rows.Next() {
 		var d OrgMemberDetail
 		if err := rows.Scan(
-			&d.OrgID, &d.UserID, &d.Email, &d.Handle,
+			&d.OrgID, &d.OrgName, &d.OrgSlug, &d.UserID, &d.Email, &d.Handle,
 			&d.Role, &d.CreatedAt,
 		); err != nil {
 			return nil, err

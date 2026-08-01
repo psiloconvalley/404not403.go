@@ -86,11 +86,11 @@
         data.orgs.forEach(function(m) {
             const div = document.createElement('div');
             div.className = 'org-card';
-            div.onclick = function() { selectOrg(m.org_id, m.org_id); };
+            div.onclick = function() { selectOrg(m.org_id, m.org_name); };
 
             const name = document.createElement('span');
             name.className = 'org-name';
-            name.textContent = m.org_id;
+            name.textContent = m.org_name;
             div.appendChild(name);
 
             const role = document.createElement('span');
