@@ -14,9 +14,12 @@ import (
 	"github.com/psiloconvalley/404not403/internal/app"
 	"github.com/psiloconvalley/404not403/internal/auth"
 	"github.com/psiloconvalley/404not403/internal/handler"
+	orghandler "github.com/psiloconvalley/404not403/internal/handler/org"
+	tickethandler "github.com/psiloconvalley/404not403/internal/handler/ticket"
 	"github.com/psiloconvalley/404not403/internal/middleware"
 	"github.com/psiloconvalley/404not403/internal/provider/ai"
 	"github.com/psiloconvalley/404not403/internal/store"
+	"github.com/psiloconvalley/404not403/internal/worker"
 )
 
 func main() {
@@ -62,7 +65,14 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	// 6. Router
+	// 6. Initialize handlers
+	tickets := tickethandler.New(a)
+	orgs := orghandler.New(a)
+
+	// 7. Worker — background job processor (AI enrichment)
+	go worker.Start(ctx, a)
+
+	// 8. Router
 	mux := http.NewServeMux()
 
 	// Static files
@@ -86,15 +96,24 @@ func main() {
 	mux.HandleFunc("/api/auth/mfa/verify", middleware.RequireAuth(a, handler.MFAVerify(a)))
 	mux.HandleFunc("/api/auth/mfa/disable", middleware.RequireAuth(a, handler.MFADisable(a)))
 
+	// ── Org routes ────────────────────────────────────────────────────
+	mux.HandleFunc("/api/orgs", middleware.RequireAuth(a, orgs.Create))
+	mux.HandleFunc("/api/orgs/me", middleware.RequireAuth(a, orgs.ListMine))
+	mux.HandleFunc("/api/orgs/", middleware.RequireAuth(a, orgRouter(orgs, tickets)))
+
+	// ── Ticket routes ─────────────────────────────────────────────────
+	// All ticket routes go through /api/orgs/{orgID}/tickets/...
+	// The orgRouter delegates to the ticket handler for ticket paths.
+
 	// ── Billing ───────────────────────────────────────────────────────
 	mux.HandleFunc("/api/billing/checkout", middleware.RequireAuth(a, handler.CreateCheckoutSession(a)))
 	mux.HandleFunc("/api/webhooks/stripe", handler.StripeWebhook(a))
 
-	// 7. Middleware chain
+	// 9. Middleware chain
 	wrapped := middleware.RateLimiter(a)(mux)
 	wrapped = middleware.Logger(wrapped)
 
-	// 8. Server
+	// 10. Server
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
@@ -108,7 +127,7 @@ func main() {
 		IdleTimeout:  60 * time.Second,
 	}
 
-	// 9. Start server in goroutine — main goroutine waits for shutdown signal
+	// 11. Start server in goroutine — main goroutine waits for shutdown signal
 	go func() {
 		log.Printf("🚀 404NOT403 Online — port %s", port)
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
@@ -116,11 +135,11 @@ func main() {
 		}
 	}()
 
-	// 10. Block until shutdown signal received
+	// 12. Block until shutdown signal received
 	<-ctx.Done()
 	log.Println("⏳ Shutdown signal received — draining connections...")
 
-	// 11. Graceful shutdown — 30 second drain window
+	// 13. Graceful shutdown — 30 second drain window
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
@@ -129,6 +148,64 @@ func main() {
 	}
 
 	log.Println("✅ 404NOT403 shut down cleanly.")
+}
+
+// orgRouter routes /api/orgs/{orgID}/... requests to the correct handler.
+// This avoids registering dozens of individual routes.
+// Standard library ServeMux matches by prefix — this function does the sub-routing.
+func orgRouter(orgs *orghandler.Handler, tickets *tickethandler.Handler) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		path := r.URL.Path
+
+		switch {
+		// Ticket routes: /api/orgs/{orgID}/tickets/...
+		case contains(path, "/tickets/search"):
+			tickets.Search(w, r)
+		case contains(path, "/tickets") && contains(path, "/status"):
+			tickets.UpdateStatus(w, r)
+		case contains(path, "/tickets") && contains(path, "/assign"):
+			tickets.Assign(w, r)
+		case contains(path, "/tickets") && contains(path, "/comments"):
+			tickets.AddComment(w, r)
+		case contains(path, "/tickets/"):
+			tickets.Get(w, r)
+		case hasSuffix(path, "/tickets"):
+			if r.Method == http.MethodPost {
+				tickets.Create(w, r)
+			} else {
+				tickets.List(w, r)
+			}
+
+		// Member routes: /api/orgs/{orgID}/members/...
+		case contains(path, "/members") && contains(path, "/role"):
+			orgs.UpdateRole(w, r)
+		case contains(path, "/members/"):
+			orgs.RemoveMember(w, r)
+		case hasSuffix(path, "/members"):
+			orgs.Invite(w, r)
+
+		// Org detail: /api/orgs/{orgID}
+		default:
+			orgs.Get(w, r)
+		}
+	}
+}
+
+func contains(s, substr string) bool {
+	return len(s) >= len(substr) && stringContains(s, substr)
+}
+
+func stringContains(s, substr string) bool {
+	for i := 0; i <= len(s)-len(substr); i++ {
+		if s[i:i+len(substr)] == substr {
+			return true
+		}
+	}
+	return false
+}
+
+func hasSuffix(s, suffix string) bool {
+	return len(s) >= len(suffix) && s[len(s)-len(suffix):] == suffix
 }
 
 // validateEnv checks that all required environment variables are set.
