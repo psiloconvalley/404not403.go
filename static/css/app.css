@@ -488,3 +488,381 @@ a:hover { color: var(--accent-hover); }
     .ticket-card { flex-wrap: wrap; gap: 0.4rem; }
     .ticket-subject { min-width: 0; }
 }
+
+/* ── Dashboard Layout Extensions ────────────────────────────────────────────── */
+
+.nav-left {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+.nav-right {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+.nav-org-name {
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    padding-left: 1rem;
+    border-left: 1px solid var(--border);
+}
+.nav-handle {
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    color: var(--text-primary);
+}
+
+/* ── Views ── */
+.view {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 1.5rem;
+}
+.view-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+.view-header h1 {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+/* ── Filter Tabs ── */
+.queue-filters {
+    display: flex;
+    gap: 0.25rem;
+}
+.filter-tab {
+    padding: 0.35rem 0.75rem;
+    font-family: var(--font-sans);
+    font-size: 0.75rem;
+    font-weight: 500;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: color 0.15s, border-color 0.15s, background 0.15s;
+    box-shadow: none;
+}
+.filter-tab:hover {
+    color: var(--text-primary);
+    border-color: var(--border-bright);
+}
+.filter-tab.active {
+    color: var(--accent);
+    border-color: var(--accent);
+    background: var(--accent-subtle);
+}
+
+/* ── Ticket Card Extensions ── */
+.ticket-card {
+    cursor: pointer;
+}
+.ticket-card-left {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex: 1;
+    min-width: 0;
+}
+.ticket-card-right {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-shrink: 0;
+}
+.ticket-age {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+    white-space: nowrap;
+}
+.ticket-card-critical {
+    border-left: 3px solid var(--priority-p0);
+}
+.btn-link {
+    background: none;
+    border: none;
+    color: var(--accent);
+    font-size: 0.85rem;
+    cursor: pointer;
+    padding: 0;
+    text-decoration: underline;
+}
+.btn-link:hover {
+    color: var(--accent-hover);
+}
+
+/* ── Form Row ── */
+.form-row {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+/* ── Detail View ── */
+.detail-nav {
+    margin-bottom: 1rem;
+}
+.detail-header {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 1.25rem;
+    margin-bottom: 1rem;
+    box-shadow: var(--shadow-sm);
+}
+.detail-meta {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+.detail-header h2 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 0.35rem;
+    line-height: 1.4;
+}
+.detail-timestamps {
+    display: flex;
+    gap: 1rem;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+}
+.detail-body {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 1.25rem;
+    margin-bottom: 1rem;
+    font-size: 0.9rem;
+    line-height: 1.7;
+    color: var(--text-primary);
+    white-space: pre-wrap;
+    box-shadow: var(--shadow-sm);
+}
+
+/* ── Actions ── */
+.detail-actions {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    padding: 1rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm);
+}
+.action-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    flex: 1;
+}
+.action-label {
+    font-size: 0.65rem;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+}
+.action-group select {
+    padding: 0.4rem 0.6rem;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text-primary);
+    font-family: var(--font-sans);
+    font-size: 0.8rem;
+    cursor: pointer;
+    outline: none;
+    transition: border-color 0.15s;
+}
+.action-group select:focus {
+    border-color: var(--accent);
+}
+
+/* ── Sections ── */
+.detail-section {
+    margin-bottom: 1.5rem;
+}
+.detail-section-title {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border);
+}
+
+/* ── Comment Thread ── */
+.comment-thread {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+.comment {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 0.75rem 1rem;
+    box-shadow: var(--shadow-sm);
+}
+.comment-internal {
+    border-left: 3px solid var(--priority-p2);
+    background: var(--bg-subtle);
+}
+.comment-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.35rem;
+}
+.comment-author {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+.comment-internal-badge {
+    font-size: 0.6rem;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    color: var(--priority-p2);
+    background: var(--priority-p2-bg);
+    padding: 0.1rem 0.35rem;
+    border-radius: 3px;
+}
+.comment-time {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+    margin-left: auto;
+}
+.comment-body {
+    font-size: 0.85rem;
+    line-height: 1.6;
+    color: var(--text-secondary);
+    white-space: pre-wrap;
+}
+.empty-thread {
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    padding: 1rem;
+    text-align: center;
+    background: var(--surface);
+    border: 1px dashed var(--border);
+    border-radius: var(--radius-md);
+}
+
+/* ── Comment Form ── */
+.comment-form {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 0.75rem;
+    box-shadow: var(--shadow-sm);
+}
+.comment-form textarea {
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text-primary);
+    font-family: var(--font-sans);
+    font-size: 0.85rem;
+    resize: vertical;
+    outline: none;
+    transition: border-color 0.15s;
+    margin-bottom: 0.5rem;
+}
+.comment-form textarea:focus {
+    border-color: var(--accent);
+}
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    cursor: pointer;
+}
+.checkbox-label input[type="checkbox"] {
+    width: auto;
+    cursor: pointer;
+}
+
+/* ── Event Trail ── */
+.event-trail {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+.event-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.35rem 0.75rem;
+    font-size: 0.75rem;
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+    border: 1px solid var(--border);
+}
+.event-type {
+    color: var(--text-secondary);
+    font-weight: 500;
+    text-transform: capitalize;
+}
+.event-time {
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+}
+
+/* ── Dashboard Responsive Extensions ── */
+@media (max-width: 640px) {
+    .nav-left { gap: 0.5rem; }
+    .nav-org-name {
+        display: none;
+    }
+    .queue-filters {
+        flex-wrap: wrap;
+        gap: 0.2rem;
+    }
+    .filter-tab {
+        font-size: 0.7rem;
+        padding: 0.25rem 0.5rem;
+    }
+    .view-header {
+        flex-direction: column;
+        gap: 0.75rem;
+        align-items: stretch;
+    }
+    .detail-actions {
+        flex-direction: column;
+    }
+    .detail-timestamps {
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+    .ticket-card-left {
+        flex-wrap: wrap;
+    }
+    .ticket-card-right {
+        flex-wrap: wrap;
+    }
+    .form-row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+}

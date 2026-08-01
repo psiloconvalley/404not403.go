@@ -335,6 +335,19 @@ func (s *Service) Search(ctx context.Context, orgID, query string, limit int) ([
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
+// ── Update Priority ───────────────────────────────────────────────────────────
+
+// UpdatePriority changes a ticket's priority.
+// Validates through domain.ParsePriority.
+// Records the priority change event.
+func (s *Service) UpdatePriority(ctx context.Context, orgID, ticketID, actorUserID, newPriority string) error {
+	if orgID == "" || ticketID == "" || actorUserID == "" {
+		return fmt.Errorf("org_id, ticket_id, and actor_user_id are required")
+	}
+
+	return store.UpdateTicketPriority(s.db, orgID, ticketID, actorUserID, newPriority)
+}
+
 // inputHash produces a SHA256 fingerprint of content sent to the AI.
 // Used for deduplication — same content does not trigger a second AI call.
 func inputHash(subject, body string) string {

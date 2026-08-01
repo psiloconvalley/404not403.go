@@ -7,207 +7,561 @@
     <link rel="stylesheet" href="/static/css/app.css">
 </head>
 <body>
-    <div class="dashboard">
-        <nav class="dash-nav">
+<div class="dashboard">
+
+    <!-- ── Nav ── -->
+    <nav class="dash-nav">
+        <div class="nav-left">
             <div class="logo">
                 <span class="logo-404">404</span><span class="logo-not">NOT</span><span class="logo-403">403</span>
             </div>
-            <div class="nav-user">
-                <span id="user-handle"></span>
-                <button onclick="handleLogout()" class="btn btn-ghost btn-sm">Log Out</button>
+            <div id="nav-org-name" class="nav-org-name" style="display:none;"></div>
+        </div>
+        <div class="nav-right">
+            <span id="user-handle" class="nav-handle"></span>
+            <button onclick="handleLogout()" class="btn btn-ghost btn-sm">Log Out</button>
+        </div>
+    </nav>
+
+    <!-- ── View: Org Picker ── -->
+    <div id="view-org" class="view">
+        <div class="view-header">
+            <h1>Your Organizations</h1>
+            <button onclick="showCreateOrg()" class="btn btn-primary btn-sm">New Organization</button>
+        </div>
+
+        <div id="org-list"></div>
+
+        <div id="create-org-form" style="display:none;" class="inline-form">
+            <input type="text" id="org-name" placeholder="Organization name">
+            <input type="text" id="org-slug" placeholder="slug — lowercase, hyphens only">
+            <div class="form-row">
+                <button onclick="createOrg()" class="btn btn-primary btn-sm">Create</button>
+                <button onclick="hideCreateOrg()" class="btn btn-ghost btn-sm">Cancel</button>
             </div>
-        </nav>
-
-        <main class="dash-main">
-            <!-- Org Section -->
-            <section class="dash-section" id="org-section">
-                <h2>Your Organizations</h2>
-                <div id="org-list"></div>
-                <div class="section-actions">
-                    <button onclick="showCreateOrg()" class="btn btn-primary btn-sm">Create Organization</button>
-                </div>
-                <div id="create-org-form" style="display:none;" class="inline-form">
-                    <input type="text" id="org-name" placeholder="Organization Name">
-                    <input type="text" id="org-slug" placeholder="slug (url-safe)">
-                    <button onclick="createOrg()" class="btn btn-primary btn-sm">Create</button>
-                </div>
-            </section>
-
-            <!-- Tickets Section (shown when org is selected) -->
-            <section class="dash-section" id="tickets-section" style="display:none;">
-                <div class="section-header">
-                    <h2>Tickets — <span id="current-org-name"></span></h2>
-                    <button onclick="showCreateTicket()" class="btn btn-primary btn-sm">New Ticket</button>
-                </div>
-
-                <div id="create-ticket-form" style="display:none;" class="inline-form">
-                    <input type="text" id="ticket-subject" placeholder="Subject">
-                    <textarea id="ticket-body" placeholder="Describe the issue..." rows="3"></textarea>
-                    <select id="ticket-priority">
-                        <option value="P3">P3 — Low</option>
-                        <option value="P2" selected>P2 — Medium</option>
-                        <option value="P1">P1 — High</option>
-                        <option value="P0">P0 — Critical</option>
-                    </select>
-                    <button onclick="createTicket()" class="btn btn-primary btn-sm">Submit</button>
-                </div>
-
-                <div id="ticket-list" class="ticket-list"></div>
-            </section>
-        </main>
+        </div>
     </div>
 
-    <script>
-    let currentOrgID = null;
-    let currentOrgName = null;
+    <!-- ── View: Queue ── -->
+    <div id="view-queue" class="view" style="display:none;">
+        <div class="view-header">
+            <div class="queue-filters">
+                <button class="filter-tab active" onclick="filterTickets('all', this)">All</button>
+                <button class="filter-tab" onclick="filterTickets('open', this)">Open</button>
+                <button class="filter-tab" onclick="filterTickets('in_progress', this)">In Progress</button>
+                <button class="filter-tab" onclick="filterTickets('pending_customer', this)">Pending</button>
+                <button class="filter-tab" onclick="filterTickets('resolved', this)">Resolved</button>
+            </div>
+            <button onclick="showCreateTicket()" class="btn btn-primary btn-sm">New Ticket</button>
+        </div>
 
-    // ── Init ──────────────────────────────────────────────────────────
-    async function init() {
-        const res = await fetch('/api/auth/me');
-        if (!res.ok) { window.location.href = '/login'; return; }
-        const user = await res.json();
-        document.getElementById('user-handle').textContent = user.handle;
+        <div id="create-ticket-form" style="display:none;" class="inline-form">
+            <input type="text" id="ticket-subject" placeholder="Subject — what is broken?">
+            <textarea id="ticket-body" placeholder="Describe the issue in detail..." rows="4"></textarea>
+            <div class="form-row">
+                <select id="ticket-priority">
+                    <option value="P3">P3 — Low</option>
+                    <option value="P2" selected>P2 — Medium</option>
+                    <option value="P1">P1 — High</option>
+                    <option value="P0">P0 — Critical / System Down</option>
+                </select>
+                <button onclick="createTicket()" class="btn btn-primary btn-sm">Submit</button>
+                <button onclick="hideCreateTicket()" class="btn btn-ghost btn-sm">Cancel</button>
+            </div>
+        </div>
+
+        <div id="ticket-list" class="ticket-list"></div>
+    </div>
+
+    <!-- ── View: Ticket Detail ── -->
+    <div id="view-detail" class="view" style="display:none;">
+        <div class="detail-nav">
+            <button onclick="showQueue()" class="btn btn-ghost btn-sm">← Back to Queue</button>
+        </div>
+
+        <div class="detail-header">
+            <div class="detail-meta">
+                <span id="detail-priority" class="ticket-priority"></span>
+                <span id="detail-status" class="ticket-status"></span>
+            </div>
+            <h2 id="detail-subject"></h2>
+            <div class="detail-timestamps">
+                <span id="detail-created"></span>
+                <span id="detail-source"></span>
+            </div>
+        </div>
+
+        <div class="detail-body" id="detail-body"></div>
+
+        <!-- Actions -->
+        <div class="detail-actions">
+            <div class="action-group">
+                <label class="action-label">Status</label>
+                <select id="action-status" onchange="changeStatus(this.value)">
+                    <option value="open">Open</option>
+                    <option value="assigned">Assigned</option>
+                    <option value="in_progress">In Progress</option>
+                    <option value="pending_customer">Pending Customer</option>
+                    <option value="pending_vendor">Pending Vendor</option>
+                    <option value="resolved">Resolved</option>
+                    <option value="closed">Closed</option>
+                </select>
+            </div>
+            <div class="action-group">
+                <label class="action-label">Priority</label>
+                <select id="action-priority" onchange="changePriority(this.value)">
+                    <option value="P0">P0 — Critical</option>
+                    <option value="P1">P1 — High</option>
+                    <option value="P2">P2 — Medium</option>
+                    <option value="P3">P3 — Low</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Comment Thread -->
+        <div class="detail-section">
+            <h3 class="detail-section-title">Conversation</h3>
+            <div id="comment-thread" class="comment-thread"></div>
+
+            <div class="comment-form">
+                <textarea id="comment-body" placeholder="Add a comment or note..." rows="3"></textarea>
+                <div class="form-row">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="comment-internal">
+                        Internal note (agents only)
+                    </label>
+                    <button onclick="addComment()" class="btn btn-primary btn-sm">Send</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Audit Trail -->
+        <div class="detail-section">
+            <h3 class="detail-section-title">Activity</h3>
+            <div id="event-trail" class="event-trail"></div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+// ── State ──────────────────────────────────────────────────────────────────
+let currentOrgID   = null;
+let currentOrgName = null;
+let currentTicketID = null;
+let currentFilter  = 'all';
+let allTickets     = [];
+
+// ── Init ───────────────────────────────────────────────────────────────────
+async function init() {
+    const res = await fetch('/api/auth/me');
+    if (!res.ok) { window.location.href = '/login'; return; }
+    const user = await res.json();
+    document.getElementById('user-handle').textContent = user.handle;
+    loadOrgs();
+}
+
+// ── Views ──────────────────────────────────────────────────────────────────
+function showView(name) {
+    document.getElementById('view-org').style.display    = 'none';
+    document.getElementById('view-queue').style.display  = 'none';
+    document.getElementById('view-detail').style.display = 'none';
+    document.getElementById('view-' + name).style.display = 'block';
+}
+
+function showQueue() {
+    showView('queue');
+    currentTicketID = null;
+    loadTickets(currentFilter);
+}
+
+// ── Orgs ───────────────────────────────────────────────────────────────────
+async function loadOrgs() {
+    const res = await fetch('/api/orgs/me');
+    if (!res.ok) { showView('org'); return; }
+    const data = await res.json();
+    const list = document.getElementById('org-list');
+    list.innerHTML = '';
+
+    if (!data.orgs || data.orgs.length === 0) {
+        list.innerHTML = '<p class="empty">No organizations yet. Create one to get started.</p>';
+        showView('org');
+        return;
+    }
+
+    // If only one org — go straight to queue
+    if (data.orgs.length === 1) {
+        selectOrg(data.orgs[0].org_id, data.orgs[0].org_name);
+        return;
+    }
+
+    data.orgs.forEach(function(m) {
+        const div = document.createElement('div');
+        div.className = 'org-card';
+        div.onclick = function() { selectOrg(m.org_id, m.org_name); };
+
+        const name = document.createElement('span');
+        name.className = 'org-name';
+        name.textContent = m.org_name;
+        div.appendChild(name);
+
+        const role = document.createElement('span');
+        role.className = 'org-role';
+        role.textContent = m.role;
+        div.appendChild(role);
+
+        list.appendChild(div);
+    });
+
+    showView('org');
+}
+
+function selectOrg(orgID, orgName) {
+    currentOrgID   = orgID;
+    currentOrgName = orgName;
+    document.getElementById('nav-org-name').textContent = orgName;
+    document.getElementById('nav-org-name').style.display = 'block';
+    showView('queue');
+    loadTickets('all');
+}
+
+function showCreateOrg() {
+    document.getElementById('create-org-form').style.display = 'flex';
+}
+
+function hideCreateOrg() {
+    document.getElementById('create-org-form').style.display = 'none';
+}
+
+async function createOrg() {
+    const name = document.getElementById('org-name').value.trim();
+    const slug = document.getElementById('org-slug').value.trim();
+    if (!name || !slug) return;
+
+    const res = await fetch('/api/orgs', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({name: name, slug: slug})
+    });
+
+    if (res.ok) {
+        hideCreateOrg();
+        document.getElementById('org-name').value = '';
+        document.getElementById('org-slug').value = '';
         loadOrgs();
+    } else {
+        const data = await res.json();
+        alert(data.error || 'Failed to create organization');
+    }
+}
+
+// ── Queue ──────────────────────────────────────────────────────────────────
+async function loadTickets(filter) {
+    if (!currentOrgID) return;
+    currentFilter = filter || 'all';
+
+    let url = '/api/orgs/' + currentOrgID + '/tickets';
+    if (currentFilter !== 'all') {
+        url += '?status=' + currentFilter;
     }
 
-    // ── Orgs ──────────────────────────────────────────────────────────
-    async function loadOrgs() {
-        const res = await fetch('/api/orgs/me');
-        if (!res.ok) return;
-        const data = await res.json();
-        const list = document.getElementById('org-list');
-        list.innerHTML = '';
+    const res = await fetch(url);
+    if (!res.ok) return;
+    const data = await res.json();
+    allTickets = data.tickets || [];
 
-        if (!data.orgs || data.orgs.length === 0) {
-            list.innerHTML = '<p class="empty">No organizations yet. Create one to get started.</p>';
-            return;
+    renderTicketList(allTickets);
+}
+
+function filterTickets(filter, btn) {
+    document.querySelectorAll('.filter-tab').forEach(function(t) {
+        t.classList.remove('active');
+    });
+    btn.classList.add('active');
+    loadTickets(filter);
+}
+
+function renderTicketList(tickets) {
+    const list = document.getElementById('ticket-list');
+    list.innerHTML = '';
+
+    if (!tickets || tickets.length === 0) {
+        list.innerHTML = '<div class="empty">No tickets found. <button onclick="showCreateTicket()" class="btn-link">Create one?</button></div>';
+        return;
+    }
+
+    // Sort: P0 first, then P1, P2, P3, then by created_at
+    const priorityOrder = {P0: 0, P1: 1, P2: 2, P3: 3};
+    tickets.sort(function(a, b) {
+        const pd = (priorityOrder[a.priority] || 99) - (priorityOrder[b.priority] || 99);
+        if (pd !== 0) return pd;
+        return new Date(a.created_at) - new Date(b.created_at);
+    });
+
+    tickets.forEach(function(t) {
+        const div = document.createElement('div');
+        div.className = 'ticket-card' + (t.priority === 'P0' ? ' ticket-card-critical' : '');
+        div.onclick = function() { openTicket(t.id); };
+
+        const left = document.createElement('div');
+        left.className = 'ticket-card-left';
+
+        const priority = document.createElement('span');
+        priority.className = 'ticket-priority priority-' + t.priority.toLowerCase();
+        priority.textContent = t.priority;
+        left.appendChild(priority);
+
+        const subject = document.createElement('span');
+        subject.className = 'ticket-subject';
+        subject.textContent = t.subject;
+        left.appendChild(subject);
+
+        const right = document.createElement('div');
+        right.className = 'ticket-card-right';
+
+        const status = document.createElement('span');
+        status.className = 'ticket-status status-' + t.status;
+        status.textContent = t.status.replace(/_/g, ' ');
+        right.appendChild(status);
+
+        const age = document.createElement('span');
+        age.className = 'ticket-age';
+        age.textContent = timeAgo(t.created_at);
+        right.appendChild(age);
+
+        div.appendChild(left);
+        div.appendChild(right);
+        list.appendChild(div);
+    });
+}
+
+function showCreateTicket() {
+    document.getElementById('create-ticket-form').style.display = 'flex';
+}
+
+function hideCreateTicket() {
+    document.getElementById('create-ticket-form').style.display = 'none';
+}
+
+async function createTicket() {
+    if (!currentOrgID) return;
+    const subject  = document.getElementById('ticket-subject').value.trim();
+    const body     = document.getElementById('ticket-body').value.trim();
+    const priority = document.getElementById('ticket-priority').value;
+    if (!subject || !body) { alert('Subject and description are required'); return; }
+
+    const res = await fetch('/api/orgs/' + currentOrgID + '/tickets', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({subject: subject, body: body, priority: priority, source_type: 'web'})
+    });
+
+    if (res.ok) {
+        hideCreateTicket();
+        document.getElementById('ticket-subject').value = '';
+        document.getElementById('ticket-body').value = '';
+        loadTickets(currentFilter);
+    } else {
+        const data = await res.json();
+        alert(data.error || 'Failed to create ticket');
+    }
+}
+
+// ── Ticket Detail ──────────────────────────────────────────────────────────
+async function openTicket(ticketID) {
+    if (!currentOrgID) return;
+    currentTicketID = ticketID;
+
+    const res = await fetch('/api/orgs/' + currentOrgID + '/tickets/' + ticketID);
+    if (!res.ok) { alert('Failed to load ticket'); return; }
+    const ctx = await res.json();
+    const t = ctx.ticket;
+
+    // Header
+    const priorityEl = document.getElementById('detail-priority');
+    priorityEl.className = 'ticket-priority priority-' + t.priority.toLowerCase();
+    priorityEl.textContent = t.priority;
+
+    const statusEl = document.getElementById('detail-status');
+    statusEl.className = 'ticket-status status-' + t.status;
+    statusEl.textContent = t.status.replace(/_/g, ' ');
+
+    document.getElementById('detail-subject').textContent = t.subject;
+    document.getElementById('detail-created').textContent = 'Opened ' + timeAgo(t.created_at);
+    document.getElementById('detail-source').textContent = 'via ' + t.source_type;
+    document.getElementById('detail-body').textContent = t.body;
+
+    // Actions
+    document.getElementById('action-status').value   = t.status;
+    document.getElementById('action-priority').value = t.priority;
+
+    // Comments
+    renderComments(ctx.comments || []);
+
+    // Events
+    renderEvents(ctx.events || []);
+
+    showView('detail');
+}
+
+function renderComments(comments) {
+    const thread = document.getElementById('comment-thread');
+    thread.innerHTML = '';
+
+    if (!comments || comments.length === 0) {
+        thread.innerHTML = '<p class="empty-thread">No comments yet. Add the first response.</p>';
+        return;
+    }
+
+    comments.forEach(function(c) {
+        const div = document.createElement('div');
+        div.className = 'comment' + (c.is_internal ? ' comment-internal' : '');
+
+        const meta = document.createElement('div');
+        meta.className = 'comment-meta';
+
+        const who = document.createElement('span');
+        who.className = 'comment-author';
+        who.textContent = c.author_id ? 'Agent' : 'Customer';
+        meta.appendChild(who);
+
+        if (c.is_internal) {
+            const badge = document.createElement('span');
+            badge.className = 'comment-internal-badge';
+            badge.textContent = 'Internal';
+            meta.appendChild(badge);
         }
 
-        data.orgs.forEach(function(m) {
-            const div = document.createElement('div');
-            div.className = 'org-card';
-            div.onclick = function() { selectOrg(m.org_id, m.org_name); };
+        const when = document.createElement('span');
+        when.className = 'comment-time';
+        when.textContent = timeAgo(c.created_at);
+        meta.appendChild(when);
 
-            const name = document.createElement('span');
-            name.className = 'org-name';
-            name.textContent = m.org_name;
-            div.appendChild(name);
+        const body = document.createElement('div');
+        body.className = 'comment-body';
+        body.textContent = c.body;
 
-            const role = document.createElement('span');
-            role.className = 'org-role';
-            role.textContent = m.role;
-            div.appendChild(role);
+        div.appendChild(meta);
+        div.appendChild(body);
+        thread.appendChild(div);
+    });
+}
 
-            list.appendChild(div);
-        });
+function renderEvents(events) {
+    const trail = document.getElementById('event-trail');
+    trail.innerHTML = '';
+
+    if (!events || events.length === 0) {
+        trail.innerHTML = '<p class="empty-thread">No activity yet.</p>';
+        return;
     }
 
-    function showCreateOrg() {
-        document.getElementById('create-org-form').style.display = 'flex';
-    }
+    // Show last 10 events, newest first
+    const recent = events.slice().reverse().slice(0, 10);
+    recent.forEach(function(e) {
+        const div = document.createElement('div');
+        div.className = 'event-row';
 
-    async function createOrg() {
-        const name = document.getElementById('org-name').value.trim();
-        const slug = document.getElementById('org-slug').value.trim();
-        if (!name || !slug) return;
+        const type = document.createElement('span');
+        type.className = 'event-type';
+        type.textContent = e.event_type.replace(/\./g, ' ');
+        div.appendChild(type);
 
-        const res = await fetch('/api/orgs', {
+        const when = document.createElement('span');
+        when.className = 'event-time';
+        when.textContent = timeAgo(e.created_at);
+        div.appendChild(when);
+
+        trail.appendChild(div);
+    });
+}
+
+async function changeStatus(newStatus) {
+    if (!currentOrgID || !currentTicketID) return;
+
+    const res = await fetch(
+        '/api/orgs/' + currentOrgID + '/tickets/' + currentTicketID + '/status',
+        {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({name: name, slug: slug})
-        });
-
-        if (res.ok) {
-            document.getElementById('create-org-form').style.display = 'none';
-            document.getElementById('org-name').value = '';
-            document.getElementById('org-slug').value = '';
-            loadOrgs();
+            body: JSON.stringify({status: newStatus})
         }
-    }
+    );
 
-    // ── Select Org ────────────────────────────────────────────────────
-    function selectOrg(orgID, orgName) {
-        currentOrgID = orgID;
-        currentOrgName = orgName;
-        document.getElementById('current-org-name').textContent = orgName;
-        document.getElementById('tickets-section').style.display = 'block';
-        loadTickets();
-    }
-
-    // ── Tickets ───────────────────────────────────────────────────────
-    async function loadTickets() {
-        if (!currentOrgID) return;
-        const res = await fetch('/api/orgs/' + currentOrgID + '/tickets');
-        if (!res.ok) return;
+    if (res.ok) {
+        const statusEl = document.getElementById('detail-status');
+        statusEl.className = 'ticket-status status-' + newStatus;
+        statusEl.textContent = newStatus.replace(/_/g, ' ');
+    } else {
         const data = await res.json();
-        const list = document.getElementById('ticket-list');
-        list.innerHTML = '';
-
-        if (!data.tickets || data.tickets.length === 0) {
-            list.innerHTML = '<p class="empty">No tickets yet.</p>';
-            return;
-        }
-
-        data.tickets.forEach(function(t) {
-            const div = document.createElement('div');
-            div.className = 'ticket-card';
-
-            const priority = document.createElement('span');
-            priority.className = 'ticket-priority priority-' + t.priority.toLowerCase();
-            priority.textContent = t.priority;
-            div.appendChild(priority);
-
-            const subject = document.createElement('span');
-            subject.className = 'ticket-subject';
-            subject.textContent = t.subject;
-            div.appendChild(subject);
-
-            const status = document.createElement('span');
-            status.className = 'ticket-status status-' + t.status;
-            status.textContent = t.status;
-            div.appendChild(status);
-
-            list.appendChild(div);
-        });
+        alert(data.error || 'Invalid status transition');
+        // Reload to reset the dropdown
+        openTicket(currentTicketID);
     }
+}
 
-    function showCreateTicket() {
-        document.getElementById('create-ticket-form').style.display = 'flex';
-    }
+async function changePriority(newPriority) {
+    if (!currentOrgID || !currentTicketID) return;
 
-    async function createTicket() {
-        if (!currentOrgID) return;
-        const subject = document.getElementById('ticket-subject').value.trim();
-        const body = document.getElementById('ticket-body').value.trim();
-        const priority = document.getElementById('ticket-priority').value;
-        if (!subject || !body) return;
-
-        const res = await fetch('/api/orgs/' + currentOrgID + '/tickets', {
+    const res = await fetch(
+        '/api/orgs/' + currentOrgID + '/tickets/' + currentTicketID + '/priority',
+        {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({
-                subject: subject,
-                body: body,
-                priority: priority,
-                source_type: 'web'
-            })
-        });
-
-        if (res.ok) {
-            document.getElementById('create-ticket-form').style.display = 'none';
-            document.getElementById('ticket-subject').value = '';
-            document.getElementById('ticket-body').value = '';
-            loadTickets();
+            body: JSON.stringify({priority: newPriority})
         }
-    }
+    );
 
-    // ── Logout ────────────────────────────────────────────────────────
-    async function handleLogout() {
-        await fetch('/api/auth/logout', {method: 'POST'});
-        window.location.href = '/login';
+    if (!res.ok) {
+        const data = await res.json();
+        alert(data.error || 'Failed to update priority');
+        openTicket(currentTicketID);
     }
+}
 
-    init();
-    </script>
+async function addComment() {
+    if (!currentOrgID || !currentTicketID) return;
+    const body       = document.getElementById('comment-body').value.trim();
+    const isInternal = document.getElementById('comment-internal').checked;
+    if (!body) return;
+
+    const res = await fetch(
+        '/api/orgs/' + currentOrgID + '/tickets/' + currentTicketID + '/comments',
+        {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({body: body, is_internal: isInternal})
+        }
+    );
+
+    if (res.ok) {
+        document.getElementById('comment-body').value = '';
+        document.getElementById('comment-internal').checked = false;
+        openTicket(currentTicketID);
+    } else {
+        const data = await res.json();
+        alert(data.error || 'Failed to add comment');
+    }
+}
+
+// ── Logout ─────────────────────────────────────────────────────────────────
+async function handleLogout() {
+    await fetch('/api/auth/logout', {method: 'POST'});
+    window.location.href = '/login';
+}
+
+// ── Helpers ────────────────────────────────────────────────────────────────
+function timeAgo(dateStr) {
+    const now  = new Date();
+    const then = new Date(dateStr);
+    const sec  = Math.floor((now - then) / 1000);
+    if (sec < 60)   return sec + 's ago';
+    if (sec < 3600) return Math.floor(sec / 60) + 'm ago';
+    if (sec < 86400) return Math.floor(sec / 3600) + 'h ago';
+    return Math.floor(sec / 86400) + 'd ago';
+}
+
+init();
+</script>
 </body>
 </html>

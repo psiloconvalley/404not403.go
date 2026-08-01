@@ -413,3 +413,49 @@ func (h *Handler) Search(w http.ResponseWriter, r *http.Request) {
 		"count":   len(tickets),
 	})
 }
+
+// ── Update Priority ───────────────────────────────────────────────────────────
+
+// UpdatePriority handles POST /api/orgs/{orgID}/tickets/{ticketID}/priority
+func (h *Handler) UpdatePriority(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		writeError(w, http.StatusMethodNotAllowed, "use POST")
+		return
+	}
+
+	userID := middleware.GetUserID(r)
+	if userID == "" {
+		writeError(w, http.StatusUnauthorized, "not authenticated")
+		return
+	}
+
+	// Path: /api/orgs/{orgID}/tickets/{ticketID}/priority
+	path := strings.TrimPrefix(r.URL.Path, "/api/orgs/")
+	path = strings.TrimSuffix(path, "/priority")
+	parts := strings.SplitN(path, "/tickets/", 2)
+	if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
+		writeError(w, http.StatusBadRequest, "invalid path")
+		return
+	}
+	orgID := parts[0]
+	ticketID := parts[1]
+
+	var input struct {
+		Priority string `json:"priority"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid JSON")
+		return
+	}
+	if input.Priority == "" {
+		writeError(w, http.StatusBadRequest, "priority is required")
+		return
+	}
+
+	if err := h.svc.UpdatePriority(r.Context(), orgID, ticketID, userID, input.Priority); err != nil {
+		writeError(w, domainErrStatus(err), err.Error())
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]string{"priority": input.Priority})
+}

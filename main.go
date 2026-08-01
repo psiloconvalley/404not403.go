@@ -169,6 +169,8 @@ func orgRouter(orgs *orghandler.Handler, tickets *tickethandler.Handler) http.Ha
 			tickets.UpdateStatus(w, r)
 		case contains(path, "/tickets") && contains(path, "/assign"):
 			tickets.Assign(w, r)
+		case contains(path, "/tickets") && contains(path, "/priority"):
+			tickets.UpdatePriority(w, r)
 		case contains(path, "/tickets") && contains(path, "/comments"):
 			tickets.AddComment(w, r)
 		case contains(path, "/tickets/"):
