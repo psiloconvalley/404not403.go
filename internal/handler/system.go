@@ -2,6 +2,7 @@ package handler
 
 import (
 	"net/http"
+
 	"github.com/psiloconvalley/404not403/internal/app"
 )
 
@@ -9,29 +10,12 @@ func Home(a *app.App) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/" {
 			w.WriteHeader(http.StatusNotFound)
-			if err := a.Templates.ExecuteTemplate(w, "404.html", nil); err != nil {
-				http.Error(w, "Not Found", http.StatusNotFound)
-			}
+			w.Header().Set("Content-Type", "application/json")
+			w.Write([]byte(`{"error":"not found"}`))
 			return
 		}
-		if err := a.Templates.ExecuteTemplate(w, "index.html", nil); err != nil {
-			http.Error(w, "System Error", http.StatusInternalServerError)
-		}
-	}
-}
-func BillingSuccess(a *app.App) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		if err := a.Templates.ExecuteTemplate(w, "billing-success.html", nil); err != nil {
-			http.Error(w, "System Error", http.StatusInternalServerError)
-		}
-	}
-}
-
-func BillingCancel(a *app.App) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		if err := a.Templates.ExecuteTemplate(w, "billing-cancel.html", nil); err != nil {
-			http.Error(w, "System Error", http.StatusInternalServerError)
-		}
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"service":"404not403","status":"operational"}`))
 	}
 }
 
@@ -52,23 +36,3 @@ func Health(a *app.App) http.HandlerFunc {
 		w.Write([]byte(`{"status":"` + dbStatus + `"}`))
 	}
 }
-func Status(a *app.App) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		dbStatus := "ok"
-		if a.DB == nil {
-			dbStatus = "offline"
-		} else if err := a.DB.Ping(); err != nil {
-			dbStatus = "error"
-		}
-
-		data := map[string]string{
-			"DBStatus": dbStatus,
-		}
-
-		if err := a.Templates.ExecuteTemplate(w, "status.html", data); err != nil {
-			http.Error(w, "System Error", http.StatusInternalServerError)
-		}
-	}
-}
-
-

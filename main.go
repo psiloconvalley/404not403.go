@@ -6,17 +6,16 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"os/signal"
 	"path/filepath"
+	"syscall"
 	"time"
 
 	"github.com/psiloconvalley/404not403/internal/app"
 	"github.com/psiloconvalley/404not403/internal/auth"
 	"github.com/psiloconvalley/404not403/internal/handler"
 	"github.com/psiloconvalley/404not403/internal/middleware"
-	"github.com/psiloconvalley/404not403/internal/monitor"
 	"github.com/psiloconvalley/404not403/internal/store"
-	"os/signal"
-	"syscall"
 )
 
 func main() {
@@ -25,8 +24,6 @@ func main() {
 		"DATABASE_URL",
 		"JWT_PRIVATE_KEY",
 		"JWT_PUBLIC_KEY",
-		"STRIPE_SECRET_KEY",
-		"STRIPE_WEBHOOK_SECRET",
 	)
 
 	a := &app.App{}
@@ -60,10 +57,7 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	// 5. Ghost Link Monitor worker — context-aware, exits cleanly on shutdown
-	go monitor.StartWorker(ctx, a)
-
-	// 6. Router
+	// 5. Router
 	mux := http.NewServeMux()
 
 	// Static files
@@ -72,17 +66,7 @@ func main() {
 
 	// ── Public routes ─────────────────────────────────────────────────
 	mux.HandleFunc("/", handler.Home(a))
-	mux.HandleFunc("/about", handler.About(a))
 	mux.HandleFunc("/health", handler.Health(a))
-	mux.HandleFunc("/status", handler.Status(a))
-	mux.HandleFunc("/billing/success", handler.BillingSuccess(a))
-	mux.HandleFunc("/billing/cancel", handler.BillingCancel(a))
-	mux.HandleFunc("/simulate/404", handler.Simulate404(a))
-	mux.HandleFunc("/simulate/403", handler.Simulate403(a))
-	mux.HandleFunc("/api/stats", handler.Stats(a))
-	mux.HandleFunc("/api/scan", handler.Scan(a))
-	mux.HandleFunc("/api/scans", middleware.RequireAuth(a, handler.RecentScans(a)))
-	mux.HandleFunc("/api/feed", handler.GlobalFeed(a))
 
 	// ── Auth routes ───────────────────────────────────────────────────
 	mux.HandleFunc("/api/auth/register", handler.Register(a))
@@ -97,20 +81,15 @@ func main() {
 	mux.HandleFunc("/api/auth/mfa/verify", middleware.RequireAuth(a, handler.MFAVerify(a)))
 	mux.HandleFunc("/api/auth/mfa/disable", middleware.RequireAuth(a, handler.MFADisable(a)))
 
-
-
-	// ── Protected routes — require authentication ─────────────────────
-	mux.HandleFunc("/api/monitor", middleware.RequireAuth(a, handler.Monitor(a)))
-	mux.HandleFunc("/api/monitors", middleware.RequireAuth(a, handler.ListMonitors(a)))
-	mux.HandleFunc("/api/changes", middleware.RequireAuth(a, handler.ListChanges(a)))
+	// ── Billing ───────────────────────────────────────────────────────
 	mux.HandleFunc("/api/billing/checkout", middleware.RequireAuth(a, handler.CreateCheckoutSession(a)))
 	mux.HandleFunc("/api/webhooks/stripe", handler.StripeWebhook(a))
 
-	// 7. Middleware chain
+	// 6. Middleware chain
 	wrapped := middleware.RateLimiter(a)(mux)
 	wrapped = middleware.Logger(wrapped)
 
-	// 8. Server
+	// 7. Server
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
@@ -124,19 +103,19 @@ func main() {
 		IdleTimeout:  60 * time.Second,
 	}
 
-	// 9. Start server in goroutine — main goroutine waits for shutdown signal
+	// 8. Start server in goroutine — main goroutine waits for shutdown signal
 	go func() {
-		log.Printf("🚀 404NOT403 Engine Online — port %s", port)
+		log.Printf("🚀 404NOT403 Online — port %s", port)
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatalf("❌ Server error: %v", err)
 		}
 	}()
 
-	// 10. Block until shutdown signal received
+	// 9. Block until shutdown signal received
 	<-ctx.Done()
 	log.Println("⏳ Shutdown signal received — draining connections...")
 
-	// 11. Graceful shutdown — 30 second drain window
+	// 10. Graceful shutdown — 30 second drain window
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
