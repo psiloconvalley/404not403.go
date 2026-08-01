@@ -134,11 +134,11 @@ func (s *Service) Create(ctx context.Context, input CreateInput) (*CreateResult,
 // TicketContext is a ticket with all related data loaded.
 // This is what an agent sees when they open a ticket.
 type TicketContext struct {
-	Ticket      *store.Ticket
-	Comments    []store.Comment
-	Events      []store.TicketEvent
-	ConfigItems []store.ConfigItem
-	Analysis    *store.AIAnalysis // nil if AI has not run yet
+	Ticket      *store.Ticket       `json:"ticket"`
+	Comments    []store.Comment     `json:"comments"`
+	Events      []store.TicketEvent `json:"events"`
+	ConfigItems []store.ConfigItem  `json:"config_items"`
+	Analysis    *store.AIAnalysis   `json:"analysis"`
 }
 
 // Get loads a ticket with full context.
