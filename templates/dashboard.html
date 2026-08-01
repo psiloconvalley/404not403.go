@@ -73,31 +73,13 @@
         <div id="ticket-list" class="ticket-list"></div>
     </div>
 
+
     <!-- ── View: Ticket Detail ── -->
     <div id="view-detail" class="view" style="display:none;">
-        <div class="detail-nav">
-            <button onclick="showQueue()" class="btn btn-ghost btn-sm">← Back to Queue</button>
-        </div>
-
-        <div class="detail-header">
-            <div class="detail-meta">
-                <span id="detail-priority" class="ticket-priority"></span>
-                <span id="detail-status" class="ticket-status"></span>
-            </div>
-            <h2 id="detail-subject"></h2>
-            <div class="detail-timestamps">
-                <span id="detail-created"></span>
-                <span id="detail-source"></span>
-            </div>
-        </div>
-
-        <div class="detail-body" id="detail-body"></div>
-
-        <!-- Actions -->
-        <div class="detail-actions">
-            <div class="action-group">
-                <label class="action-label">Status</label>
-                <select id="action-status" onchange="changeStatus(this.value)">
+        <div class="detail-topbar">
+            <button onclick="showQueue()" class="btn btn-ghost btn-sm">← Back</button>
+            <div class="detail-topbar-actions">
+                <select id="action-status" onchange="changeStatus(this.value)" class="detail-select">
                     <option value="open">Open</option>
                     <option value="assigned">Assigned</option>
                     <option value="in_progress">In Progress</option>
@@ -106,41 +88,54 @@
                     <option value="resolved">Resolved</option>
                     <option value="closed">Closed</option>
                 </select>
-            </div>
-            <div class="action-group">
-                <label class="action-label">Priority</label>
-                <select id="action-priority" onchange="changePriority(this.value)">
-                    <option value="P0">P0 — Critical</option>
-                    <option value="P1">P1 — High</option>
-                    <option value="P2">P2 — Medium</option>
-                    <option value="P3">P3 — Low</option>
+                <select id="action-priority" onchange="changePriority(this.value)" class="detail-select">
+                    <option value="P0">P0</option>
+                    <option value="P1">P1</option>
+                    <option value="P2">P2</option>
+                    <option value="P3">P3</option>
                 </select>
             </div>
         </div>
 
-        <!-- Comment Thread -->
-        <div class="detail-section">
-            <h3 class="detail-section-title">Conversation</h3>
-            <div id="comment-thread" class="comment-thread"></div>
+        <div class="detail-card">
+            <div class="detail-title-row">
+                <span id="detail-priority" class="ticket-priority"></span>
+                <h2 id="detail-subject"></h2>
+            </div>
+            <div class="detail-info-row">
+                <span id="detail-status" class="ticket-status"></span>
+                <span class="detail-dot">·</span>
+                <span id="detail-created" class="detail-time"></span>
+                <span class="detail-dot">·</span>
+                <span id="detail-source" class="detail-time"></span>
+            </div>
 
+            <div class="detail-body" id="detail-body"></div>
+        </div>
+
+        <!-- Conversation -->
+        <div class="detail-card">
+            <div class="detail-card-header">Conversation</div>
+            <div id="comment-thread" class="comment-thread"></div>
             <div class="comment-form">
-                <textarea id="comment-body" placeholder="Add a comment or note..." rows="3"></textarea>
-                <div class="form-row">
+                <textarea id="comment-body" placeholder="Write a reply..." rows="2"></textarea>
+                <div class="comment-form-footer">
                     <label class="checkbox-label">
                         <input type="checkbox" id="comment-internal">
-                        Internal note (agents only)
+                        Internal note
                     </label>
-                    <button onclick="addComment()" class="btn btn-primary btn-sm">Send</button>
+                    <button onclick="addComment()" class="btn btn-primary btn-sm">Reply</button>
                 </div>
             </div>
         </div>
 
-        <!-- Audit Trail -->
-        <div class="detail-section">
-            <h3 class="detail-section-title">Activity</h3>
+        <!-- Activity -->
+        <div class="detail-card detail-card-muted">
+            <div class="detail-card-header">Activity</div>
             <div id="event-trail" class="event-trail"></div>
         </div>
     </div>
+
 
 </div>
 
