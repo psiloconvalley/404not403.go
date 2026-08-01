@@ -8,12 +8,14 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strings"
 	"syscall"
 	"time"
 
 	"github.com/psiloconvalley/404not403/internal/app"
 	"github.com/psiloconvalley/404not403/internal/auth"
 	"github.com/psiloconvalley/404not403/internal/handler"
+	helphandler "github.com/psiloconvalley/404not403/internal/handler/help"
 	orghandler "github.com/psiloconvalley/404not403/internal/handler/org"
 	tickethandler "github.com/psiloconvalley/404not403/internal/handler/ticket"
 	"github.com/psiloconvalley/404not403/internal/middleware"
@@ -53,8 +55,14 @@ func main() {
 	}
 	log.Println("✅ JWT keys loaded.")
 
-	// 4. Templates
-	tmpl, err := template.ParseGlob(filepath.Join("templates", "*.html"))
+	// 4. Templates — with custom functions for portal rendering
+	funcMap := template.FuncMap{
+		"lower": strings.ToLower,
+		"replace": func(s, old, new string) string {
+			return strings.ReplaceAll(s, old, new)
+		},
+	}
+	tmpl, err := template.New("").Funcs(funcMap).ParseGlob(filepath.Join("templates", "*.html"))
 	if err != nil {
 		log.Fatalf("❌ Template error: %v", err)
 	}
@@ -68,6 +76,7 @@ func main() {
 	// 6. Initialize handlers
 	tickets := tickethandler.New(a)
 	orgs := orghandler.New(a)
+	helpPortal := helphandler.New(a)
 
 	// 7. Worker — background job processor (AI enrichment)
 	go worker.Start(ctx, a)
@@ -85,6 +94,11 @@ func main() {
 	mux.HandleFunc("/login", handler.LoginPage(a))
 	mux.HandleFunc("/register", handler.RegisterPage(a))
 	mux.HandleFunc("/dashboard", handler.Dashboard(a))
+
+	// ── Employee Portal (public — no auth) ────────────────────────────
+	mux.HandleFunc("/help/track/comment", helpPortal.AddComment)
+	mux.HandleFunc("/help/track", helpPortal.Track)
+	mux.HandleFunc("/help/", helpPortal.Portal)
 
 
 	// ── Auth routes ───────────────────────────────────────────────────

@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Get Help — {{.OrgName}}</title>
+    <link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body>
+<div class="portal">
+
+    <div class="portal-nav">
+        <div class="logo">
+            <span class="logo-404">404</span><span class="logo-not">NOT</span><span class="logo-403">403</span>
+        </div>
+        <span class="portal-org">{{.OrgName}} IT Support</span>
+    </div>
+
+    <div class="portal-hero">
+        <h1>How can we help?</h1>
+        <p>Describe your issue and we'll get back to you as soon as possible.</p>
+    </div>
+
+    <div class="portal-card">
+
+        <div id="success-msg" class="portal-success" style="display:none;">
+            <div class="success-icon">✓</div>
+            <h2>Request received</h2>
+            <p>We've got your request. Check your email for a link to track its progress.</p>
+            <p class="success-ticket-id"></p>
+        </div>
+
+        <form id="help-form" onsubmit="return handleSubmit(event)">
+            <div id="error-msg" class="error-msg" style="display:none;"></div>
+
+            <div class="portal-form-group">
+                <label for="name">Your Name</label>
+                <input type="text" id="name" placeholder="Jane Smith" required>
+            </div>
+
+            <div class="portal-form-group">
+                <label for="email">Work Email</label>
+                <input type="email" id="email" placeholder="jane@company.com" required>
+            </div>
+
+            <div class="portal-form-group">
+                <label for="subject">What's the issue?</label>
+                <input type="text" id="subject"
+                    placeholder="e.g. Laptop won't connect to WiFi" required>
+            </div>
+
+            <div class="portal-form-group">
+                <label for="body">Tell us more</label>
+                <textarea id="body" rows="5"
+                    placeholder="Describe the problem in detail. The more context you give us, the faster we can help." required></textarea>
+            </div>
+
+            <div class="portal-form-group">
+                <label>How urgent is this?</label>
+                <div class="urgency-grid">
+                    <label class="urgency-option">
+                        <input type="radio" name="urgency" value="low">
+                        <div class="urgency-card">
+                            <span class="urgency-label">Low</span>
+                            <span class="urgency-desc">Minor issue, can wait</span>
+                        </div>
+                    </label>
+                    <label class="urgency-option">
+                        <input type="radio" name="urgency" value="medium" checked>
+                        <div class="urgency-card">
+                            <span class="urgency-label">Medium</span>
+                            <span class="urgency-desc">Affecting my work</span>
+                        </div>
+                    </label>
+                    <label class="urgency-option">
+                        <input type="radio" name="urgency" value="high">
+                        <div class="urgency-card">
+                            <span class="urgency-label">High</span>
+                            <span class="urgency-desc">Blocking me completely</span>
+                        </div>
+                    </label>
+                    <label class="urgency-option">
+                        <input type="radio" name="urgency" value="critical">
+                        <div class="urgency-card urgency-critical">
+                            <span class="urgency-label">Critical</span>
+                            <span class="urgency-desc">System down, team affected</span>
+                        </div>
+                    </label>
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-full" id="submit-btn">
+                Submit Request
+            </button>
+        </form>
+
+        <div class="portal-footer-link">
+            Already submitted? <a href="/help/track">Track your request →</a>
+        </div>
+    </div>
+
+    <div class="portal-footer">
+        <p>Powered by <strong>404NOT403</strong></p>
+    </div>
+</div>
+
+<script>
+async function handleSubmit(e) {
+    e.preventDefault();
+    const errEl  = document.getElementById('error-msg');
+    const btn    = document.getElementById('submit-btn');
+    const urgency = document.querySelector('input[name="urgency"]:checked');
+
+    errEl.style.display = 'none';
+    btn.textContent = 'Submitting...';
+    btn.disabled = true;
+
+    const body = {
+        name:    document.getElementById('name').value.trim(),
+        email:   document.getElementById('email').value.trim(),
+        subject: document.getElementById('subject').value.trim(),
+        body:    document.getElementById('body').value.trim(),
+        urgency: urgency ? urgency.value : 'medium'
+    };
+
+    try {
+        const res = await fetch(window.location.pathname, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(body)
+        });
+        const data = await res.json();
+
+        if (!res.ok) {
+            errEl.textContent = data.error || 'Something went wrong. Please try again.';
+            errEl.style.display = 'block';
+            btn.textContent = 'Submit Request';
+            btn.disabled = false;
+            return;
+        }
+
+        // Show success
+        document.getElementById('help-form').style.display = 'none';
+        const success = document.getElementById('success-msg');
+        success.querySelector('.success-ticket-id').textContent =
+            'Reference: ' + data.ticket_id.slice(0, 8).toUpperCase();
+        success.style.display = 'block';
+
+    } catch (err) {
+        errEl.textContent = 'Network error. Please try again.';
+        errEl.style.display = 'block';
+        btn.textContent = 'Submit Request';
+        btn.disabled = false;
+    }
+}
+</script>
+</body>
+</html>

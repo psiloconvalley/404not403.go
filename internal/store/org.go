@@ -282,3 +282,29 @@ func SlugExists(db *sql.DB, slug string) (bool, error) {
 	).Scan(&count)
 	return count > 0, err
 }
+
+// GetOrgByDomain returns an organization by its email domain.
+// Used during employee portal submission to match employee email
+// to the correct org. For example, john@acme.com → org with domain "acme.com".
+func GetOrgByDomain(db *sql.DB, domain string) (*Organization, error) {
+	var org Organization
+	err := db.QueryRow(`
+		SELECT id, name, slug, domain, plan,
+		       inbound_email, slack_team_id, slack_channel_id,
+		       created_at, updated_at
+		FROM organizations
+		WHERE domain = $1`,
+		domain,
+	).Scan(
+		&org.ID, &org.Name, &org.Slug, &org.Domain, &org.Plan,
+		&org.InboundEmail, &org.SlackTeamID, &org.SlackChannelID,
+		&org.CreatedAt, &org.UpdatedAt,
+	)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &org, nil
+}

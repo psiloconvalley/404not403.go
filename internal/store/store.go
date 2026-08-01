@@ -348,6 +348,41 @@ func RunMigrations(db *sql.DB) {
 		},
 		{name: "idx_ai_ticket", sql: `CREATE INDEX IF NOT EXISTS idx_ai_ticket ON ai_analysis(ticket_id)`},
 		{name: "idx_ai_org",    sql: `CREATE INDEX IF NOT EXISTS idx_ai_org    ON ai_analysis(org_id)`},
+
+		// ── Customer Tracking Tokens ──────────────────────────────────────────
+		{
+			name: "add_tracking_token_to_customers",
+			sql: `ALTER TABLE customers
+				ADD COLUMN IF NOT EXISTS tracking_token_hash TEXT UNIQUE,
+				ADD COLUMN IF NOT EXISTS tracking_token_expires TIMESTAMPTZ`,
+		},
+		{name: "idx_customers_token", sql: `CREATE INDEX IF NOT EXISTS idx_customers_token ON customers(tracking_token_hash) WHERE tracking_token_hash IS NOT NULL`},
+
+		// ── Auth Events ───────────────────────────────────────────────────────
+		{
+			name: "create_auth_events_table",
+			sql: `CREATE TABLE IF NOT EXISTS auth_events (
+				id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+				user_id        UUID REFERENCES users(id),
+				org_id         UUID REFERENCES organizations(id),
+				event_type     TEXT NOT NULL,
+				provider       TEXT NOT NULL DEFAULT 'email',
+				ip_address     TEXT,
+				user_agent     TEXT,
+				success        BOOLEAN NOT NULL,
+				failure_reason TEXT,
+				created_at     TIMESTAMPTZ NOT NULL DEFAULT now()
+			)`,
+		},
+		{name: "idx_auth_events_user", sql: `CREATE INDEX IF NOT EXISTS idx_auth_events_user ON auth_events(user_id)`},
+
+		// ── Account Lockout ───────────────────────────────────────────────────
+		{
+			name: "add_lockout_to_users",
+			sql: `ALTER TABLE users
+				ADD COLUMN IF NOT EXISTS failed_login_attempts INT NOT NULL DEFAULT 0,
+				ADD COLUMN IF NOT EXISTS locked_until TIMESTAMPTZ`,
+		},
 	}
 
 	for _, m := range migrations {

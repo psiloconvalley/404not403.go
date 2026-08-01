@@ -12,15 +12,18 @@ import (
 // A customer may be identified by email, Slack user ID, or both.
 // Customers do not have passwords — they are not agents.
 type Customer struct {
-	ID          string     `json:"id"`
-	OrgID       string     `json:"org_id"`
-	Email       *string    `json:"email,omitempty"`
-	SlackUserID *string    `json:"slack_user_id,omitempty"`
-	FullName    *string    `json:"full_name,omitempty"`
-	Department  *string    `json:"department,omitempty"`
-	CreatedAt   time.Time  `json:"created_at"`
-	UpdatedAt   time.Time  `json:"updated_at"`
+	ID                   string     `json:"id"`
+	OrgID                string     `json:"org_id"`
+	Email                *string    `json:"email,omitempty"`
+	SlackUserID          *string    `json:"slack_user_id,omitempty"`
+	FullName             *string    `json:"full_name,omitempty"`
+	Department           *string    `json:"department,omitempty"`
+	TrackingTokenHash    *string    `json:"-"`
+	TrackingTokenExpires *time.Time `json:"-"`
+	CreatedAt            time.Time  `json:"created_at"`
+	UpdatedAt            time.Time  `json:"updated_at"`
 }
+
 
 // ── Queries ───────────────────────────────────────────────────────────────────
 
@@ -191,4 +194,84 @@ func UpdateCustomer(db *sql.DB, orgID, customerID string, fullName, department *
 		fullName, department, orgID, customerID,
 	)
 	return err
+}
+
+// ── Tracking Tokens ───────────────────────────────────────────────────────────
+
+// SetTrackingToken stores a hashed tracking token for a customer.
+// The raw token is sent via email. Only the hash is stored.
+func SetTrackingToken(db *sql.DB, customerID, tokenHash string, expiresAt time.Time) error {
+	_, err := db.Exec(`
+		UPDATE customers
+		SET tracking_token_hash = $1,
+		    tracking_token_expires = $2,
+		    updated_at = now()
+		WHERE id = $3`,
+		tokenHash, expiresAt, customerID,
+	)
+	return err
+}
+
+// GetCustomerByTrackingToken looks up a customer by their tracking token hash.
+// Returns nil if the token is invalid or expired.
+func GetCustomerByTrackingToken(db *sql.DB, tokenHash string) (*Customer, error) {
+	var c Customer
+	err := db.QueryRow(`
+		SELECT id, org_id, email, slack_user_id, full_name, department,
+		       tracking_token_hash, tracking_token_expires,
+		       created_at, updated_at
+		FROM customers
+		WHERE tracking_token_hash = $1
+		  AND tracking_token_expires > now()`,
+		tokenHash,
+	).Scan(
+		&c.ID, &c.OrgID, &c.Email, &c.SlackUserID,
+		&c.FullName, &c.Department,
+		&c.TrackingTokenHash, &c.TrackingTokenExpires,
+		&c.CreatedAt, &c.UpdatedAt,
+	)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &c, nil
+}
+
+// GetTicketsForCustomer returns all tickets submitted by a customer.
+// Used in the employee tracking portal.
+func GetTicketsForCustomer(db *sql.DB, orgID, customerID string) ([]Ticket, error) {
+	rows, err := db.Query(`
+		SELECT id, org_id, customer_id, assigned_to,
+		       subject, body, status, priority, category,
+		       source_type, thread_id, incident_id,
+		       sla_due_at, sla_breached,
+		       created_at, updated_at, resolved_at
+		FROM tickets
+		WHERE org_id = $1 AND customer_id = $2
+		ORDER BY created_at DESC
+		LIMIT 50`,
+		orgID, customerID,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var tickets []Ticket
+	for rows.Next() {
+		var t Ticket
+		if err := rows.Scan(
+			&t.ID, &t.OrgID, &t.CustomerID, &t.AssignedTo,
+			&t.Subject, &t.Body, &t.Status, &t.Priority, &t.Category,
+			&t.SourceType, &t.ThreadID, &t.IncidentID,
+			&t.SLADueAt, &t.SLABreached,
+			&t.CreatedAt, &t.UpdatedAt, &t.ResolvedAt,
+		); err != nil {
+			return nil, err
+		}
+		tickets = append(tickets, t)
+	}
+	return tickets, rows.Err()
 }

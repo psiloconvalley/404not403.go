@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Requests — {{.OrgName}}</title>
+    <link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body>
+<div class="portal">
+
+    <div class="portal-nav">
+        <div class="logo">
+            <span class="logo-404">404</span><span class="logo-not">NOT</span><span class="logo-403">403</span>
+        </div>
+        <span class="portal-org">{{.OrgName}} IT Support</span>
+    </div>
+
+    <div class="portal-hero">
+        <h1>Your Requests</h1>
+        {{if .Customer.FullName}}
+        <p>Showing requests for {{.Customer.FullName}}</p>
+        {{end}}
+    </div>
+
+    <div class="portal-card">
+        {{if not .Tickets}}
+        <div class="empty">
+            No requests found. <a href="/help/{{.OrgSlug}}">Submit a new request →</a>
+        </div>
+        {{else}}
+        <div class="track-list">
+            {{range .Tickets}}
+            <div class="track-card" onclick="toggleTicket('{{.ID}}')">
+                <div class="track-card-header">
+                    <div class="track-card-left">
+                        <span class="ticket-priority priority-{{lower .Priority}}">{{.Priority}}</span>
+                        <span class="track-subject">{{.Subject}}</span>
+                    </div>
+                    <div class="track-card-right">
+                        <span class="ticket-status status-{{.Status}}">{{replace .Status "_" " "}}</span>
+                        <span class="track-age">{{.CreatedAt.Format "Jan 2"}}</span>
+                    </div>
+                </div>
+
+                <div class="track-detail" id="detail-{{.ID}}" style="display:none;">
+                    <div class="track-body">{{.Body}}</div>
+
+                    <div class="track-comment-form">
+                        <textarea
+                            id="comment-{{.ID}}"
+                            placeholder="Add a reply or more information..."
+                            rows="3"></textarea>
+                        <button
+                            onclick="addComment('{{.ID}}', event)"
+                            class="btn btn-primary btn-sm">
+                            Send Reply
+                        </button>
+                    </div>
+                </div>
+            </div>
+            {{end}}
+        </div>
+        {{end}}
+    </div>
+
+    <div class="portal-footer">
+        <p>Powered by <strong>404NOT403</strong></p>
+    </div>
+</div>
+
+<script>
+const TOKEN = '{{.Token}}';
+
+function toggleTicket(id) {
+    const detail = document.getElementById('detail-' + id);
+    if (!detail) return;
+    detail.style.display = detail.style.display === 'none' ? 'block' : 'none';
+}
+
+async function addComment(ticketID, e) {
+    e.stopPropagation();
+    const textarea = document.getElementById('comment-' + ticketID);
+    const body = textarea.value.trim();
+    if (!body) return;
+
+    const btn = e.target;
+    btn.disabled = true;
+    btn.textContent = 'Sending...';
+
+    try {
+        const res = await fetch('/help/track/comment', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                token: TOKEN,
+                ticket_id: ticketID,
+                body: body
+            })
+        });
+
+        if (res.ok) {
+            textarea.value = '';
+            btn.textContent = '✓ Sent';
+            setTimeout(function() {
+                btn.textContent = 'Send Reply';
+                btn.disabled = false;
+            }, 2000);
+        } else {
+            const data = await res.json();
+            alert(data.error || 'Failed to send');
+            btn.textContent = 'Send Reply';
+            btn.disabled = false;
+        }
+    } catch (err) {
+        alert('Network error');
+        btn.textContent = 'Send Reply';
+        btn.disabled = false;
+    }
+}
+</script>
+</body>
+</html>
