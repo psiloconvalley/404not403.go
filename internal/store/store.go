@@ -383,6 +383,51 @@ func RunMigrations(db *sql.DB) {
 				ADD COLUMN IF NOT EXISTS failed_login_attempts INT NOT NULL DEFAULT 0,
 				ADD COLUMN IF NOT EXISTS locked_until TIMESTAMPTZ`,
 		},
+
+		// ── Queues ────────────────────────────────────────────────────────────
+		{
+			name: "create_queues_table",
+			sql: `CREATE TABLE IF NOT EXISTS queues (
+				id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+				org_id      UUID NOT NULL REFERENCES organizations(id),
+				name        TEXT NOT NULL,
+				description TEXT,
+				department  TEXT,
+				color       TEXT DEFAULT '#6366f1',
+				icon        TEXT,
+				filters     JSONB NOT NULL DEFAULT '{}',
+				sla_config  JSONB NOT NULL DEFAULT '{}',
+				active      BOOLEAN NOT NULL DEFAULT true,
+				sort_order  INT NOT NULL DEFAULT 0,
+				created_by  UUID REFERENCES users(id),
+				created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+				updated_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+				UNIQUE(org_id, name)
+			)`,
+		},
+		{name: "idx_queues_org", sql: `CREATE INDEX IF NOT EXISTS idx_queues_org ON queues(org_id) WHERE active = true`},
+
+		// ── Queue Members ─────────────────────────────────────────────────────
+		{
+			name: "create_queue_members_table",
+			sql: `CREATE TABLE IF NOT EXISTS queue_members (
+				queue_id       UUID NOT NULL REFERENCES queues(id),
+				user_id        UUID NOT NULL REFERENCES users(id),
+				org_id         UUID NOT NULL REFERENCES organizations(id),
+				role           TEXT NOT NULL DEFAULT 'member',
+				notify_on_new  BOOLEAN NOT NULL DEFAULT true,
+				created_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
+				PRIMARY KEY (queue_id, user_id)
+			)`,
+		},
+		{name: "idx_qm_user", sql: `CREATE INDEX IF NOT EXISTS idx_qm_user ON queue_members(user_id)`},
+
+		// ── Add queue_id to tickets ───────────────────────────────────────────
+		{
+			name: "add_queue_id_to_tickets",
+			sql:  `ALTER TABLE tickets ADD COLUMN IF NOT EXISTS queue_id UUID REFERENCES queues(id)`,
+		},
+		{name: "idx_tickets_queue", sql: `CREATE INDEX IF NOT EXISTS idx_tickets_queue ON tickets(queue_id)`},
 	}
 
 	for _, m := range migrations {

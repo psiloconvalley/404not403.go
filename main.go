@@ -16,6 +16,7 @@ import (
 	"github.com/psiloconvalley/404not403/internal/auth"
 	"github.com/psiloconvalley/404not403/internal/handler"
 	helphandler "github.com/psiloconvalley/404not403/internal/handler/help"
+	queuehandler "github.com/psiloconvalley/404not403/internal/handler/queue"
 	orghandler "github.com/psiloconvalley/404not403/internal/handler/org"
 	tickethandler "github.com/psiloconvalley/404not403/internal/handler/ticket"
 	"github.com/psiloconvalley/404not403/internal/middleware"
@@ -77,6 +78,7 @@ func main() {
 	tickets := tickethandler.New(a)
 	orgs := orghandler.New(a)
 	helpPortal := helphandler.New(a)
+	queues := queuehandler.New(a)
 
 	// 7. Worker — background job processor (AI enrichment)
 	go worker.Start(ctx, a)
@@ -117,7 +119,7 @@ func main() {
 	// ── Org routes ────────────────────────────────────────────────────
 	mux.HandleFunc("/api/orgs", middleware.RequireAuth(a, orgs.Create))
 	mux.HandleFunc("/api/orgs/me", middleware.RequireAuth(a, orgs.ListMine))
-	mux.HandleFunc("/api/orgs/", middleware.RequireAuth(a, orgRouter(orgs, tickets)))
+	mux.HandleFunc("/api/orgs/", middleware.RequireAuth(a, orgRouter(orgs, tickets, queues)))
 
 	// ── Ticket routes ─────────────────────────────────────────────────
 	// All ticket routes go through /api/orgs/{orgID}/tickets/...
@@ -171,11 +173,21 @@ func main() {
 // orgRouter routes /api/orgs/{orgID}/... requests to the correct handler.
 // This avoids registering dozens of individual routes.
 // Standard library ServeMux matches by prefix — this function does the sub-routing.
-func orgRouter(orgs *orghandler.Handler, tickets *tickethandler.Handler) http.HandlerFunc {
+func orgRouter(orgs *orghandler.Handler, tickets *tickethandler.Handler, qh *queuehandler.Handler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		path := r.URL.Path
 
 		switch {
+		// Queue routes: /api/orgs/{orgID}/queues/...
+		case contains(path, "/queues/sidebar"):
+			qh.Sidebar(w, r)
+		case contains(path, "/queues") && contains(path, "/assign"):
+			qh.AssignTicket(w, r)
+		case contains(path, "/queues") && contains(path, "/tickets"):
+			qh.ListTickets(w, r)
+		case hasSuffix(path, "/queues"):
+			qh.Create(w, r)
+
 		// Ticket routes: /api/orgs/{orgID}/tickets/...
 		case contains(path, "/tickets/search"):
 			tickets.Search(w, r)
