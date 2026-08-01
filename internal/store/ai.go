@@ -2,7 +2,6 @@ package store
 
 import (
 	"database/sql"
-	"encoding/json"
 	"time"
 
 	"github.com/lib/pq"
@@ -32,7 +31,7 @@ type AIAnalysis struct {
 	TimeReference     *string         `json:"time_reference,omitempty"`
 	IsPotentialP0     bool            `json:"is_potential_p0"`
 	Reasoning         *string         `json:"reasoning,omitempty"`
-	Entities          json.RawMessage `json:"entities"`
+	Entities          []byte          `json:"entities"`
 	Summary           *string         `json:"summary,omitempty"`
 	DraftResponse     *string         `json:"draft_response,omitempty"`
 	ResolutionSteps   []string        `json:"resolution_steps,omitempty"`
@@ -43,7 +42,7 @@ type AIAnalysis struct {
 	DraftAccepted     *bool           `json:"draft_accepted,omitempty"`
 	DraftEditDistance *int            `json:"draft_edit_distance,omitempty"`
 	ResolutionMatched *bool           `json:"resolution_matched,omitempty"`
-	RawOutput         json.RawMessage `json:"raw_output,omitempty"`
+	RawOutput         []byte          `json:"raw_output,omitempty"`
 	CreatedAt         time.Time       `json:"created_at"`
 	ReviewedAt        *time.Time      `json:"reviewed_at,omitempty"`
 }
@@ -66,20 +65,23 @@ type CreateAIAnalysisParams struct {
 	TimeReference     *string
 	IsPotentialP0     bool
 	Reasoning         *string
-	Entities          json.RawMessage
+	Entities          []byte
 	Summary           *string
 	DraftResponse     *string
 	ResolutionSteps   []string
 	EstimatedMinutes  *int
 	KBArticlesUsed    []string
-	RawOutput         json.RawMessage
+	RawOutput         []byte
 }
 
 // CreateAIAnalysis inserts an AI analysis result.
 // Called by the AI worker after classification or draft generation.
 func CreateAIAnalysis(db *sql.DB, p CreateAIAnalysisParams) (*AIAnalysis, error) {
 	if p.Entities == nil {
-		p.Entities = json.RawMessage(`[]`)
+		p.Entities = []byte(`[]`)
+	}
+	if p.RawOutput == nil {
+		p.RawOutput = []byte(`{}`)
 	}
 
 	var a AIAnalysis
