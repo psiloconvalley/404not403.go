@@ -428,6 +428,120 @@ func RunMigrations(db *sql.DB) {
 			sql:  `ALTER TABLE tickets ADD COLUMN IF NOT EXISTS queue_id UUID REFERENCES queues(id)`,
 		},
 		{name: "idx_tickets_queue", sql: `CREATE INDEX IF NOT EXISTS idx_tickets_queue ON tickets(queue_id)`},
+
+		// ── Incidents ─────────────────────────────────────────────────────────
+		{
+			name: "create_incidents_table",
+			sql: `CREATE TABLE IF NOT EXISTS incidents (
+				id                   UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+				org_id               UUID NOT NULL REFERENCES organizations(id),
+				title                TEXT NOT NULL,
+				description          TEXT,
+				severity             TEXT NOT NULL DEFAULT 'P1',
+				status               TEXT NOT NULL DEFAULT 'investigating',
+				commander_id         UUID REFERENCES users(id),
+				affected_services    TEXT[],
+				affected_users_count INT,
+				business_impact      TEXT,
+				detected_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
+				acknowledged_at      TIMESTAMPTZ,
+				identified_at        TIMESTAMPTZ,
+				resolved_at          TIMESTAMPTZ,
+				postmortem_written   BOOLEAN NOT NULL DEFAULT false,
+				postmortem_due       TIMESTAMPTZ,
+				created_at           TIMESTAMPTZ NOT NULL DEFAULT now(),
+				updated_at           TIMESTAMPTZ NOT NULL DEFAULT now()
+			)`,
+		},
+		{name: "idx_incidents_org",    sql: `CREATE INDEX IF NOT EXISTS idx_incidents_org    ON incidents(org_id)`},
+		{name: "idx_incidents_status", sql: `CREATE INDEX IF NOT EXISTS idx_incidents_status ON incidents(org_id, status)`},
+
+		// ── Incident Timeline ─────────────────────────────────────────────────
+		{
+			name: "create_incident_timeline_table",
+			sql: `CREATE TABLE IF NOT EXISTS incident_timeline (
+				id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+				incident_id  UUID NOT NULL REFERENCES incidents(id),
+				org_id       UUID NOT NULL REFERENCES organizations(id),
+				author_id    UUID REFERENCES users(id),
+				entry_type   TEXT NOT NULL,
+				body         TEXT NOT NULL,
+				created_at   TIMESTAMPTZ NOT NULL DEFAULT now()
+			)`,
+		},
+		{name: "idx_timeline_incident", sql: `CREATE INDEX IF NOT EXISTS idx_timeline_incident ON incident_timeline(incident_id)`},
+
+		// ── Postmortems ───────────────────────────────────────────────────────
+		{
+			name: "create_postmortems_table",
+			sql: `CREATE TABLE IF NOT EXISTS postmortems (
+				id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+				incident_id      UUID NOT NULL REFERENCES incidents(id),
+				org_id           UUID NOT NULL REFERENCES organizations(id),
+				what_happened    TEXT,
+				root_cause       TEXT,
+				detection        TEXT,
+				response         TEXT,
+				prevention       TEXT,
+				timeline_summary TEXT,
+				written_by       UUID REFERENCES users(id),
+				reviewed_by      UUID REFERENCES users(id),
+				approved         BOOLEAN NOT NULL DEFAULT false,
+				created_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
+				updated_at       TIMESTAMPTZ NOT NULL DEFAULT now()
+			)`,
+		},
+		{name: "idx_postmortem_incident", sql: `CREATE INDEX IF NOT EXISTS idx_postmortem_incident ON postmortems(incident_id)`},
+
+		// ── Link tickets to incidents ──────────────────────────────────────────
+		{
+			name: "add_incident_id_index_to_tickets",
+			sql:  `CREATE INDEX IF NOT EXISTS idx_tickets_incident ON tickets(incident_id) WHERE incident_id IS NOT NULL`,
+		},
+
+		// ── Changes ───────────────────────────────────────────────────────────
+		{
+			name: "create_changes_table",
+			sql: `CREATE TABLE IF NOT EXISTS change_requests (
+				id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+				org_id           UUID NOT NULL REFERENCES organizations(id),
+				title            TEXT NOT NULL,
+				description      TEXT NOT NULL,
+				change_type      TEXT NOT NULL DEFAULT 'standard',
+				risk_level       TEXT NOT NULL DEFAULT 'medium',
+				affected_systems TEXT[],
+				rollback_plan    TEXT NOT NULL,
+				test_plan        TEXT,
+				requested_by     UUID NOT NULL REFERENCES users(id),
+				status           TEXT NOT NULL DEFAULT 'draft',
+				scheduled_start  TIMESTAMPTZ,
+				scheduled_end    TIMESTAMPTZ,
+				actual_start     TIMESTAMPTZ,
+				actual_end       TIMESTAMPTZ,
+				incident_id      UUID REFERENCES incidents(id),
+				ticket_id        UUID REFERENCES tickets(id),
+				created_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
+				updated_at       TIMESTAMPTZ NOT NULL DEFAULT now()
+			)`,
+		},
+		{name: "idx_changes_org",    sql: `CREATE INDEX IF NOT EXISTS idx_changes_org    ON change_requests(org_id)`},
+		{name: "idx_changes_status", sql: `CREATE INDEX IF NOT EXISTS idx_changes_status ON change_requests(org_id, status)`},
+
+		// ── Change Approvals ──────────────────────────────────────────────────
+		{
+			name: "create_change_approvals_table",
+			sql: `CREATE TABLE IF NOT EXISTS change_approvals (
+				id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+				change_id   UUID NOT NULL REFERENCES change_requests(id),
+				org_id      UUID NOT NULL REFERENCES organizations(id),
+				approver_id UUID NOT NULL REFERENCES users(id),
+				status      TEXT NOT NULL DEFAULT 'pending',
+				comment     TEXT,
+				decided_at  TIMESTAMPTZ,
+				created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+			)`,
+		},
+		{name: "idx_approvals_change", sql: `CREATE INDEX IF NOT EXISTS idx_approvals_change ON change_approvals(change_id)`},
 	}
 
 	for _, m := range migrations {
