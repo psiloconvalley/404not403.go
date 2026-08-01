@@ -10,12 +10,38 @@ func Home(a *app.App) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/" {
 			w.WriteHeader(http.StatusNotFound)
-			w.Header().Set("Content-Type", "application/json")
-			w.Write([]byte(`{"error":"not found"}`))
+			if err := a.Templates.ExecuteTemplate(w, "index.html", nil); err != nil {
+				http.Error(w, "Not Found", http.StatusNotFound)
+			}
 			return
 		}
-		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{"service":"404not403","status":"operational"}`))
+		if err := a.Templates.ExecuteTemplate(w, "index.html", nil); err != nil {
+			http.Error(w, "System Error", http.StatusInternalServerError)
+		}
+	}
+}
+
+func LoginPage(a *app.App) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if err := a.Templates.ExecuteTemplate(w, "login.html", nil); err != nil {
+			http.Error(w, "System Error", http.StatusInternalServerError)
+		}
+	}
+}
+
+func RegisterPage(a *app.App) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if err := a.Templates.ExecuteTemplate(w, "register.html", nil); err != nil {
+			http.Error(w, "System Error", http.StatusInternalServerError)
+		}
+	}
+}
+
+func Dashboard(a *app.App) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if err := a.Templates.ExecuteTemplate(w, "dashboard.html", nil); err != nil {
+			http.Error(w, "System Error", http.StatusInternalServerError)
+		}
 	}
 }
 

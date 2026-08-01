@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard — 404NOT403</title>
+    <link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body>
+    <div class="dashboard">
+        <nav class="dash-nav">
+            <div class="logo">
+                <span class="logo-404">404</span><span class="logo-not">NOT</span><span class="logo-403">403</span>
+            </div>
+            <div class="nav-user">
+                <span id="user-handle"></span>
+                <button onclick="handleLogout()" class="btn btn-ghost btn-sm">Log Out</button>
+            </div>
+        </nav>
+
+        <main class="dash-main">
+            <!-- Org Section -->
+            <section class="dash-section" id="org-section">
+                <h2>Your Organizations</h2>
+                <div id="org-list"></div>
+                <div class="section-actions">
+                    <button onclick="showCreateOrg()" class="btn btn-primary btn-sm">Create Organization</button>
+                </div>
+                <div id="create-org-form" style="display:none;" class="inline-form">
+                    <input type="text" id="org-name" placeholder="Organization Name">
+                    <input type="text" id="org-slug" placeholder="slug (url-safe)">
+                    <button onclick="createOrg()" class="btn btn-primary btn-sm">Create</button>
+                </div>
+            </section>
+
+            <!-- Tickets Section (shown when org is selected) -->
+            <section class="dash-section" id="tickets-section" style="display:none;">
+                <div class="section-header">
+                    <h2>Tickets — <span id="current-org-name"></span></h2>
+                    <button onclick="showCreateTicket()" class="btn btn-primary btn-sm">New Ticket</button>
+                </div>
+
+                <div id="create-ticket-form" style="display:none;" class="inline-form">
+                    <input type="text" id="ticket-subject" placeholder="Subject">
+                    <textarea id="ticket-body" placeholder="Describe the issue..." rows="3"></textarea>
+                    <select id="ticket-priority">
+                        <option value="P3">P3 — Low</option>
+                        <option value="P2" selected>P2 — Medium</option>
+                        <option value="P1">P1 — High</option>
+                        <option value="P0">P0 — Critical</option>
+                    </select>
+                    <button onclick="createTicket()" class="btn btn-primary btn-sm">Submit</button>
+                </div>
+
+                <div id="ticket-list" class="ticket-list"></div>
+            </section>
+        </main>
+    </div>
+
+    <script>
+    let currentOrgID = null;
+    let currentOrgName = null;
+
+    // ── Init ──────────────────────────────────────────────────────────
+    async function init() {
+        const res = await fetch('/api/auth/me');
+        if (!res.ok) { window.location.href = '/login'; return; }
+        const user = await res.json();
+        document.getElementById('user-handle').textContent = user.handle;
+        loadOrgs();
+    }
+
+    // ── Orgs ──────────────────────────────────────────────────────────
+    async function loadOrgs() {
+        const res = await fetch('/api/orgs/me');
+        if (!res.ok) return;
+        const data = await res.json();
+        const list = document.getElementById('org-list');
+        list.innerHTML = '';
+
+        if (!data.orgs || data.orgs.length === 0) {
+            list.innerHTML = '<p class="empty">No organizations yet. Create one to get started.</p>';
+            return;
+        }
+
+        data.orgs.forEach(function(m) {
+            const div = document.createElement('div');
+            div.className = 'org-card';
+            div.onclick = function() { selectOrg(m.org_id, m.org_id); };
+
+            const name = document.createElement('span');
+            name.className = 'org-name';
+            name.textContent = m.org_id;
+            div.appendChild(name);
+
+            const role = document.createElement('span');
+            role.className = 'org-role';
+            role.textContent = m.role;
+            div.appendChild(role);
+
+            list.appendChild(div);
+        });
+    }
+
+    function showCreateOrg() {
+        document.getElementById('create-org-form').style.display = 'flex';
+    }
+
+    async function createOrg() {
+        const name = document.getElementById('org-name').value.trim();
+        const slug = document.getElementById('org-slug').value.trim();
+        if (!name || !slug) return;
+
+        const res = await fetch('/api/orgs', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({name: name, slug: slug})
+        });
+
+        if (res.ok) {
+            document.getElementById('create-org-form').style.display = 'none';
+            document.getElementById('org-name').value = '';
+            document.getElementById('org-slug').value = '';
+            loadOrgs();
+        }
+    }
+
+    // ── Select Org ────────────────────────────────────────────────────
+    function selectOrg(orgID, orgName) {
+        currentOrgID = orgID;
+        currentOrgName = orgName;
+        document.getElementById('current-org-name').textContent = orgName;
+        document.getElementById('tickets-section').style.display = 'block';
+        loadTickets();
+    }
+
+    // ── Tickets ───────────────────────────────────────────────────────
+    async function loadTickets() {
+        if (!currentOrgID) return;
+        const res = await fetch('/api/orgs/' + currentOrgID + '/tickets');
+        if (!res.ok) return;
+        const data = await res.json();
+        const list = document.getElementById('ticket-list');
+        list.innerHTML = '';
+
+        if (!data.tickets || data.tickets.length === 0) {
+            list.innerHTML = '<p class="empty">No tickets yet.</p>';
+            return;
+        }
+
+        data.tickets.forEach(function(t) {
+            const div = document.createElement('div');
+            div.className = 'ticket-card';
+
+            const priority = document.createElement('span');
+            priority.className = 'ticket-priority priority-' + t.priority.toLowerCase();
+            priority.textContent = t.priority;
+            div.appendChild(priority);
+
+            const subject = document.createElement('span');
+            subject.className = 'ticket-subject';
+            subject.textContent = t.subject;
+            div.appendChild(subject);
+
+            const status = document.createElement('span');
+            status.className = 'ticket-status status-' + t.status;
+            status.textContent = t.status;
+            div.appendChild(status);
+
+            list.appendChild(div);
+        });
+    }
+
+    function showCreateTicket() {
+        document.getElementById('create-ticket-form').style.display = 'flex';
+    }
+
+    async function createTicket() {
+        if (!currentOrgID) return;
+        const subject = document.getElementById('ticket-subject').value.trim();
+        const body = document.getElementById('ticket-body').value.trim();
+        const priority = document.getElementById('ticket-priority').value;
+        if (!subject || !body) return;
+
+        const res = await fetch('/api/orgs/' + currentOrgID + '/tickets', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                subject: subject,
+                body: body,
+                priority: priority,
+                source_type: 'web'
+            })
+        });
+
+        if (res.ok) {
+            document.getElementById('create-ticket-form').style.display = 'none';
+            document.getElementById('ticket-subject').value = '';
+            document.getElementById('ticket-body').value = '';
+            loadTickets();
+        }
+    }
+
+    // ── Logout ────────────────────────────────────────────────────────
+    async function handleLogout() {
+        await fetch('/api/auth/logout', {method: 'POST'});
+        window.location.href = '/login';
+    }
+
+    init();
+    </script>
+</body>
+</html>

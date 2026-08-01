@@ -82,6 +82,10 @@ func main() {
 	// ── Public routes ─────────────────────────────────────────────────
 	mux.HandleFunc("/", handler.Home(a))
 	mux.HandleFunc("/health", handler.Health(a))
+	mux.HandleFunc("/login", handler.LoginPage(a))
+	mux.HandleFunc("/register", handler.RegisterPage(a))
+	mux.HandleFunc("/dashboard", handler.Dashboard(a))
+
 
 	// ── Auth routes ───────────────────────────────────────────────────
 	mux.HandleFunc("/api/auth/register", handler.Register(a))

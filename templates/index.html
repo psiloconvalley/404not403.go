@@ -3,244 +3,53 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>404NOT403 | HTTP Forensic Lab</title>
-    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
-    <meta name="description" content="Forensic HTTP instrument. Inspect any URL and see what the server actually returned — status codes, headers, TLS, CDN, WAF detection.">
-    <meta property="og:title" content="404NOT403 — What did the server actually say?">
-    <meta property="og:description" content="Forensic HTTP instrument. Bypass browser interpretation. See the raw server truth.">
-    <meta property="og:type" content="website">
-    <meta property="og:url" content="https://404not403.com">
-    <meta name="twitter:card" content="summary">
-    <meta name="twitter:title" content="404NOT403 — HTTP Forensic Lab">
-    <meta name="twitter:description" content="Inspect any URL. See what the server actually said.">
-    <meta name="theme-color" content="#09090b">
-    <link rel="stylesheet" href="/static/css/style.css">
+    <title>404NOT403 — Intelligent IT Operations</title>
+    <link rel="stylesheet" href="/static/css/app.css">
 </head>
 <body>
-<div class="page-wrapper">
-
-    <header class="site-header">
-        <div class="header-top">
-            <div>
-                <h1 class="logo"><span class="logo-404">404</span><span class="logo-not">NOT</span><span class="logo-403">403</span></h1>
-                <p class="tagline">What did the server actually say?</p>
+    <div class="landing">
+        <nav class="landing-nav">
+            <div class="logo">
+                <span class="logo-404">404</span><span class="logo-not">NOT</span><span class="logo-403">403</span>
             </div>
-            <div class="auth-bar" id="auth-bar">
-                <div class="auth-logged-out" id="auth-logged-out">
-                    <button class="auth-btn" onclick="showAuthModal('login')">SIGN IN</button>
-                    <button class="auth-btn auth-btn-primary" onclick="showAuthModal('register')">CREATE ACCOUNT</button>
-                </div>
-		<div class="auth-logged-in" id="auth-logged-in" style="display:none;">
-                    <span class="auth-handle" id="auth-handle"></span>
-                    <span class="auth-role" id="auth-role"></span>
-                    <button class="auth-btn auth-btn-upgrade" id="upgrade-btn" onclick="upgradeToPro()" style="display:none;">UPGRADE</button>
-		    <button class="auth-btn" id="mfa-btn" onclick="setupMFA()" style="display:none;">ENABLE MFA</button>
-                    <button class="auth-btn" onclick="logout()">SIGN OUT</button>
-                </div>
-                           </div>
-        </div>
-        <div class="live-stats" id="live-stats">
-            <span class="stats-loading">Loading system stats...</span>
-        </div>
-    </header>
-
-    <!-- Auth Modal -->
-    <div class="modal-overlay" id="auth-modal" style="display:none;">
-        <div class="modal-card">
-            <div class="modal-header">
-                <span class="modal-title" id="modal-title">SIGN IN</span>
-                <button class="modal-close" onclick="closeAuthModal()">×</button>
+            <div class="nav-actions">
+                <a href="/login" class="btn btn-ghost">Log In</a>
             </div>
-            <div class="modal-body" id="modal-body">
-                <!-- Login Form -->
-                <div id="login-form">
-                    <div class="form-group">
-                        <label class="form-label">EMAIL OR HANDLE</label>
-                        <input type="text" id="login-email" class="form-input" placeholder="email or handle" autocomplete="username" />
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">PASSWORD</label>
-                        <div class="password-wrapper">
-                            <input type="password" id="login-password" class="form-input" placeholder="minimum 12 characters" autocomplete="current-password" />
-                            <button type="button" class="password-toggle" onclick="togglePassword('login-password', this)" aria-label="Show password">
-                                <span class="eye-icon">◉</span>
-                            </button>
-                        </div>
-                    </div>
-                    <div class="form-group" id="mfa-group" style="display:none;">
-                        <label class="form-label">MFA CODE</label>
-                        <input type="text" id="login-mfa" class="form-input" placeholder="6-digit code" autocomplete="one-time-code" maxlength="6" />
-                    </div>
-                    <div class="form-error" id="login-error"></div>
-                    <button class="form-submit" id="login-submit" onclick="login()">SIGN IN</button>
-		    <p class="form-switch"><a href="#" onclick="showForgotPassword(); return false;">Forgot password?</a></p>
-
-                    <p class="form-switch">No account? <a href="#" onclick="showAuthModal('register'); return false;">Create one</a></p>
-                </div>
-
-                <!-- Register Form -->
-                <div id="register-form" style="display:none;">
-                    <div class="form-group">
-                        <label class="form-label">EMAIL</label>
-                        <input type="email" id="register-email" class="form-input" placeholder="you@example.com" autocomplete="email" />
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">HANDLE</label>
-                        <input type="text" id="register-handle" class="form-input" placeholder="3-32 characters" autocomplete="username" />
-                        <div class="handle-status" id="handle-status"></div>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">PASSWORD</label>
-                        <div class="password-wrapper">
-                            <input type="password" id="register-password" class="form-input" placeholder="minimum 12 characters" autocomplete="new-password" />
-                            <button type="button" class="password-toggle" onclick="togglePassword('register-password', this)" aria-label="Show password">
-                                <span class="eye-icon">◉</span>
-                            </button>
-                        </div>
-                    </div>
-                    <div class="form-error" id="register-error"></div>
-                    <button class="form-submit" onclick="register()">CREATE ACCOUNT</button>
-                    <p class="form-switch">Already have an account? <a href="#" onclick="showAuthModal('login'); return false;">Sign in</a></p>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <main>
-
-        <div class="section-divider">
-            <span>HEADER INSPECTOR</span>
-        </div>
-
-        <section class="inspector">
-            <p class="section-desc">Inspect any public URL. Server-side forensic scan.</p>
-
-            <div class="inspector-input-group">
-                <input
-                    type="url"
-                    id="inspector-url"
-                    class="inspector-input"
-                    placeholder="https://example.com"
-                    autocomplete="off"
-                    spellcheck="false"
-                />
-                <button id="inspector-btn" onclick="inspectURL()">INSPECT</button>
-            </div>
-
-            <div class="inspector-result" id="inspector-result">
-                <div class="result-placeholder">
-                    <span>No scan yet</span>
-                </div>
-            </div>
-        </section>
-
-	<div class="section-divider">
-            <span id="scan-feed-title">GLOBAL ACTIVITY</span>
-        </div>
-
-        <section class="feed-section">
-            <p class="section-desc" id="scan-feed-desc">Recent forensic events observed across the platform.</p>
-	   <div class="feed-legend">● URL · STATUS · SPEED · SERVER · WHEN</div>
-            <div class="scan-card">
-                <div class="scan-history-list" id="scan-history-list">
-                    <div class="result-placeholder">
-                        <span>Loading activity...</span>
-                    </div>
-                </div>
-            </div>
-        </section>
-               <div class="section-divider">
-            <span>GHOST LINK MONITOR</span>
-        </div>
-
-        <section class="monitor-section">
-            <div id="monitor-auth-gate">
-                <div class="result-placeholder">
-                    <span>Sign in to monitor URLs and track changes</span>
-                </div>
-            </div>
-
-            <div id="monitor-controls" style="display:none;">
-                <p class="section-desc">Track any URL over time. Detect when pages disappear or change.</p>
-
-                <div class="monitor-input-group">
-                    <input
-                        type="url"
-                        id="monitor-url"
-                        class="monitor-input"
-                        placeholder="https://example.com/page-to-watch"
-                        autocomplete="off"
-                        spellcheck="false"
-                    />
-                    <select id="monitor-interval" class="monitor-select">
-                        <option value="1h">EVERY 1H</option>
-                        <option value="6h">EVERY 6H</option>
-                        <option value="24h">EVERY 24H</option>
-                    </select>
-                    <button id="monitor-btn" onclick="createMonitor()">MONITOR</button>
-                </div>
-
-                <div class="monitor-list" id="monitor-list">
-                    <div class="result-placeholder">
-                        <span>No monitors active</span>
-                    </div>
-                </div>
-
-                <div class="changes-section" id="changes-section" style="display:none;">
-                    <div class="section-divider section-divider-inner">
-                        <span>DETECTED CHANGES</span>
-                    </div>
-                    <div class="changes-list" id="changes-list"></div>
-                </div>
-            </div>
-        </section>
-
-        <div class="section-divider">
-            <span>STATUS SIMULATOR</span>
-        </div>
-
-        <section class="simulator">
-            <p class="section-desc">Trigger real HTTP responses from our server.</p>
-
-            <div class="button-group">
-                <button id="btn-404" onclick="simulate(404)">
-                    TRIGGER 404
-                    <span>Not Found</span>
-                </button>
-                <button id="btn-403" onclick="simulate(403)">
-                    TRIGGER 403
-                    <span>Forbidden</span>
-                </button>
-            </div>
-
-            <div class="response-box" id="response-box">
-                <p class="placeholder">Awaiting simulation...</p>
-            </div>
-
-            <div class="education-panel" id="education-panel"></div>
-        </section>
-
-    </main>
-
-    <footer class="site-footer">
-        <div class="section-divider">
-            <span>SYSTEM</span>
-        </div>
-
-        <nav class="footer-nav">
-            <a href="/about">ABOUT</a>
-            <a href="https://github.com/psiloconvalley" target="_blank">SOURCE</a>
-            <a href="/status" target="_blank">STATUS</a>
         </nav>
-        <div class="footer-credits">
-            <p>404NOT403 // RAILWAY // V2.0.0</p>
-        </div>
-    </footer>
 
-</div>
-    <script src="/static/js/simulator.js"></script>
-    <script src="/static/js/inspector.js"></script>
-    <script src="/static/js/monitor.js"></script>
-    <script src="/static/js/auth.js"></script>
+        <main class="landing-hero">
+            <h1>Intelligent IT Operations</h1>
+            <p class="hero-sub">
+                AI-powered ticket triage. CMDB-aware context.
+                Multi-tenant. Built for teams that outgrew the shared inbox.
+            </p>
+            <div class="hero-actions">
+                <a href="/login" class="btn btn-primary">Get Started</a>
+            </div>
+        </main>
+
+        <section class="landing-features">
+            <div class="feature">
+                <h3>AI Triage</h3>
+                <p>Every ticket classified, prioritized, and routed — before an agent touches it.</p>
+            </div>
+            <div class="feature">
+                <h3>CMDB-Aware</h3>
+                <p>Tickets linked to devices, services, and people. Full context on every issue.</p>
+            </div>
+            <div class="feature">
+                <h3>Audit Trail</h3>
+                <p>Every action logged. Every state change recorded. Reconstruct any moment in time.</p>
+            </div>
+            <div class="feature">
+                <h3>Multi-Channel</h3>
+                <p>Email and Slack flow into one source of truth. Reply via the channel that started it.</p>
+            </div>
+        </section>
+
+        <footer class="landing-footer">
+            <p>404NOT403 — What did the server actually say?</p>
+        </footer>
+    </div>
 </body>
 </html>

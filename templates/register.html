@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Account — 404NOT403</title>
+    <link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body>
+    <div class="auth-page">
+        <div class="auth-card">
+            <div class="logo">
+                <span class="logo-404">404</span><span class="logo-not">NOT</span><span class="logo-403">403</span>
+            </div>
+            <h2>Create Account</h2>
+
+            <div id="error-msg" class="error-msg" style="display:none;"></div>
+
+            <form id="register-form" onsubmit="return handleRegister(event)">
+                <label for="email">Email</label>
+                <input type="email" id="email" name="email" required autocomplete="email">
+
+                <label for="handle">Handle</label>
+                <input type="text" id="handle" name="handle" required minlength="3" maxlength="32" autocomplete="username">
+
+                <label for="password">Password (12+ characters)</label>
+                <input type="password" id="password" name="password" required minlength="12" autocomplete="new-password">
+
+                <button type="submit" class="btn btn-primary btn-full">Create Account</button>
+            </form>
+
+            <div class="auth-links">
+                <a href="/login">Already have an account?</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    async function handleRegister(e) {
+        e.preventDefault();
+        const errEl = document.getElementById('error-msg');
+        errEl.style.display = 'none';
+
+        const body = {
+            email: document.getElementById('email').value.trim(),
+            handle: document.getElementById('handle').value.trim(),
+            password: document.getElementById('password').value
+        };
+
+        try {
+            const res = await fetch('/api/auth/register', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(body)
+            });
+            const data = await res.json();
+
+            if (!res.ok) {
+                errEl.textContent = data.error || 'Registration failed';
+                errEl.style.display = 'block';
+                return;
+            }
+
+            window.location.href = '/dashboard';
+        } catch (err) {
+            errEl.textContent = 'Network error';
+            errEl.style.display = 'block';
+        }
+    }
+    </script>
+</body>
+</html>

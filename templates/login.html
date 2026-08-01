@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Log In — 404NOT403</title>
+    <link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body>
+    <div class="auth-page">
+        <div class="auth-card">
+            <div class="logo">
+                <span class="logo-404">404</span><span class="logo-not">NOT</span><span class="logo-403">403</span>
+            </div>
+            <h2>Log In</h2>
+
+            <div id="error-msg" class="error-msg" style="display:none;"></div>
+
+            <form id="login-form" onsubmit="return handleLogin(event)">
+                <label for="identifier">Email or Handle</label>
+                <input type="text" id="identifier" name="identifier" required autocomplete="username">
+
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password" required autocomplete="current-password">
+
+                <button type="submit" class="btn btn-primary btn-full">Log In</button>
+            </form>
+
+            <div class="auth-links">
+                <a href="/reset">Forgot password?</a>
+                <a href="/register">Create account</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    async function handleLogin(e) {
+        e.preventDefault();
+        const errEl = document.getElementById('error-msg');
+        errEl.style.display = 'none';
+
+        const body = {
+            identifier: document.getElementById('identifier').value.trim(),
+            password: document.getElementById('password').value
+        };
+
+        try {
+            const res = await fetch('/api/auth/login', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(body)
+            });
+            const data = await res.json();
+
+            if (!res.ok) {
+                errEl.textContent = data.error || 'Login failed';
+                errEl.style.display = 'block';
+                return;
+            }
+
+            if (data.mfa_required) {
+                errEl.textContent = 'MFA required — not yet supported in this UI';
+                errEl.style.display = 'block';
+                return;
+            }
+
+            window.location.href = '/dashboard';
+        } catch (err) {
+            errEl.textContent = 'Network error';
+            errEl.style.display = 'block';
+        }
+    }
+    </script>
+</body>
+</html>
