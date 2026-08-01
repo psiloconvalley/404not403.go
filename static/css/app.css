@@ -1,53 +1,61 @@
-/* ── 404NOT403 · ITSM Design System — Light ─────────────────────────────────── */
+/* ── 404NOT403 · ITSM Design System — Cloud Dancer + Terracotta ──────────── */
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 
 :root {
-    --bg:             #ffffff;
-    --bg-subtle:      #f6f8fa;
+    /* Cloud Dancer — Pantone 2026 */
+    --bg:             #faf9f7;
+    --bg-subtle:      #f3f1ed;
     --surface:        #ffffff;
-    --surface-hover:  #f3f4f6;
-    --border:         #d1d5db;
-    --border-bright:  #9ca3af;
+    --surface-hover:  #f7f5f2;
+    --border:         #e2ddd5;
+    --border-bright:  #c5bdb2;
 
-    --text-primary:   #1f2937;
-    --text-secondary: #4b5563;
-    --text-muted:     #9ca3af;
+    /* Text — warm grays, not blue-grays */
+    --text-primary:   #292524;
+    --text-secondary: #57534e;
+    --text-muted:     #a8a29e;
 
-    --accent:         #6366f1;
-    --accent-hover:   #4f46e5;
-    --accent-subtle:  rgba(99, 102, 241, 0.08);
+    /* Terracotta — Burnt Sienna accent */
+    --accent:         #c2410c;
+    --accent-hover:   #9a3412;
+    --accent-subtle:  rgba(194, 65, 12, 0.07);
     --accent-text:    #ffffff;
 
+    /* Priority — semantic, universal */
     --priority-p0:    #dc2626;
-    --priority-p0-bg: rgba(220, 38, 38, 0.08);
+    --priority-p0-bg: rgba(220, 38, 38, 0.07);
     --priority-p1:    #ea580c;
-    --priority-p1-bg: rgba(234, 88, 12, 0.08);
+    --priority-p1-bg: rgba(234, 88, 12, 0.07);
     --priority-p2:    #ca8a04;
-    --priority-p2-bg: rgba(202, 138, 4, 0.08);
-    --priority-p3:    #71717a;
-    --priority-p3-bg: rgba(113, 113, 122, 0.06);
+    --priority-p2-bg: rgba(202, 138, 4, 0.07);
+    --priority-p3:    #78716c;
+    --priority-p3-bg: rgba(120, 113, 108, 0.06);
 
+    /* Status — muted, professional */
     --status-open:       #2563eb;
-    --status-open-bg:    rgba(37, 99, 235, 0.08);
+    --status-open-bg:    rgba(37, 99, 235, 0.07);
     --status-assigned:   #7c3aed;
-    --status-assigned-bg: rgba(124, 58, 237, 0.08);
+    --status-assigned-bg: rgba(124, 58, 237, 0.07);
     --status-progress:   #0891b2;
-    --status-progress-bg: rgba(8, 145, 178, 0.08);
+    --status-progress-bg: rgba(8, 145, 178, 0.07);
     --status-pending:    #d97706;
-    --status-pending-bg: rgba(217, 119, 6, 0.08);
+    --status-pending-bg: rgba(217, 119, 6, 0.07);
     --status-resolved:   #16a34a;
-    --status-resolved-bg: rgba(22, 163, 74, 0.08);
-    --status-closed:     #71717a;
-    --status-closed-bg:  rgba(113, 113, 122, 0.06);
+    --status-resolved-bg: rgba(22, 163, 74, 0.07);
+    --status-closed:     #78716c;
+    --status-closed-bg:  rgba(120, 113, 108, 0.05);
 
-    --shadow-sm:  0 1px 2px rgba(0, 0, 0, 0.05);
-    --shadow-md:  0 4px 6px rgba(0, 0, 0, 0.05), 0 1px 3px rgba(0, 0, 0, 0.08);
-    --shadow-lg:  0 10px 15px rgba(0, 0, 0, 0.05), 0 4px 6px rgba(0, 0, 0, 0.05);
+    /* Shadows — warm tinted */
+    --shadow-sm:  0 1px 2px rgba(41, 37, 36, 0.04);
+    --shadow-md:  0 4px 6px rgba(41, 37, 36, 0.04), 0 1px 3px rgba(41, 37, 36, 0.06);
+    --shadow-lg:  0 10px 15px rgba(41, 37, 36, 0.06), 0 4px 6px rgba(41, 37, 36, 0.04);
 
+    /* Typography */
     --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     --font-mono: 'JetBrains Mono', monospace;
 
+    /* Radius */
     --radius-sm: 6px;
     --radius-md: 8px;
     --radius-lg: 12px;
@@ -77,8 +85,8 @@ a:hover { color: var(--accent-hover); }
     line-height: 1;
 }
 .logo-404 { color: var(--priority-p0); }
-.logo-not { color: var(--text-primary); opacity: 0.5; }
-.logo-403 { color: var(--priority-p2); }
+.logo-not { color: var(--text-primary); opacity: 0.4; }
+.logo-403 { color: var(--accent); }
 
 /* ── Buttons ── */
 .btn {
@@ -181,7 +189,7 @@ a:hover { color: var(--accent-hover); }
     padding: 1rem 2rem 5rem;
 }
 .feature {
-    background: var(--bg);
+    background: var(--surface);
     border: 1px solid var(--border);
     border-radius: var(--radius-md);
     padding: 1.5rem;
@@ -218,7 +226,7 @@ a:hover { color: var(--accent-hover); }
 .auth-card {
     width: 100%;
     max-width: 380px;
-    background: var(--bg);
+    background: var(--surface);
     border: 1px solid var(--border);
     border-radius: var(--radius-lg);
     padding: 2rem;
@@ -271,7 +279,7 @@ a:hover { color: var(--accent-hover); }
 }
 .error-msg {
     background: var(--priority-p0-bg);
-    border: 1px solid rgba(220, 38, 38, 0.2);
+    border: 1px solid rgba(220, 38, 38, 0.15);
     border-radius: var(--radius-sm);
     padding: 0.6rem 0.75rem;
     font-size: 0.8rem;
@@ -292,7 +300,7 @@ a:hover { color: var(--accent-hover); }
     align-items: center;
     padding: 0.75rem 1.5rem;
     border-bottom: 1px solid var(--border);
-    background: var(--bg);
+    background: var(--surface);
     box-shadow: var(--shadow-sm);
 }
 .nav-user {
@@ -333,7 +341,7 @@ a:hover { color: var(--accent-hover); }
     font-size: 0.85rem;
     padding: 1.5rem;
     text-align: center;
-    background: var(--bg);
+    background: var(--surface);
     border: 1px dashed var(--border);
     border-radius: var(--radius-md);
 }
@@ -344,7 +352,7 @@ a:hover { color: var(--accent-hover); }
     flex-direction: column;
     gap: 0.5rem;
     padding: 1rem;
-    background: var(--bg);
+    background: var(--surface);
     border: 1px solid var(--border);
     border-radius: var(--radius-md);
     margin-top: 0.75rem;
@@ -382,7 +390,7 @@ a:hover { color: var(--accent-hover); }
     justify-content: space-between;
     align-items: center;
     padding: 0.75rem 1rem;
-    background: var(--bg);
+    background: var(--surface);
     border: 1px solid var(--border);
     border-radius: var(--radius-md);
     margin-bottom: 0.5rem;
@@ -421,7 +429,7 @@ a:hover { color: var(--accent-hover); }
     align-items: center;
     gap: 0.75rem;
     padding: 0.65rem 1rem;
-    background: var(--bg);
+    background: var(--surface);
     border: 1px solid var(--border);
     border-radius: var(--radius-md);
     transition: border-color 0.15s, box-shadow 0.15s;
