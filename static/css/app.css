@@ -287,21 +287,26 @@ a:hover { color: var(--accent-hover); }
     margin-bottom: 1rem;
 }
 
-/* ── Dashboard ── */
+/* ── Dashboard Shell ── */
 .dashboard {
-    min-height: 100vh;
+    height: 100vh;
     display: flex;
     flex-direction: column;
     background: var(--bg-subtle);
+    overflow: hidden;
 }
 .dash-nav {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 0.75rem 1.5rem;
+    padding: 0 1.25rem;
+    height: 48px;
+    min-height: 48px;
     border-bottom: 1px solid var(--border);
     background: var(--surface);
     box-shadow: var(--shadow-sm);
+    z-index: 100;
+    flex-shrink: 0;
 }
 .nav-user {
     display: flex;
@@ -313,10 +318,9 @@ a:hover { color: var(--accent-hover); }
 }
 .dash-main {
     flex: 1;
-    max-width: 900px;
-    margin: 0 auto;
     width: 100%;
     padding: 1.5rem;
+    overflow-y: auto;
 }
 .dash-section {
     margin-bottom: 2rem;
@@ -516,8 +520,8 @@ a:hover { color: var(--accent-hover); }
 
 /* ── Views ── */
 .view {
-    max-width: 900px;
-    margin: 0 auto;
+    width: 100%;
+    max-width: 100%;
     padding: 1.5rem;
 }
 .view-header {
@@ -1165,22 +1169,23 @@ a:hover { color: var(--accent-hover); }
 /* ── Two-Panel Layout ───────────────────────────────────────────────────────── */
 .view-split {
     display: flex;
-    max-width: 100%;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
     padding: 0;
     gap: 0;
 }
 
 /* ── Sidebar ── */
 .sidebar {
-    width: 220px;
-    min-width: 220px;
+    width: 240px;
+    min-width: 240px;
     background: var(--surface);
     border-right: 1px solid var(--border);
     padding: 0.75rem 0;
     overflow-y: auto;
-    height: calc(100vh - 49px);
-    position: sticky;
-    top: 49px;
+    height: 100%;
+    flex-shrink: 0;
 }
 .sidebar-section {
     margin-bottom: 0.75rem;
@@ -1298,7 +1303,7 @@ a:hover { color: var(--accent-hover); }
     flex: 1;
     padding: 1rem 1.5rem;
     overflow-y: auto;
-    height: calc(100vh - 49px);
+    height: 100%;
     min-width: 0;
 }
 .queue-main-header {
