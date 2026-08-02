@@ -577,10 +577,75 @@ function renderTicketList(tickets) {
         age.textContent = timeAgo(t.created_at);
         right.appendChild(age);
 
+        // Action menu button
+        const actions = document.createElement('div');
+        actions.className = 'ticket-actions';
+        actions.onclick = function(e) {
+            e.stopPropagation();
+            closeAllMenus();
+            const menu = actions.querySelector('.ticket-menu');
+            menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+        };
+        actions.innerHTML = '<span class="ticket-actions-btn">⋯</span>';
+
+        const menu = document.createElement('div');
+        menu.className = 'ticket-menu';
+
+        const role = (sidebarData && sidebarData.role) || 'viewer';
+
+        menu.innerHTML =
+            '<div class="ticket-menu-item" onclick="quickAssignToMe(\'' + t.id + '\')">Assign to me</div>' +
+            '<div class="ticket-menu-item" onclick="quickStatus(\'' + t.id + '\', \'in_progress\')">→ In Progress</div>' +
+            '<div class="ticket-menu-item" onclick="quickStatus(\'' + t.id + '\', \'resolved\')">✓ Resolve</div>' +
+            '<div class="ticket-menu-item" onclick="quickStatus(\'' + t.id + '\', \'closed\')">✕ Close</div>' +
+            (role === 'owner' || role === 'admin'
+                ? '<div class="ticket-menu-divider"></div><div class="ticket-menu-item ticket-menu-danger" onclick="quickDelete(\'' + t.id + '\')">🗑 Delete</div>'
+                : '');
+
+        actions.appendChild(menu);
+
         div.appendChild(left);
         div.appendChild(right);
+        div.appendChild(actions);
         list.appendChild(div);
     });
+}
+
+function closeAllMenus() {
+    document.querySelectorAll('.ticket-menu').forEach(function(m) { m.style.display = 'none'; });
+}
+document.addEventListener('click', closeAllMenus);
+
+async function quickAssignToMe(ticketID) {
+    closeAllMenus();
+    const res = await fetch('/api/auth/me');
+    if (!res.ok) return;
+    const user = await res.json();
+    const r = await fetch('/api/orgs/' + currentOrgID + '/tickets/' + ticketID + '/assign', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({assignee_user_id: user.id})
+    });
+    if (r.ok) { loadTickets(currentFilter); loadSidebar(); }
+    else { const d = await r.json(); alert(d.error || 'Failed'); }
+}
+
+async function quickStatus(ticketID, status) {
+    closeAllMenus();
+    const res = await fetch('/api/orgs/' + currentOrgID + '/tickets/' + ticketID + '/status', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({status: status})
+    });
+    if (res.ok) { loadTickets(currentFilter); loadSidebar(); }
+    else { const d = await res.json(); alert(d.error || 'Failed'); }
+}
+
+async function quickDelete(ticketID) {
+    closeAllMenus();
+    if (!confirm('Delete this ticket? This cannot be undone.')) return;
+    // TODO: implement delete endpoint
+    alert('Delete not yet implemented');
 }
 
 function showCreateTicket() { document.getElementById('create-ticket-form').style.display = 'flex'; }
