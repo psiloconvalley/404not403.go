@@ -1604,3 +1604,13 @@ a:hover { color: var(--accent-hover); }
 .sidebar-gear:hover {
     color: var(--accent);
 }
+
+/* ── Settings Layout ── */
+#view-settings-org .settings-card,
+#view-settings-account .settings-card,
+#view-settings-queue .settings-card {
+    max-width: 600px;
+}
+.settings-invite-row {
+    max-width: 600px;
+}
