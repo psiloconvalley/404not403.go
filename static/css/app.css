@@ -1614,3 +1614,12 @@ a:hover { color: var(--accent-hover); }
 .settings-invite-row {
     max-width: 600px;
 }
+
+/* ── Settings View Centering ── */
+#view-settings-org,
+#view-settings-account,
+#view-settings-queue {
+    max-width: 700px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem;
+}
