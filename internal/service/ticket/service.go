@@ -196,15 +196,19 @@ func (s *Service) Get(ctx context.Context, orgID, ticketID string) (*TicketConte
 
 // ListInput defines filters for listing tickets.
 type ListInput struct {
-	OrgID      string
-	Status     *string
-	Priority   *string
-	AssignedTo *string
-	Limit      int
-	Offset     int
+	OrgID            string
+	RequestingUserID string
+	Status           *string
+	Priority         *string
+	AssignedTo       *string
+	Limit            int
+	Offset           int
 }
 
 // List returns tickets for an org with optional filters.
+// Enforces role-based access control:
+//   - owner/admin: sees all tickets
+//   - agent/viewer: sees tickets in their queues + assigned to them
 func (s *Service) List(ctx context.Context, input ListInput) ([]store.Ticket, error) {
 	if input.OrgID == "" {
 		return nil, fmt.Errorf("org_id is required")
@@ -219,6 +223,17 @@ func (s *Service) List(ctx context.Context, input ListInput) ([]store.Ticket, er
 	if input.Priority != nil {
 		if _, err := domain.ParsePriority(*input.Priority); err != nil {
 			return nil, fmt.Errorf("invalid priority filter: %w", err)
+		}
+	}
+
+	// Role-based access control
+	if input.RequestingUserID != "" {
+		member, err := store.GetOrgMember(s.db, input.OrgID, input.RequestingUserID)
+		if err != nil {
+			return nil, domain.ErrUnauthorized
+		}
+		if member.Role != "owner" && member.Role != "admin" {
+			return store.ListTicketsForAgent(s.db, input.OrgID, input.RequestingUserID, input.Limit)
 		}
 	}
 

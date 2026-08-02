@@ -66,7 +66,7 @@
 
             <div class="sidebar-section sidebar-section-bottom">
                 <div class="sidebar-label">Settings</div>
-                <div class="sidebar-item" onclick="showView('settings-org')">
+                <div id="nav-settings-org" class="sidebar-item" onclick="showView('settings-org')" style="display:none;">
                     <span class="sidebar-item-name">⚙ Org Settings</span>
                 </div>
                 <div class="sidebar-item" onclick="showView('settings-account')">
@@ -351,6 +351,11 @@ function renderSidebar() {
     if (totalEl)      totalEl.textContent      = counts.total      || 0;
     if (unassignedEl) unassignedEl.textContent = counts.unassigned || 0;
     if (urgentEl)     urgentEl.textContent      = counts.urgent     || 0;
+
+    // Role-based settings visibility
+    const role = sidebarData.role || 'viewer';
+    const orgSettingsEl = document.getElementById('nav-settings-org');
+    if (orgSettingsEl) orgSettingsEl.style.display = (role === 'owner' || role === 'admin') ? '' : 'none';
 
     // Render queue list — single global sidebar
     const list = document.getElementById('queue-list');

@@ -467,3 +467,49 @@ func UpdateTicketCategory(db *sql.DB, orgID, ticketID, category string) error {
 	)
 	return err
 }
+
+// ListTicketsForAgent returns tickets visible to an agent:
+//   - tickets in queues the agent belongs to
+//   - tickets assigned to the agent
+// This enforces queue-based access control at the data layer.
+func ListTicketsForAgent(db *sql.DB, orgID, userID string, limit int) ([]Ticket, error) {
+	if limit <= 0 || limit > 200 {
+		limit = 50
+	}
+
+	rows, err := db.Query(`
+		SELECT DISTINCT t.id, t.org_id, t.customer_id, t.assigned_to,
+		       t.subject, t.body, t.status, t.priority, t.category,
+		       t.source_type, t.thread_id, t.incident_id,
+		       t.sla_due_at, t.sla_breached,
+		       t.created_at, t.updated_at, t.resolved_at
+		FROM tickets t
+		LEFT JOIN queue_members qm
+		  ON qm.queue_id = t.queue_id AND qm.user_id = $2 AND qm.org_id = $1
+		WHERE t.org_id = $1
+		  AND (qm.user_id IS NOT NULL OR t.assigned_to = $2)
+		ORDER BY t.created_at DESC
+		LIMIT $3`,
+		orgID, userID, limit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var tickets []Ticket
+	for rows.Next() {
+		var t Ticket
+		if err := rows.Scan(
+			&t.ID, &t.OrgID, &t.CustomerID, &t.AssignedTo,
+			&t.Subject, &t.Body, &t.Status, &t.Priority, &t.Category,
+			&t.SourceType, &t.ThreadID, &t.IncidentID,
+			&t.SLADueAt, &t.SLABreached,
+			&t.CreatedAt, &t.UpdatedAt, &t.ResolvedAt,
+		); err != nil {
+			return nil, err
+		}
+		tickets = append(tickets, t)
+	}
+	return tickets, rows.Err()
+}

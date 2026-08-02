@@ -82,8 +82,9 @@ func (s *Service) Create(ctx context.Context, input CreateInput) (*store.Queue, 
 
 // SidebarData is what powers the queue sidebar in the dashboard.
 type SidebarData struct {
-	OrgCounts *store.OrgTicketCounts    `json:"org_counts"`
-	Queues    []store.QueueWithCounts   `json:"queues"`
+	Role      string                   `json:"role"`
+	OrgCounts *store.OrgTicketCounts   `json:"org_counts"`
+	Queues    []store.QueueWithCounts  `json:"queues"`
 }
 
 func (s *Service) ListForSidebar(ctx context.Context, orgID, requestingUserID string) (*SidebarData, error) {
@@ -91,8 +92,8 @@ func (s *Service) ListForSidebar(ctx context.Context, orgID, requestingUserID st
 		return nil, fmt.Errorf("org_id and requesting_user_id are required")
 	}
 
-	// Must be at least viewer in the org
-	_, err := s.orgs.RequireMember(ctx, orgID, requestingUserID)
+	// Get membership and role
+	member, err := s.orgs.RequireMember(ctx, orgID, requestingUserID)
 	if err != nil {
 		return nil, err
 	}
@@ -103,13 +104,20 @@ func (s *Service) ListForSidebar(ctx context.Context, orgID, requestingUserID st
 		return nil, fmt.Errorf("load org counts: %w", err)
 	}
 
-	// Queues with per-queue counts
-	queues, err := store.ListQueuesWithCounts(s.db, orgID)
+	// Role-aware queue listing
+	var queues []store.QueueWithCounts
+	switch member.Role {
+	case "owner", "admin":
+		queues, err = store.ListQueuesWithCounts(s.db, orgID)
+	default:
+		queues, err = store.ListQueuesForUser(s.db, orgID, requestingUserID)
+	}
 	if err != nil {
 		return nil, fmt.Errorf("load queues: %w", err)
 	}
 
 	return &SidebarData{
+		Role:      member.Role,
 		OrgCounts: counts,
 		Queues:    queues,
 	}, nil

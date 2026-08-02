@@ -77,7 +77,7 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 		assignedTo = &v
 	}
 
-	tickets, err := h.svc.List(r.Context(), ticketsvc.ListInput{
+	tickets, err := h.svc.List(r.Context(), ticketsvc.ListInput{RequestingUserID: userID,
 		OrgID:      orgID,
 		Status:     status,
 		Priority:   priority,
