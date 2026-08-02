@@ -19,6 +19,7 @@ import (
 	queuehandler "github.com/psiloconvalley/404not403/internal/handler/queue"
 	orghandler "github.com/psiloconvalley/404not403/internal/handler/org"
 	tickethandler "github.com/psiloconvalley/404not403/internal/handler/ticket"
+	inboundhandler "github.com/psiloconvalley/404not403/internal/handler/inbound"
 	"github.com/psiloconvalley/404not403/internal/middleware"
 	"github.com/psiloconvalley/404not403/internal/provider/ai"
 	"github.com/psiloconvalley/404not403/internal/provider/email"
@@ -81,6 +82,7 @@ func main() {
 	orgs := orghandler.New(a)
 	helpPortal := helphandler.New(a)
 	queues := queuehandler.New(a)
+	inbound := inboundhandler.New(a)
 
 	// 7. Worker — background job processor (AI enrichment)
 	go worker.Start(ctx, a)
@@ -130,6 +132,7 @@ func main() {
 	// ── Billing ───────────────────────────────────────────────────────
 	mux.HandleFunc("/api/billing/checkout", middleware.RequireAuth(a, handler.CreateCheckoutSession(a)))
 	mux.HandleFunc("/api/webhooks/stripe", handler.StripeWebhook(a))
+	mux.HandleFunc("/api/webhooks/inbound-email", inbound.ResendEmail)
 
 	// 9. Middleware chain
 	wrapped := middleware.RateLimiter(a)(mux)
