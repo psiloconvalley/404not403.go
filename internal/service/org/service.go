@@ -286,3 +286,30 @@ func roleAtLeast(actual, required string) bool {
 	}
 	return order[actual] >= order[required]
 }
+
+// ── Update Org ───────────────────────────────────────────────────────────────
+
+// UpdateOrgInput defines the fields that can be updated on an organization.
+type UpdateOrgInput struct {
+	OrgID            string
+	RequestingUserID string
+	Name             *string
+	Domain           *string
+	InboundEmail     *string
+}
+
+// UpdateOrg updates an organization's settings.
+// Only owners and admins can update org settings.
+func (s *Service) UpdateOrg(ctx context.Context, input UpdateOrgInput) (*store.Organization, error) {
+	if input.OrgID == "" || input.RequestingUserID == "" {
+		return nil, fmt.Errorf("org_id and requesting_user_id are required")
+	}
+
+	// Only admins or owners can update org settings
+	_, err := s.RequireRole(ctx, input.OrgID, input.RequestingUserID, "admin")
+	if err != nil {
+		return nil, err
+	}
+
+	return store.UpdateOrg(s.db, input.OrgID, input.Name, input.Domain, input.InboundEmail)
+}

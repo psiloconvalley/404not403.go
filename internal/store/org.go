@@ -308,3 +308,29 @@ func GetOrgByDomain(db *sql.DB, domain string) (*Organization, error) {
 	}
 	return &org, nil
 }
+
+// UpdateOrg updates an organization's configurable fields.
+// Only non-nil fields are updated. Slug and plan are not editable here.
+func UpdateOrg(db *sql.DB, orgID string, name, domain, inboundEmail *string) (*Organization, error) {
+	var org Organization
+	err := db.QueryRow(`
+		UPDATE organizations
+		SET name          = COALESCE($2, name),
+		    domain        = COALESCE($3, domain),
+		    inbound_email = COALESCE($4, inbound_email),
+		    updated_at    = now()
+		WHERE id = $1
+		RETURNING id, name, slug, domain, plan,
+		          inbound_email, slack_team_id, slack_channel_id,
+		          created_at, updated_at`,
+		orgID, name, domain, inboundEmail,
+	).Scan(
+		&org.ID, &org.Name, &org.Slug, &org.Domain, &org.Plan,
+		&org.InboundEmail, &org.SlackTeamID, &org.SlackChannelID,
+		&org.CreatedAt, &org.UpdatedAt,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &org, nil
+}

@@ -1517,3 +1517,74 @@ a:hover { color: var(--accent-hover); }
 .ticket-menu-danger:hover {
     background: var(--priority-p0-bg);
 }
+
+/* ── Settings ── */
+.settings-field {
+    margin-bottom: 1rem;
+}
+.settings-label {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-muted);
+    margin-bottom: 0.35rem;
+}
+.settings-input {
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text-primary);
+    font-family: var(--font-sans);
+    font-size: 0.85rem;
+    outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+}
+.settings-input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-subtle);
+}
+.settings-hint {
+    display: block;
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    margin-top: 0.25rem;
+}
+.settings-status {
+    font-size: 0.8rem;
+    margin-left: 0.75rem;
+}
+.settings-card-header {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 0.75rem;
+}
+.settings-member-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.85rem;
+}
+.settings-member-name {
+    font-weight: 500;
+    color: var(--text-primary);
+    min-width: 120px;
+}
+.settings-member-email {
+    color: var(--text-secondary);
+    flex: 1;
+}
+.settings-invite-row {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+.settings-invite-row .settings-input {
+    flex: 1;
+}

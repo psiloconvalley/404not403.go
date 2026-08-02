@@ -221,6 +221,10 @@ func orgRouter(orgs *orghandler.Handler, tickets *tickethandler.Handler, qh *que
 		case hasSuffix(path, "/members"):
 			orgs.Invite(w, r)
 
+		// Org settings: /api/orgs/{orgID}/settings
+		case hasSuffix(path, "/settings"):
+			orgs.UpdateSettings(w, r)
+
 		// Org detail: /api/orgs/{orgID}
 		default:
 			orgs.Get(w, r)

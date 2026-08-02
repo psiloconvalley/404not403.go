@@ -201,7 +201,41 @@
                     <h1>Org Settings</h1>
                 </div>
                 <div class="settings-card">
-                    <p class="empty">Org settings coming soon — name, inbound email, domain, members.</p>
+                    <div class="settings-field">
+                        <label class="settings-label">Organization Name</label>
+                        <input type="text" id="settings-org-name" class="settings-input" placeholder="Acme Corp">
+                    </div>
+                    <div class="settings-field">
+                        <label class="settings-label">Domain</label>
+                        <input type="text" id="settings-org-domain" class="settings-input" placeholder="acme.com">
+                        <span class="settings-hint">Used to verify employee email addresses</span>
+                    </div>
+                    <div class="settings-field">
+                        <label class="settings-label">Inbound Email</label>
+                        <input type="email" id="settings-org-inbound" class="settings-input" placeholder="support@acme.com">
+                        <span class="settings-hint">Emails sent here become tickets automatically</span>
+                    </div>
+                    <div class="settings-field">
+                        <button onclick="saveOrgSettings()" class="btn btn-primary">Save Changes</button>
+                        <span id="settings-org-status" class="settings-status"></span>
+                    </div>
+                </div>
+
+                <div class="settings-card">
+                    <div class="settings-card-header">Members</div>
+                    <div id="settings-members-list"></div>
+                    <div class="settings-field" style="margin-top: 0.75rem;">
+                        <label class="settings-label">Invite Member</label>
+                        <div class="settings-invite-row">
+                            <input type="email" id="settings-invite-email" class="settings-input" placeholder="jane@acme.com">
+                            <select id="settings-invite-role" class="settings-input" style="max-width: 120px;">
+                                <option value="agent">Agent</option>
+                                <option value="admin">Admin</option>
+                                <option value="viewer">Viewer</option>
+                            </select>
+                            <button onclick="inviteMember()" class="btn btn-primary btn-sm">Invite</button>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -250,6 +284,8 @@ function showView(name) {
 
     const sidebar = document.getElementById('global-sidebar');
     if (sidebar) sidebar.style.display = (name === 'org') ? 'none' : '';
+
+    if (name === 'settings-org') loadOrgSettings();
 }
 
 function showQueue() {
@@ -858,6 +894,98 @@ function timeAgo(dateStr) {
     if (sec < 3600)  return Math.floor(sec / 60) + 'm ago';
     if (sec < 86400) return Math.floor(sec / 3600) + 'h ago';
     return Math.floor(sec / 86400) + 'd ago';
+}
+
+
+// ── Org Settings ─────────────────────────────────────────────────────────────
+async function loadOrgSettings() {
+    if (!currentOrgID) return;
+    const res = await fetch('/api/orgs/' + currentOrgID);
+    if (!res.ok) return;
+    const data = await res.json();
+    const org = data.org || data;
+    document.getElementById('settings-org-name').value = org.name || '';
+    document.getElementById('settings-org-domain').value = org.domain || '';
+    document.getElementById('settings-org-inbound').value = org.inbound_email || '';
+    loadMembers();
+}
+
+async function saveOrgSettings() {
+    if (!currentOrgID) return;
+    const name = document.getElementById('settings-org-name').value.trim();
+    const domain = document.getElementById('settings-org-domain').value.trim();
+    const inbound = document.getElementById('settings-org-inbound').value.trim();
+    const statusEl = document.getElementById('settings-org-status');
+
+    const body = {};
+    if (name) body.name = name;
+    if (domain) body.domain = domain;
+    if (inbound) body.inbound_email = inbound;
+
+    const res = await fetch('/api/orgs/' + currentOrgID + '/settings', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(body)
+    });
+
+    if (res.ok) {
+        statusEl.textContent = '✓ Saved';
+        statusEl.style.color = 'var(--status-resolved)';
+        setTimeout(function() { statusEl.textContent = ''; }, 2000);
+        // Update nav org name
+        document.getElementById('nav-org-name').textContent = name;
+        currentOrgName = name;
+    } else {
+        const d = await res.json();
+        statusEl.textContent = d.error || 'Failed to save';
+        statusEl.style.color = 'var(--priority-p0)';
+    }
+}
+
+async function loadMembers() {
+    if (!currentOrgID) return;
+    const res = await fetch('/api/orgs/' + currentOrgID);
+    if (!res.ok) return;
+    const data = await res.json();
+    const members = data.members || [];
+    const list = document.getElementById('settings-members-list');
+    list.innerHTML = '';
+
+    if (members.length === 0) {
+        list.innerHTML = '<p class="empty">No members found.</p>';
+        return;
+    }
+
+    members.forEach(function(m) {
+        const row = document.createElement('div');
+        row.className = 'settings-member-row';
+        row.innerHTML =
+            '<span class="settings-member-name">' + (m.handle || m.email) + '</span>' +
+            '<span class="settings-member-email">' + m.email + '</span>' +
+            '<span class="org-role">' + m.role + '</span>';
+        list.appendChild(row);
+    });
+}
+
+async function inviteMember() {
+    if (!currentOrgID) return;
+    const email = document.getElementById('settings-invite-email').value.trim();
+    const role = document.getElementById('settings-invite-role').value;
+    if (!email) { alert('Email is required'); return; }
+
+    const res = await fetch('/api/orgs/' + currentOrgID + '/members', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({email: email, role: role})
+    });
+
+    if (res.ok) {
+        document.getElementById('settings-invite-email').value = '';
+        loadMembers();
+    } else {
+        const d = await res.json();
+        alert(d.error || 'Failed to invite');
+    }
 }
 
 init();

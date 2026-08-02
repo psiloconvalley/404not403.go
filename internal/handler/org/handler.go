@@ -309,3 +309,49 @@ func (h *Handler) RemoveMember(w http.ResponseWriter, r *http.Request) {
 		"user_id": targetUserID,
 	})
 }
+
+// ── Update Settings ──────────────────────────────────────────────────────────
+
+// UpdateSettings handles POST /api/orgs/{orgID}/settings
+func (h *Handler) UpdateSettings(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		writeError(w, http.StatusMethodNotAllowed, "use POST")
+		return
+	}
+
+	userID := middleware.GetUserID(r)
+	if userID == "" {
+		writeError(w, http.StatusUnauthorized, "not authenticated")
+		return
+	}
+
+	orgID := orgIDFromPath(r)
+	if orgID == "" {
+		writeError(w, http.StatusBadRequest, "org_id is required")
+		return
+	}
+
+	var input struct {
+		Name         *string `json:"name"`
+		Domain       *string `json:"domain"`
+		InboundEmail *string `json:"inbound_email"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid JSON")
+		return
+	}
+
+	org, err := h.svc.UpdateOrg(r.Context(), orgsvc.UpdateOrgInput{
+		OrgID:            orgID,
+		RequestingUserID: userID,
+		Name:             input.Name,
+		Domain:           input.Domain,
+		InboundEmail:     input.InboundEmail,
+	})
+	if err != nil {
+		writeError(w, domainErrStatus(err), err.Error())
+		return
+	}
+
+	writeJSON(w, http.StatusOK, org)
+}
