@@ -99,6 +99,7 @@
             </div>
 
             <div id="create-ticket-form" style="display:none;" class="inline-form">
+                <input type="email" id="ticket-customer-email" placeholder="Requester email (e.g. jane@company.com)">
                 <input type="text" id="ticket-subject" placeholder="Subject — what is broken?">
                 <textarea id="ticket-body" placeholder="Describe the issue in detail..." rows="3"></textarea>
                 <div class="form-row">
@@ -569,6 +570,7 @@ function hideCreateTicket()  { document.getElementById('create-ticket-form').sty
 
 async function createTicket() {
     if (!currentOrgID) return;
+    const customerEmail = document.getElementById('ticket-customer-email').value.trim();
     const subject  = document.getElementById('ticket-subject').value.trim();
     const body     = document.getElementById('ticket-body').value.trim();
     const priority = document.getElementById('ticket-priority').value;
@@ -577,13 +579,14 @@ async function createTicket() {
     const res = await fetch('/api/orgs/' + currentOrgID + '/tickets', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({subject: subject, body: body, priority: priority, source_type: 'web'})
+        body: JSON.stringify({subject: subject, body: body, priority: priority, source_type: 'web', customer_email: customerEmail})
     });
 
     if (res.ok) {
         hideCreateTicket();
         document.getElementById('ticket-subject').value = '';
         document.getElementById('ticket-body').value = '';
+        document.getElementById('ticket-customer-email').value = '';
         loadSidebar();
         loadTickets(currentFilter);
     } else {

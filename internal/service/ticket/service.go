@@ -45,6 +45,7 @@ type CreateInput struct {
 	Priority   string            // optional — defaults to P2
 	SourceType string            // required — domain.SourceType
 	ThreadID   *string           // optional — for idempotency
+	CustomerEmail *string    // optional — find or create customer on submit
 }
 
 // CreateResult is returned after a ticket is created.
@@ -85,6 +86,15 @@ func (s *Service) Create(ctx context.Context, input CreateInput) (*CreateResult,
 	}
 	if _, err := domain.ParsePriority(input.Priority); err != nil {
 		return nil, fmt.Errorf("invalid priority: %w", err)
+	}
+
+	// Resolve customer email to customer ID if provided
+	if input.CustomerEmail != nil && *input.CustomerEmail != "" && input.CustomerID == nil {
+		customer, err := store.FindOrCreateCustomerByEmail(s.db, input.OrgID, *input.CustomerEmail, nil)
+		if err != nil {
+			return nil, fmt.Errorf("resolve customer: %w", err)
+		}
+		input.CustomerID = &customer.ID
 	}
 
 	// Create the ticket

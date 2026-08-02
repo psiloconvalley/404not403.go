@@ -29,16 +29,23 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var input struct {
-		Subject    string  `json:"subject"`
-		Body       string  `json:"body"`
-		Priority   string  `json:"priority"`
-		SourceType string  `json:"source_type"`
-		ThreadID   *string `json:"thread_id"`
+		Subject       string  `json:"subject"`
+		Body          string  `json:"body"`
+		Priority      string  `json:"priority"`
+		SourceType    string  `json:"source_type"`
+		ThreadID      *string `json:"thread_id"`
+		CustomerEmail string  `json:"customer_email"`
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid JSON")
 		return
+	}
+
+	customerEmail := strings.TrimSpace(input.CustomerEmail)
+	var customerEmailPtr *string
+	if customerEmail != "" {
+		customerEmailPtr = &customerEmail
 	}
 
 	// Default source type to web for agent-created tickets
@@ -47,12 +54,13 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	result, err := h.svc.Create(r.Context(), ticketsvc.CreateInput{
-		OrgID:      orgID,
-		Subject:    input.Subject,
-		Body:       input.Body,
-		Priority:   input.Priority,
-		SourceType: input.SourceType,
-		ThreadID:   input.ThreadID,
+		OrgID:         orgID,
+		Subject:       input.Subject,
+		Body:          input.Body,
+		Priority:      input.Priority,
+		SourceType:    input.SourceType,
+		ThreadID:      input.ThreadID,
+		CustomerEmail: customerEmailPtr,
 	})
 	if err != nil {
 		writeError(w, domainErrStatus(err), err.Error())
@@ -203,7 +211,6 @@ func (h *Handler) AddComment(w http.ResponseWriter, r *http.Request) {
 
 	writeJSON(w, http.StatusCreated, comment)
 }
-
 
 // ── Update Priority ───────────────────────────────────────────────────────────
 
