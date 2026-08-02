@@ -192,6 +192,14 @@ func orgRouter(orgs *orghandler.Handler, tickets *tickethandler.Handler, qh *que
 			qh.ListTickets(w, r)
 		case hasSuffix(path, "/queues"):
 			qh.Create(w, r)
+		case contains(path, "/queues") && contains(path, "/settings"):
+			qh.UpdateQueueSettings(w, r)
+		case contains(path, "/queues") && contains(path, "/members/"):
+			qh.RemoveMember(w, r)
+		case contains(path, "/queues") && hasSuffix(path, "/members"):
+			qh.AddMember(w, r)
+		case contains(path, "/queues/") && !contains(path, "/tickets") && !contains(path, "/assign") && !contains(path, "/sidebar"):
+			qh.GetQueue(w, r)
 
 		// Ticket routes: /api/orgs/{orgID}/tickets/...
 		case contains(path, "/tickets/search"):

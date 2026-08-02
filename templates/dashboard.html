@@ -222,7 +222,7 @@
                 </div>
 
                 <div class="settings-card">
-                    <div class="settings-card-header">Members</div>
+                    <div class="settings-card-header">Organization Members</div><p class="settings-hint" style="margin-bottom:0.75rem">Everyone who can access this workspace</p>
                     <div id="settings-members-list"></div>
                     <div class="settings-field" style="margin-top: 0.75rem;">
                         <label class="settings-label">Invite Member</label>
@@ -249,6 +249,50 @@
                 </div>
             </div>
 
+            <!-- ── View: Queue Settings ── -->
+            <div id="view-settings-queue" class="view" style="display:none;">
+                <div class="view-header">
+                    <h1 id="queue-settings-title">Queue Settings</h1>
+                </div>
+                <div class="settings-card">
+                    <div class="settings-field">
+                        <label class="settings-label">Queue Name</label>
+                        <input type="text" id="settings-queue-name" class="settings-input">
+                    </div>
+                    <div class="settings-field">
+                        <label class="settings-label">Department</label>
+                        <input type="text" id="settings-queue-dept" class="settings-input" placeholder="e.g. Information Technology">
+                    </div>
+                    <div class="settings-field">
+                        <label class="settings-label">Color</label>
+                        <input type="text" id="settings-queue-color" class="settings-input" placeholder="#6366f1">
+                    </div>
+                    <div class="settings-field">
+                        <button onclick="saveQueueSettings()" class="btn btn-primary">Save Changes</button>
+                        <span id="settings-queue-status" class="settings-status"></span>
+                    </div>
+                </div>
+
+                <div class="settings-card">
+                    <div class="settings-card-header">Team Members</div>
+                    <p class="settings-hint" style="margin-bottom:0.75rem">Agents assigned to work tickets in this queue</p>
+                    <div id="queue-members-list"></div>
+                    <div class="settings-field" style="margin-top: 0.75rem;">
+                        <label class="settings-label">Add Team Member</label>
+                        <div class="settings-invite-row">
+                            <select id="queue-member-select" class="settings-input">
+                                <option value="">Select agent...</option>
+                            </select>
+                            <select id="queue-member-role" class="settings-input" style="max-width: 120px;">
+                                <option value="member">Member</option>
+                                <option value="lead">Lead</option>
+                            </select>
+                            <button onclick="addQueueMember()" class="btn btn-primary btn-sm">Add</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
         </div><!-- /.workspace-main -->
     </div><!-- /.workspace-body -->
 
@@ -261,6 +305,7 @@ let currentTicketID = null;
 let currentFilter   = 'all';
 let currentQueueID  = null;
 let currentQueueName = null;
+let currentSettingsQueueID = null;
 let sidebarData     = null;
 
 // ── Init ───────────────────────────────────────────────────────────────────
@@ -274,7 +319,7 @@ async function init() {
 
 // ── Views ──────────────────────────────────────────────────────────────────
 function showView(name) {
-    ['org','queue','detail','settings-org','settings-account'].forEach(function(v) {
+    ['org','queue','detail','settings-org','settings-account','settings-queue'].forEach(function(v) {
         const el = document.getElementById('view-' + v);
         if (el) el.style.display = 'none';
     });
@@ -286,6 +331,7 @@ function showView(name) {
     if (sidebar) sidebar.style.display = (name === 'org') ? 'none' : '';
 
     if (name === 'settings-org') loadOrgSettings();
+    if (name === 'settings-queue') loadQueueSettings();
 }
 
 function showQueue() {
@@ -438,6 +484,17 @@ function renderSidebar() {
                     (q.urgent_count > 0 ? ' sidebar-count-crit' : '');
                 countEl.textContent = q.open_count || 0;
                 item.appendChild(countEl);
+
+                // Settings gear for queue
+                const gear = document.createElement('span');
+                gear.className = 'sidebar-gear';
+                gear.textContent = '⚙';
+                gear.onclick = function(e) {
+                    e.stopPropagation();
+                    currentSettingsQueueID = q.id;
+                    showView('settings-queue');
+                };
+                item.appendChild(gear);
 
                 list.appendChild(item);
             });
@@ -985,6 +1042,122 @@ async function inviteMember() {
     } else {
         const d = await res.json();
         alert(d.error || 'Failed to invite');
+    }
+}
+
+
+// ── Queue Settings ───────────────────────────────────────────────────────────
+async function loadQueueSettings() {
+    if (!currentOrgID || !currentSettingsQueueID) return;
+    const res = await fetch('/api/orgs/' + currentOrgID + '/queues/' + currentSettingsQueueID);
+    if (!res.ok) return;
+    const data = await res.json();
+    const q = data.queue;
+    document.getElementById('queue-settings-title').textContent = 'Queue: ' + q.name;
+    document.getElementById('settings-queue-name').value = q.name || '';
+    document.getElementById('settings-queue-dept').value = q.department || '';
+    document.getElementById('settings-queue-color').value = q.color || '';
+    renderQueueMembers(data.members || []);
+    loadOrgMembersForSelect();
+}
+
+async function saveQueueSettings() {
+    if (!currentOrgID || !currentSettingsQueueID) return;
+    const name = document.getElementById('settings-queue-name').value.trim();
+    const dept = document.getElementById('settings-queue-dept').value.trim();
+    const color = document.getElementById('settings-queue-color').value.trim();
+    const statusEl = document.getElementById('settings-queue-status');
+
+    const body = {};
+    if (name) body.name = name;
+    if (dept) body.department = dept;
+    if (color) body.color = color;
+
+    const res = await fetch('/api/orgs/' + currentOrgID + '/queues/' + currentSettingsQueueID + '/settings', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(body)
+    });
+
+    if (res.ok) {
+        statusEl.textContent = '✓ Saved';
+        statusEl.style.color = 'var(--status-resolved)';
+        setTimeout(function() { statusEl.textContent = ''; }, 2000);
+        loadSidebar();
+    } else {
+        const d = await res.json();
+        statusEl.textContent = d.error || 'Failed to save';
+        statusEl.style.color = 'var(--priority-p0)';
+    }
+}
+
+function renderQueueMembers(members) {
+    const list = document.getElementById('queue-members-list');
+    list.innerHTML = '';
+    if (members.length === 0) {
+        list.innerHTML = '<p class="empty">No team members yet. Add agents below.</p>';
+        return;
+    }
+    members.forEach(function(m) {
+        const row = document.createElement('div');
+        row.className = 'settings-member-row';
+        row.innerHTML =
+            '<span class="settings-member-name">' + m.user_id.substring(0, 8) + '...</span>' +
+            '<span class="org-role">' + m.role + '</span>' +
+            '<button class="btn btn-ghost btn-sm" onclick="removeQueueMember(\'' + m.user_id + '\')">✕</button>';
+        list.appendChild(row);
+    });
+}
+
+async function loadOrgMembersForSelect() {
+    if (!currentOrgID) return;
+    const res = await fetch('/api/orgs/' + currentOrgID);
+    if (!res.ok) return;
+    const data = await res.json();
+    const members = data.members || [];
+    const select = document.getElementById('queue-member-select');
+    select.innerHTML = '<option value="">Select agent...</option>';
+    members.forEach(function(m) {
+        const opt = document.createElement('option');
+        opt.value = m.user_id;
+        opt.textContent = (m.handle || m.email) + ' (' + m.role + ')';
+        select.appendChild(opt);
+    });
+}
+
+async function addQueueMember() {
+    if (!currentOrgID || !currentSettingsQueueID) return;
+    const userID = document.getElementById('queue-member-select').value;
+    const role = document.getElementById('queue-member-role').value;
+    if (!userID) { alert('Select an agent'); return; }
+
+    const res = await fetch('/api/orgs/' + currentOrgID + '/queues/' + currentSettingsQueueID + '/members', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({user_id: userID, role: role})
+    });
+
+    if (res.ok) {
+        loadQueueSettings();
+    } else {
+        const d = await res.json();
+        alert(d.error || 'Failed to add member');
+    }
+}
+
+async function removeQueueMember(userID) {
+    if (!currentOrgID || !currentSettingsQueueID) return;
+    if (!confirm('Remove this member from the queue?')) return;
+
+    const res = await fetch('/api/orgs/' + currentOrgID + '/queues/' + currentSettingsQueueID + '/members/' + userID, {
+        method: 'DELETE'
+    });
+
+    if (res.ok) {
+        loadQueueSettings();
+    } else {
+        const d = await res.json();
+        alert(d.error || 'Failed to remove member');
     }
 }
 

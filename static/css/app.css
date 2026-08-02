@@ -1588,3 +1588,19 @@ a:hover { color: var(--accent-hover); }
 .settings-invite-row .settings-input {
     flex: 1;
 }
+
+/* ── Sidebar Gear ── */
+.sidebar-gear {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.15s;
+    margin-left: 0.25rem;
+}
+.sidebar-item:hover .sidebar-gear {
+    opacity: 1;
+}
+.sidebar-gear:hover {
+    color: var(--accent);
+}
