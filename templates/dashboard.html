@@ -23,28 +23,11 @@
         </div>
     </nav>
 
-    <!-- ── View: Org Picker ── -->
-    <div id="view-org" class="view">
-        <div class="view-header">
-            <h1>Your Organizations</h1>
-            <button onclick="showCreateOrg()" class="btn btn-primary btn-sm">New Organization</button>
-        </div>
-        <div id="org-list"></div>
-        <div id="create-org-form" style="display:none;" class="inline-form">
-            <input type="text" id="org-name" placeholder="Organization name">
-            <input type="text" id="org-slug" placeholder="slug — lowercase, hyphens only">
-            <div class="form-row">
-                <button onclick="createOrg()" class="btn btn-primary btn-sm">Create</button>
-                <button onclick="hideCreateOrg()" class="btn btn-ghost btn-sm">Cancel</button>
-            </div>
-        </div>
-    </div>
+    <!-- ── Workspace Body ── -->
+    <div class="workspace-body">
 
-    <!-- ── View: Queue (two-panel) ── -->
-    <div id="view-queue" class="view view-split" style="display:none;">
-
-        <!-- Sidebar -->
-        <aside class="sidebar">
+        <!-- ── Global Sidebar ── -->
+        <aside class="sidebar" id="global-sidebar">
             <div class="sidebar-section">
                 <div class="sidebar-label">All Tickets</div>
                 <div id="sidebar-all" class="sidebar-item sidebar-item-active"
@@ -80,10 +63,42 @@
                     <button onclick="hideCreateQueue()" class="btn btn-ghost btn-sm">Cancel</button>
                 </div>
             </div>
+
+            <div class="sidebar-section sidebar-section-bottom">
+                <div class="sidebar-label">Settings</div>
+                <div class="sidebar-item" onclick="showView('settings-org')">
+                    <span class="sidebar-item-name">⚙ Org Settings</span>
+                </div>
+                <div class="sidebar-item" onclick="showView('settings-account')">
+                    <span class="sidebar-item-name">👤 Account</span>
+                </div>
+            </div>
         </aside>
 
-        <!-- Main: Ticket List -->
-        <main class="queue-main">
+        <!-- ── Workspace Main ── -->
+        <div class="workspace-main">
+
+            <!-- ── View: Org Picker ── -->
+            <div id="view-org" class="view" style="display:block;">
+                <div class="view-header">
+                    <h1>Your Organizations</h1>
+                    <button onclick="showCreateOrg()" class="btn btn-primary btn-sm">New Organization</button>
+                </div>
+                <div id="org-list"></div>
+                <div id="create-org-form" style="display:none;" class="inline-form">
+                    <input type="text" id="org-name" placeholder="Organization name">
+                    <input type="text" id="org-slug" placeholder="slug — lowercase, hyphens only">
+                    <div class="form-row">
+                        <button onclick="createOrg()" class="btn btn-primary btn-sm">Create</button>
+                        <button onclick="hideCreateOrg()" class="btn btn-ghost btn-sm">Cancel</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── View: Queue ── -->
+            <div id="view-queue" class="view" style="display:none;">
+                <!-- Main: Ticket List -->
+                <main class="queue-main">
             <div class="queue-main-header">
                 <div class="queue-title-row">
                     <h2 id="queue-title">All Tickets</h2>
@@ -118,33 +133,8 @@
         </main>
     </div>
 
-    <!-- ── View: Ticket Detail ── -->
-    <div id="view-detail" class="view view-split" style="display:none;">
-
-        <!-- Sidebar (same as queue) -->
-        <aside class="sidebar">
-            <div class="sidebar-section">
-                <div class="sidebar-label">All Tickets</div>
-                <div id="sidebar-all-detail" class="sidebar-item"
-                     onclick="selectAllTickets(); showQueue();">
-                    <span class="sidebar-item-name">All Open</span>
-                    <span id="count-total-detail" class="sidebar-count"></span>
-                </div>
-                <div class="sidebar-item" onclick="selectUnassigned(); showQueue();">
-                    <span class="sidebar-item-name">Unassigned</span>
-                    <span id="count-unassigned-detail" class="sidebar-count sidebar-count-warn"></span>
-                </div>
-                <div class="sidebar-item" onclick="selectUrgent(); showQueue();">
-                    <span class="sidebar-item-name">🔴 Urgent (P0/P1)</span>
-                    <span id="count-urgent-detail" class="sidebar-count sidebar-count-crit"></span>
-                </div>
-            </div>
-            <div class="sidebar-section">
-                <div class="sidebar-label">Queues</div>
-                <div id="queue-list-detail"></div>
-            </div>
-        </aside>
-
+            <!-- ── View: Ticket Detail ── -->
+            <div id="view-detail" class="view" style="display:none;">
         <!-- Main: Ticket Detail -->
         <main class="queue-main">
             <div class="detail-topbar">
@@ -205,7 +195,30 @@
         </main>
     </div>
 
-</div>
+            <!-- ── View: Org Settings ── -->
+            <div id="view-settings-org" class="view" style="display:none;">
+                <div class="view-header">
+                    <h1>Org Settings</h1>
+                </div>
+                <div class="settings-card">
+                    <p class="empty">Org settings coming soon — name, inbound email, domain, members.</p>
+                </div>
+            </div>
+
+            <!-- ── View: Account Settings ── -->
+            <div id="view-settings-account" class="view" style="display:none;">
+                <div class="view-header">
+                    <h1>Account Settings</h1>
+                </div>
+                <div class="settings-card">
+                    <p class="empty">Account settings coming soon — password, MFA, profile.</p>
+                </div>
+            </div>
+
+        </div><!-- /.workspace-main -->
+    </div><!-- /.workspace-body -->
+
+</div><!-- /.dashboard -->
 <script>
 // ── State ──────────────────────────────────────────────────────────────────
 let currentOrgID    = null;
@@ -227,10 +240,16 @@ async function init() {
 
 // ── Views ──────────────────────────────────────────────────────────────────
 function showView(name) {
-    ['org','queue','detail'].forEach(function(v) {
-        document.getElementById('view-' + v).style.display = 'none';
+    ['org','queue','detail','settings-org','settings-account'].forEach(function(v) {
+        const el = document.getElementById('view-' + v);
+        if (el) el.style.display = 'none';
     });
-    document.getElementById('view-' + name).style.display = 'flex';
+
+    const target = document.getElementById('view-' + name);
+    if (target) target.style.display = 'block';
+
+    const sidebar = document.getElementById('global-sidebar');
+    if (sidebar) sidebar.style.display = (name === 'org') ? 'none' : '';
 }
 
 function showQueue() {
@@ -325,23 +344,18 @@ function renderSidebar() {
     const counts = sidebarData.org_counts || {};
     const queues = sidebarData.queues || [];
 
-    // Update counts in both queue view and detail view sidebars
-    ['', '-detail'].forEach(function(suffix) {
-        const totalEl = document.getElementById('count-total' + suffix);
-        const unassignedEl = document.getElementById('count-unassigned' + suffix);
-        const urgentEl = document.getElementById('count-urgent' + suffix);
+    // Update counts — single global sidebar
+    const totalEl      = document.getElementById('count-total');
+    const unassignedEl = document.getElementById('count-unassigned');
+    const urgentEl     = document.getElementById('count-urgent');
+    if (totalEl)      totalEl.textContent      = counts.total      || 0;
+    if (unassignedEl) unassignedEl.textContent = counts.unassigned || 0;
+    if (urgentEl)     urgentEl.textContent      = counts.urgent     || 0;
 
-        if (totalEl) totalEl.textContent = counts.total || 0;
-        if (unassignedEl) unassignedEl.textContent = counts.unassigned || 0;
-        if (urgentEl) urgentEl.textContent = counts.urgent || 0;
-    });
-
-    // Render queue list
-    ['queue-list', 'queue-list-detail'].forEach(function(listID) {
-        const list = document.getElementById(listID);
-        if (!list) return;
-        list.innerHTML = '';
-
+    // Render queue list — single global sidebar
+    const list = document.getElementById('queue-list');
+    if (!list) return;
+    list.innerHTML = '';
         if (!queues || queues.length === 0) {
             list.innerHTML = '<div class="sidebar-empty">No queues yet</div>';
             return;
@@ -624,23 +638,6 @@ async function openTicket(ticketID) {
     renderComments(ctx.comments || []);
     renderEvents(ctx.events || []);
 
-    // Sync sidebar counts to detail view
-    if (sidebarData) {
-        const counts = sidebarData.org_counts || {};
-        const detailTotal = document.getElementById('count-total-detail');
-        const detailUnassigned = document.getElementById('count-unassigned-detail');
-        const detailUrgent = document.getElementById('count-urgent-detail');
-        if (detailTotal) detailTotal.textContent = counts.total || 0;
-        if (detailUnassigned) detailUnassigned.textContent = counts.unassigned || 0;
-        if (detailUrgent) detailUrgent.textContent = counts.urgent || 0;
-
-        // Render queue list in detail sidebar
-        const detailQueueList = document.getElementById('queue-list-detail');
-        const queueList = document.getElementById('queue-list');
-        if (detailQueueList && queueList) {
-            detailQueueList.innerHTML = queueList.innerHTML;
-        }
-    }
 
     showView('detail');
 }
