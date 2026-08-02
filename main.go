@@ -21,6 +21,7 @@ import (
 	tickethandler "github.com/psiloconvalley/404not403/internal/handler/ticket"
 	"github.com/psiloconvalley/404not403/internal/middleware"
 	"github.com/psiloconvalley/404not403/internal/provider/ai"
+	"github.com/psiloconvalley/404not403/internal/provider/email"
 	"github.com/psiloconvalley/404not403/internal/store"
 	"github.com/psiloconvalley/404not403/internal/worker"
 )
@@ -48,6 +49,7 @@ func main() {
 
 	// 2. AI Provider — disabled until OPENAI_API_KEY is configured
 	a.AI = ai.NewDisabled()
+	a.Email = email.NewResendProvider(a.HTTPClient)
 	log.Println("✅ AI provider initialized (disabled — no API key configured).")
 
 	// 3. JWT Keys — must be set in environment

@@ -306,7 +306,7 @@ func (s *Service) AddComment(ctx context.Context, input AddCommentInput) (*store
 		return nil, domain.ErrTicketClosed
 	}
 
-	return store.CreateComment(s.db, store.CreateCommentParams{
+	comment, err := store.CreateComment(s.db, store.CreateCommentParams{
 		OrgID:      input.OrgID,
 		TicketID:   input.TicketID,
 		AuthorID:   input.AuthorID,
@@ -317,6 +317,41 @@ func (s *Service) AddComment(ctx context.Context, input AddCommentInput) (*store
 		ExternalID: input.ExternalID,
 		AIDrafted:  input.AIDrafted,
 	})
+	if err != nil {
+		return nil, err
+	}
+
+	// Close the loop:
+	// if an agent adds a public comment to a customer-owned ticket,
+	// enqueue an outbound email notification.
+	if input.AuthorID != nil && !input.IsInternal && ticket.CustomerID != nil {
+		customer, err := store.GetCustomerByID(s.db, input.OrgID, *ticket.CustomerID)
+		if err == nil && customer != nil && customer.Email != nil && *customer.Email != "" {
+			subject := "Re: " + ticket.Subject
+
+			escapedBody := strings.ReplaceAll(input.Body, "\n", "<br>")
+			emailBody := "<p>You have an update on your request:</p><div style=\"font-family: sans-serif; line-height:1.6;\">" +
+				escapedBody +
+				"</div><hr><p style=\"color:#666;font-size:12px;\">Reply to this email or visit the support portal to continue the conversation.</p>"
+
+			payload, _ := json.Marshal(map[string]string{
+				"to":      *customer.Email,
+				"subject": subject,
+				"body":    emailBody,
+			})
+
+			idempotencyKey := fmt.Sprintf("email.send.comment.%s", comment.ID)
+			_, _ = store.EnqueueJob(s.db, store.EnqueueJobParams{
+				OrgID:          &input.OrgID,
+				JobType:        store.JobTypeEmailSend,
+				Payload:        payload,
+				IdempotencyKey: &idempotencyKey,
+				MaxAttempts:    3,
+			})
+		}
+	}
+
+	return comment, nil
 }
 
 // ── Search ────────────────────────────────────────────────────────────────────

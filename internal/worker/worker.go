@@ -23,6 +23,7 @@ import (
 	"github.com/psiloconvalley/404not403/internal/app"
 	"github.com/psiloconvalley/404not403/internal/domain"
 	"github.com/psiloconvalley/404not403/internal/provider/ai"
+	"github.com/psiloconvalley/404not403/internal/provider/email"
 	"github.com/psiloconvalley/404not403/internal/store"
 )
 
@@ -49,7 +50,7 @@ func Start(ctx context.Context, a *app.App) {
 // processNext claims and processes a single job.
 // Called on every tick. Returns immediately if no jobs are available.
 func processNext(ctx context.Context, a *app.App) {
-	job, err := store.ClaimJob(a.DB, store.JobTypeAIClassify, store.JobTypeAIDraft)
+	job, err := store.ClaimJob(a.DB, store.JobTypeAIClassify, store.JobTypeAIDraft, store.JobTypeEmailSend)
 	if err != nil {
 		log.Printf("⚠️  Worker: claim error: %v", err)
 		return
@@ -67,6 +68,8 @@ func processNext(ctx context.Context, a *app.App) {
 		processErr = handleClassify(ctx, a, job)
 	case store.JobTypeAIDraft:
 		processErr = handleDraft(ctx, a, job)
+	case store.JobTypeEmailSend:
+		processErr = handleEmailSend(ctx, a, job)
 	default:
 		processErr = fmt.Errorf("unknown job type: %s", job.JobType)
 	}
@@ -333,4 +336,31 @@ func nilIfZeroInt(n int) *int {
 		return nil
 	}
 	return &n
+}
+
+// ── Email Send Handler ───────────────────────────────────────────────────────
+
+// handleEmailSend delivers an outbound email job via the configured provider.
+func handleEmailSend(ctx context.Context, a *app.App, job *store.Job) error {
+	var payload struct {
+		To      string `json:"to"`
+		Subject string `json:"subject"`
+		Body    string `json:"body"`
+		From    string `json:"from,omitempty"`
+	}
+	if err := json.Unmarshal(job.Payload, &payload); err != nil {
+		return fmt.Errorf("parse payload: %w", err)
+	}
+	if payload.To == "" || payload.Subject == "" || payload.Body == "" {
+		return fmt.Errorf("email job missing to, subject, or body")
+	}
+	if a.Email == nil {
+		return fmt.Errorf("email provider not configured")
+	}
+	return a.Email.Send(ctx, email.SendInput{
+		To:      payload.To,
+		Subject: payload.Subject,
+		Body:    payload.Body,
+		From:    payload.From,
+	})
 }
