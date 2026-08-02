@@ -29,9 +29,7 @@
             <h1>Your Organizations</h1>
             <button onclick="showCreateOrg()" class="btn btn-primary btn-sm">New Organization</button>
         </div>
-
         <div id="org-list"></div>
-
         <div id="create-org-form" style="display:none;" class="inline-form">
             <input type="text" id="org-name" placeholder="Organization name">
             <input type="text" id="org-slug" placeholder="slug — lowercase, hyphens only">
@@ -42,110 +40,180 @@
         </div>
     </div>
 
-    <!-- ── View: Queue ── -->
-    <div id="view-queue" class="view" style="display:none;">
-        <div class="view-header">
-            <div class="queue-filters">
-                <button class="filter-tab active" onclick="filterTickets('all', this)">All</button>
-                <button class="filter-tab" onclick="filterTickets('open', this)">Open</button>
-                <button class="filter-tab" onclick="filterTickets('in_progress', this)">In Progress</button>
-                <button class="filter-tab" onclick="filterTickets('pending_customer', this)">Pending</button>
-                <button class="filter-tab" onclick="filterTickets('resolved', this)">Resolved</button>
-            </div>
-            <button onclick="showCreateTicket()" class="btn btn-primary btn-sm">New Ticket</button>
-        </div>
+    <!-- ── View: Queue (two-panel) ── -->
+    <div id="view-queue" class="view view-split" style="display:none;">
 
-        <div id="create-ticket-form" style="display:none;" class="inline-form">
-            <input type="text" id="ticket-subject" placeholder="Subject — what is broken?">
-            <textarea id="ticket-body" placeholder="Describe the issue in detail..." rows="4"></textarea>
-            <div class="form-row">
-                <select id="ticket-priority">
-                    <option value="P3">P3 — Low</option>
-                    <option value="P2" selected>P2 — Medium</option>
-                    <option value="P1">P1 — High</option>
-                    <option value="P0">P0 — Critical / System Down</option>
-                </select>
-                <button onclick="createTicket()" class="btn btn-primary btn-sm">Submit</button>
-                <button onclick="hideCreateTicket()" class="btn btn-ghost btn-sm">Cancel</button>
-            </div>
-        </div>
-
-        <div id="ticket-list" class="ticket-list"></div>
-    </div>
-
-
-    <!-- ── View: Ticket Detail ── -->
-    <div id="view-detail" class="view" style="display:none;">
-        <div class="detail-topbar">
-            <button onclick="showQueue()" class="btn btn-ghost btn-sm">← Back</button>
-            <div class="detail-topbar-actions">
-                <select id="action-status" onchange="changeStatus(this.value)" class="detail-select">
-                    <option value="open">Open</option>
-                    <option value="assigned">Assigned</option>
-                    <option value="in_progress">In Progress</option>
-                    <option value="pending_customer">Pending Customer</option>
-                    <option value="pending_vendor">Pending Vendor</option>
-                    <option value="resolved">Resolved</option>
-                    <option value="closed">Closed</option>
-                </select>
-                <select id="action-priority" onchange="changePriority(this.value)" class="detail-select">
-                    <option value="P0">P0</option>
-                    <option value="P1">P1</option>
-                    <option value="P2">P2</option>
-                    <option value="P3">P3</option>
-                </select>
-            </div>
-        </div>
-
-        <div class="detail-card">
-            <div class="detail-title-row">
-                <span id="detail-priority" class="ticket-priority"></span>
-                <h2 id="detail-subject"></h2>
-            </div>
-            <div class="detail-info-row">
-                <span id="detail-status" class="ticket-status"></span>
-                <span class="detail-dot">·</span>
-                <span id="detail-created" class="detail-time"></span>
-                <span class="detail-dot">·</span>
-                <span id="detail-source" class="detail-time"></span>
-            </div>
-
-            <div class="detail-body" id="detail-body"></div>
-        </div>
-
-        <!-- Conversation -->
-        <div class="detail-card">
-            <div class="detail-card-header">Conversation</div>
-            <div id="comment-thread" class="comment-thread"></div>
-            <div class="comment-form">
-                <textarea id="comment-body" placeholder="Write a reply..." rows="2"></textarea>
-                <div class="comment-form-footer">
-                    <label class="checkbox-label">
-                        <input type="checkbox" id="comment-internal">
-                        Internal note
-                    </label>
-                    <button onclick="addComment()" class="btn btn-primary btn-sm">Reply</button>
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-section">
+                <div class="sidebar-label">All Tickets</div>
+                <div id="sidebar-all" class="sidebar-item sidebar-item-active"
+                     onclick="selectAllTickets()">
+                    <span class="sidebar-item-name">All Open</span>
+                    <span id="count-total" class="sidebar-count"></span>
+                </div>
+                <div class="sidebar-item" onclick="selectUnassigned()">
+                    <span class="sidebar-item-name">Unassigned</span>
+                    <span id="count-unassigned" class="sidebar-count sidebar-count-warn"></span>
+                </div>
+                <div class="sidebar-item" onclick="selectUrgent()">
+                    <span class="sidebar-item-name">🔴 Urgent (P0/P1)</span>
+                    <span id="count-urgent" class="sidebar-count sidebar-count-crit"></span>
                 </div>
             </div>
-        </div>
 
-        <!-- Activity -->
-        <div class="detail-card detail-card-muted">
-            <div class="detail-card-header">Activity</div>
-            <div id="event-trail" class="event-trail"></div>
-        </div>
+            <div class="sidebar-section">
+                <div class="sidebar-label">
+                    Queues
+                    <button onclick="showCreateQueue()" class="sidebar-add">+</button>
+                </div>
+                <div id="queue-list"></div>
+            </div>
+
+            <!-- Create Queue Form -->
+            <div id="create-queue-form" style="display:none;" class="sidebar-form">
+                <input type="text" id="queue-name" placeholder="Queue name">
+                <input type="text" id="queue-dept" placeholder="Department (optional)">
+                <input type="text" id="queue-color" placeholder="Color (#6366f1)">
+                <div class="form-row">
+                    <button onclick="createQueue()" class="btn btn-primary btn-sm">Create</button>
+                    <button onclick="hideCreateQueue()" class="btn btn-ghost btn-sm">Cancel</button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main: Ticket List -->
+        <main class="queue-main">
+            <div class="queue-main-header">
+                <div class="queue-title-row">
+                    <h2 id="queue-title">All Tickets</h2>
+                    <button onclick="showCreateTicket()" class="btn btn-primary btn-sm">New Ticket</button>
+                </div>
+                <div class="queue-filters">
+                    <button class="filter-tab active" onclick="filterTickets('all', this)">All</button>
+                    <button class="filter-tab" onclick="filterTickets('open', this)">Open</button>
+                    <button class="filter-tab" onclick="filterTickets('in_progress', this)">In Progress</button>
+                    <button class="filter-tab" onclick="filterTickets('pending_customer', this)">Pending</button>
+                    <button class="filter-tab" onclick="filterTickets('resolved', this)">Resolved</button>
+                </div>
+            </div>
+
+            <div id="create-ticket-form" style="display:none;" class="inline-form">
+                <input type="text" id="ticket-subject" placeholder="Subject — what is broken?">
+                <textarea id="ticket-body" placeholder="Describe the issue in detail..." rows="3"></textarea>
+                <div class="form-row">
+                    <select id="ticket-priority">
+                        <option value="P3">P3 — Low</option>
+                        <option value="P2" selected>P2 — Medium</option>
+                        <option value="P1">P1 — High</option>
+                        <option value="P0">P0 — Critical</option>
+                    </select>
+                    <button onclick="createTicket()" class="btn btn-primary btn-sm">Submit</button>
+                    <button onclick="hideCreateTicket()" class="btn btn-ghost btn-sm">Cancel</button>
+                </div>
+            </div>
+
+            <div id="ticket-list" class="ticket-list"></div>
+        </main>
     </div>
 
+    <!-- ── View: Ticket Detail ── -->
+    <div id="view-detail" class="view view-split" style="display:none;">
+
+        <!-- Sidebar (same as queue) -->
+        <aside class="sidebar">
+            <div class="sidebar-section">
+                <div class="sidebar-label">All Tickets</div>
+                <div id="sidebar-all-detail" class="sidebar-item"
+                     onclick="selectAllTickets(); showQueue();">
+                    <span class="sidebar-item-name">All Open</span>
+                    <span id="count-total-detail" class="sidebar-count"></span>
+                </div>
+                <div class="sidebar-item" onclick="selectUnassigned(); showQueue();">
+                    <span class="sidebar-item-name">Unassigned</span>
+                    <span id="count-unassigned-detail" class="sidebar-count sidebar-count-warn"></span>
+                </div>
+                <div class="sidebar-item" onclick="selectUrgent(); showQueue();">
+                    <span class="sidebar-item-name">🔴 Urgent (P0/P1)</span>
+                    <span id="count-urgent-detail" class="sidebar-count sidebar-count-crit"></span>
+                </div>
+            </div>
+            <div class="sidebar-section">
+                <div class="sidebar-label">Queues</div>
+                <div id="queue-list-detail"></div>
+            </div>
+        </aside>
+
+        <!-- Main: Ticket Detail -->
+        <main class="queue-main">
+            <div class="detail-topbar">
+                <button onclick="showQueue()" class="btn btn-ghost btn-sm">← Back</button>
+                <div class="detail-topbar-actions">
+                    <select id="action-status" onchange="changeStatus(this.value)" class="detail-select">
+                        <option value="open">Open</option>
+                        <option value="assigned">Assigned</option>
+                        <option value="in_progress">In Progress</option>
+                        <option value="pending_customer">Pending Customer</option>
+                        <option value="pending_vendor">Pending Vendor</option>
+                        <option value="resolved">Resolved</option>
+                        <option value="closed">Closed</option>
+                    </select>
+                    <select id="action-priority" onchange="changePriority(this.value)" class="detail-select">
+                        <option value="P0">P0 — Critical</option>
+                        <option value="P1">P1 — High</option>
+                        <option value="P2">P2 — Medium</option>
+                        <option value="P3">P3 — Low</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="detail-card">
+                <div class="detail-title-row">
+                    <span id="detail-priority" class="ticket-priority"></span>
+                    <h2 id="detail-subject"></h2>
+                </div>
+                <div class="detail-info-row">
+                    <span id="detail-status" class="ticket-status"></span>
+                    <span class="detail-dot">·</span>
+                    <span id="detail-created" class="detail-time"></span>
+                    <span class="detail-dot">·</span>
+                    <span id="detail-source" class="detail-time"></span>
+                </div>
+                <div class="detail-body" id="detail-body"></div>
+            </div>
+
+            <div class="detail-card">
+                <div class="detail-card-header">Conversation</div>
+                <div id="comment-thread" class="comment-thread"></div>
+                <div class="comment-form">
+                    <textarea id="comment-body" placeholder="Write a reply..." rows="2"></textarea>
+                    <div class="comment-form-footer">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="comment-internal">
+                            Internal note
+                        </label>
+                        <button onclick="addComment()" class="btn btn-primary btn-sm">Reply</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="detail-card detail-card-muted">
+                <div class="detail-card-header">Activity</div>
+                <div id="event-trail" class="event-trail"></div>
+            </div>
+        </main>
+    </div>
 
 </div>
-
 <script>
 // ── State ──────────────────────────────────────────────────────────────────
-let currentOrgID   = null;
-let currentOrgName = null;
+let currentOrgID    = null;
+let currentOrgName  = null;
 let currentTicketID = null;
-let currentFilter  = 'all';
-let allTickets     = [];
+let currentFilter   = 'all';
+let currentQueueID  = null;
+let currentQueueName = null;
+let sidebarData     = null;
 
 // ── Init ───────────────────────────────────────────────────────────────────
 async function init() {
@@ -158,10 +226,10 @@ async function init() {
 
 // ── Views ──────────────────────────────────────────────────────────────────
 function showView(name) {
-    document.getElementById('view-org').style.display    = 'none';
-    document.getElementById('view-queue').style.display  = 'none';
-    document.getElementById('view-detail').style.display = 'none';
-    document.getElementById('view-' + name).style.display = 'block';
+    ['org','queue','detail'].forEach(function(v) {
+        document.getElementById('view-' + v).style.display = 'none';
+    });
+    document.getElementById('view-' + name).style.display = 'flex';
 }
 
 function showQueue() {
@@ -184,7 +252,6 @@ async function loadOrgs() {
         return;
     }
 
-    // If only one org — go straight to queue
     if (data.orgs.length === 1) {
         selectOrg(data.orgs[0].org_id, data.orgs[0].org_name);
         return;
@@ -194,17 +261,14 @@ async function loadOrgs() {
         const div = document.createElement('div');
         div.className = 'org-card';
         div.onclick = function() { selectOrg(m.org_id, m.org_name); };
-
         const name = document.createElement('span');
         name.className = 'org-name';
         name.textContent = m.org_name;
         div.appendChild(name);
-
         const role = document.createElement('span');
         role.className = 'org-role';
         role.textContent = m.role;
         div.appendChild(role);
-
         list.appendChild(div);
     });
 
@@ -217,16 +281,12 @@ function selectOrg(orgID, orgName) {
     document.getElementById('nav-org-name').textContent = orgName;
     document.getElementById('nav-org-name').style.display = 'block';
     showView('queue');
+    loadSidebar();
     loadTickets('all');
 }
 
-function showCreateOrg() {
-    document.getElementById('create-org-form').style.display = 'flex';
-}
-
-function hideCreateOrg() {
-    document.getElementById('create-org-form').style.display = 'none';
-}
+function showCreateOrg() { document.getElementById('create-org-form').style.display = 'flex'; }
+function hideCreateOrg()  { document.getElementById('create-org-form').style.display = 'none'; }
 
 async function createOrg() {
     const name = document.getElementById('org-name').value.trim();
@@ -250,7 +310,179 @@ async function createOrg() {
     }
 }
 
-// ── Queue ──────────────────────────────────────────────────────────────────
+// ── Sidebar ─────────────────────────────────────────────────────────────────
+async function loadSidebar() {
+    if (!currentOrgID) return;
+    const res = await fetch('/api/orgs/' + currentOrgID + '/queues/sidebar');
+    if (!res.ok) return;
+    sidebarData = await res.json();
+    renderSidebar();
+}
+
+function renderSidebar() {
+    if (!sidebarData) return;
+    const counts = sidebarData.org_counts || {};
+    const queues = sidebarData.queues || [];
+
+    // Update counts in both queue view and detail view sidebars
+    ['', '-detail'].forEach(function(suffix) {
+        const totalEl = document.getElementById('count-total' + suffix);
+        const unassignedEl = document.getElementById('count-unassigned' + suffix);
+        const urgentEl = document.getElementById('count-urgent' + suffix);
+
+        if (totalEl) totalEl.textContent = counts.total || 0;
+        if (unassignedEl) unassignedEl.textContent = counts.unassigned || 0;
+        if (urgentEl) urgentEl.textContent = counts.urgent || 0;
+    });
+
+    // Render queue list
+    ['queue-list', 'queue-list-detail'].forEach(function(listID) {
+        const list = document.getElementById(listID);
+        if (!list) return;
+        list.innerHTML = '';
+
+        if (!queues || queues.length === 0) {
+            list.innerHTML = '<div class="sidebar-empty">No queues yet</div>';
+            return;
+        }
+
+        // Group by department
+        const grouped = {};
+        queues.forEach(function(q) {
+            const dept = q.department || 'General';
+            if (!grouped[dept]) grouped[dept] = [];
+            grouped[dept].push(q);
+        });
+
+        Object.keys(grouped).sort().forEach(function(dept) {
+            // Department header
+            const deptEl = document.createElement('div');
+            deptEl.className = 'sidebar-dept';
+            deptEl.textContent = dept;
+            list.appendChild(deptEl);
+
+            grouped[dept].forEach(function(q) {
+                const item = document.createElement('div');
+                item.className = 'sidebar-item' +
+                    (currentQueueID === q.id ? ' sidebar-item-active' : '');
+                item.onclick = function() { selectQueue(q.id, q.name); };
+
+                const nameEl = document.createElement('span');
+                nameEl.className = 'sidebar-item-name';
+                // Color dot
+                const dot = document.createElement('span');
+                dot.className = 'sidebar-dot';
+                dot.style.background = q.color || '#6366f1';
+                nameEl.appendChild(dot);
+                nameEl.appendChild(document.createTextNode(q.name));
+                item.appendChild(nameEl);
+
+                const countEl = document.createElement('span');
+                countEl.className = 'sidebar-count' +
+                    (q.urgent_count > 0 ? ' sidebar-count-crit' : '');
+                countEl.textContent = q.open_count || 0;
+                item.appendChild(countEl);
+
+                list.appendChild(item);
+            });
+        });
+    });
+}
+
+// ── Queue Selection ──────────────────────────────────────────────────────────
+function selectAllTickets() {
+    currentQueueID   = null;
+    currentQueueName = null;
+    document.getElementById('queue-title').textContent = 'All Tickets';
+    setSidebarActive('sidebar-all');
+    loadTickets(currentFilter);
+}
+
+function selectUnassigned() {
+    currentQueueID   = null;
+    currentQueueName = 'Unassigned';
+    document.getElementById('queue-title').textContent = 'Unassigned';
+    loadTicketsFiltered({assigned_to: 'null'});
+}
+
+function selectUrgent() {
+    currentQueueID   = null;
+    currentQueueName = 'Urgent';
+    document.getElementById('queue-title').textContent = 'Urgent — P0 / P1';
+    loadTicketsFiltered({priority: 'P0'});
+}
+
+function selectQueue(queueID, queueName) {
+    currentQueueID   = queueID;
+    currentQueueName = queueName;
+    document.getElementById('queue-title').textContent = queueName;
+    renderSidebar(); // refresh active state
+    loadQueueTickets(queueID);
+    showView('queue');
+}
+
+function setSidebarActive(itemID) {
+    document.querySelectorAll('.sidebar-item').forEach(function(el) {
+        el.classList.remove('sidebar-item-active');
+    });
+    const el = document.getElementById(itemID);
+    if (el) el.classList.add('sidebar-item-active');
+}
+
+async function loadQueueTickets(queueID) {
+    if (!currentOrgID) return;
+    const res = await fetch('/api/orgs/' + currentOrgID + '/queues/' + queueID + '/tickets');
+    if (!res.ok) return;
+    const data = await res.json();
+    renderTicketList(data.tickets || []);
+}
+
+async function loadTicketsFiltered(params) {
+    if (!currentOrgID) return;
+    let url = '/api/orgs/' + currentOrgID + '/tickets?';
+    Object.keys(params).forEach(function(k) {
+        url += k + '=' + params[k] + '&';
+    });
+    const res = await fetch(url);
+    if (!res.ok) return;
+    const data = await res.json();
+    renderTicketList(data.tickets || []);
+}
+
+// ── Queue CRUD ───────────────────────────────────────────────────────────────
+function showCreateQueue() { document.getElementById('create-queue-form').style.display = 'block'; }
+function hideCreateQueue()  { document.getElementById('create-queue-form').style.display = 'none'; }
+
+async function createQueue() {
+    if (!currentOrgID) return;
+    const name  = document.getElementById('queue-name').value.trim();
+    const dept  = document.getElementById('queue-dept').value.trim();
+    const color = document.getElementById('queue-color').value.trim();
+    if (!name) { alert('Queue name is required'); return; }
+
+    const body = {name: name};
+    if (dept)  body.department = dept;
+    if (color) body.color = color;
+
+    const res = await fetch('/api/orgs/' + currentOrgID + '/queues', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(body)
+    });
+
+    if (res.ok) {
+        hideCreateQueue();
+        document.getElementById('queue-name').value = '';
+        document.getElementById('queue-dept').value = '';
+        document.getElementById('queue-color').value = '';
+        loadSidebar();
+    } else {
+        const data = await res.json();
+        alert(data.error || 'Failed to create queue');
+    }
+}
+
+// ── Tickets ──────────────────────────────────────────────────────────────────
 async function loadTickets(filter) {
     if (!currentOrgID) return;
     currentFilter = filter || 'all';
@@ -263,9 +495,7 @@ async function loadTickets(filter) {
     const res = await fetch(url);
     if (!res.ok) return;
     const data = await res.json();
-    allTickets = data.tickets || [];
-
-    renderTicketList(allTickets);
+    renderTicketList(data.tickets || []);
 }
 
 function filterTickets(filter, btn) {
@@ -273,7 +503,12 @@ function filterTickets(filter, btn) {
         t.classList.remove('active');
     });
     btn.classList.add('active');
-    loadTickets(filter);
+
+    if (currentQueueID) {
+        loadQueueTickets(currentQueueID);
+    } else {
+        loadTickets(filter);
+    }
 }
 
 function renderTicketList(tickets) {
@@ -285,7 +520,6 @@ function renderTicketList(tickets) {
         return;
     }
 
-    // Sort: P0 first, then P1, P2, P3, then by created_at
     const priorityOrder = {P0: 0, P1: 1, P2: 2, P3: 3};
     tickets.sort(function(a, b) {
         const pd = (priorityOrder[a.priority] || 99) - (priorityOrder[b.priority] || 99);
@@ -330,13 +564,8 @@ function renderTicketList(tickets) {
     });
 }
 
-function showCreateTicket() {
-    document.getElementById('create-ticket-form').style.display = 'flex';
-}
-
-function hideCreateTicket() {
-    document.getElementById('create-ticket-form').style.display = 'none';
-}
+function showCreateTicket() { document.getElementById('create-ticket-form').style.display = 'flex'; }
+function hideCreateTicket()  { document.getElementById('create-ticket-form').style.display = 'none'; }
 
 async function createTicket() {
     if (!currentOrgID) return;
@@ -355,6 +584,7 @@ async function createTicket() {
         hideCreateTicket();
         document.getElementById('ticket-subject').value = '';
         document.getElementById('ticket-body').value = '';
+        loadSidebar();
         loadTickets(currentFilter);
     } else {
         const data = await res.json();
@@ -362,7 +592,7 @@ async function createTicket() {
     }
 }
 
-// ── Ticket Detail ──────────────────────────────────────────────────────────
+// ── Ticket Detail ─────────────────────────────────────────────────────────────
 async function openTicket(ticketID) {
     if (!currentOrgID) return;
     currentTicketID = ticketID;
@@ -372,7 +602,6 @@ async function openTicket(ticketID) {
     const ctx = await res.json();
     const t = ctx.ticket;
 
-    // Header
     const priorityEl = document.getElementById('detail-priority');
     priorityEl.className = 'ticket-priority priority-' + t.priority.toLowerCase();
     priorityEl.textContent = t.priority;
@@ -386,15 +615,29 @@ async function openTicket(ticketID) {
     document.getElementById('detail-source').textContent = 'via ' + t.source_type;
     document.getElementById('detail-body').textContent = t.body;
 
-    // Actions
     document.getElementById('action-status').value   = t.status;
     document.getElementById('action-priority').value = t.priority;
 
-    // Comments
     renderComments(ctx.comments || []);
-
-    // Events
     renderEvents(ctx.events || []);
+
+    // Sync sidebar counts to detail view
+    if (sidebarData) {
+        const counts = sidebarData.org_counts || {};
+        const detailTotal = document.getElementById('count-total-detail');
+        const detailUnassigned = document.getElementById('count-unassigned-detail');
+        const detailUrgent = document.getElementById('count-urgent-detail');
+        if (detailTotal) detailTotal.textContent = counts.total || 0;
+        if (detailUnassigned) detailUnassigned.textContent = counts.unassigned || 0;
+        if (detailUrgent) detailUrgent.textContent = counts.urgent || 0;
+
+        // Render queue list in detail sidebar
+        const detailQueueList = document.getElementById('queue-list-detail');
+        const queueList = document.getElementById('queue-list');
+        if (detailQueueList && queueList) {
+            detailQueueList.innerHTML = queueList.innerHTML;
+        }
+    }
 
     showView('detail');
 }
@@ -451,7 +694,6 @@ function renderEvents(events) {
         return;
     }
 
-    // Show last 10 events, newest first
     const recent = events.slice().reverse().slice(0, 10);
     recent.forEach(function(e) {
         const div = document.createElement('div');
@@ -476,21 +718,18 @@ async function changeStatus(newStatus) {
 
     const res = await fetch(
         '/api/orgs/' + currentOrgID + '/tickets/' + currentTicketID + '/status',
-        {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({status: newStatus})
-        }
+        {method: 'POST', headers: {'Content-Type': 'application/json'},
+         body: JSON.stringify({status: newStatus})}
     );
 
     if (res.ok) {
         const statusEl = document.getElementById('detail-status');
         statusEl.className = 'ticket-status status-' + newStatus;
         statusEl.textContent = newStatus.replace(/_/g, ' ');
+        loadSidebar();
     } else {
         const data = await res.json();
         alert(data.error || 'Invalid status transition');
-        // Reload to reset the dropdown
         openTicket(currentTicketID);
     }
 }
@@ -500,17 +739,16 @@ async function changePriority(newPriority) {
 
     const res = await fetch(
         '/api/orgs/' + currentOrgID + '/tickets/' + currentTicketID + '/priority',
-        {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({priority: newPriority})
-        }
+        {method: 'POST', headers: {'Content-Type': 'application/json'},
+         body: JSON.stringify({priority: newPriority})}
     );
 
     if (!res.ok) {
         const data = await res.json();
         alert(data.error || 'Failed to update priority');
         openTicket(currentTicketID);
+    } else {
+        loadSidebar();
     }
 }
 
@@ -522,11 +760,8 @@ async function addComment() {
 
     const res = await fetch(
         '/api/orgs/' + currentOrgID + '/tickets/' + currentTicketID + '/comments',
-        {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({body: body, is_internal: isInternal})
-        }
+        {method: 'POST', headers: {'Content-Type': 'application/json'},
+         body: JSON.stringify({body: body, is_internal: isInternal})}
     );
 
     if (res.ok) {
@@ -539,19 +774,19 @@ async function addComment() {
     }
 }
 
-// ── Logout ─────────────────────────────────────────────────────────────────
+// ── Logout ────────────────────────────────────────────────────────────────────
 async function handleLogout() {
     await fetch('/api/auth/logout', {method: 'POST'});
     window.location.href = '/login';
 }
 
-// ── Helpers ────────────────────────────────────────────────────────────────
+// ── Helpers ───────────────────────────────────────────────────────────────────
 function timeAgo(dateStr) {
     const now  = new Date();
     const then = new Date(dateStr);
     const sec  = Math.floor((now - then) / 1000);
-    if (sec < 60)   return sec + 's ago';
-    if (sec < 3600) return Math.floor(sec / 60) + 'm ago';
+    if (sec < 60)    return sec + 's ago';
+    if (sec < 3600)  return Math.floor(sec / 60) + 'm ago';
     if (sec < 86400) return Math.floor(sec / 3600) + 'h ago';
     return Math.floor(sec / 86400) + 'd ago';
 }

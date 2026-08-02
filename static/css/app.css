@@ -1161,3 +1161,207 @@ a:hover { color: var(--accent-hover); }
         flex: 1 1 100%;
     }
 }
+
+/* ── Two-Panel Layout ───────────────────────────────────────────────────────── */
+.view-split {
+    display: flex;
+    max-width: 100%;
+    padding: 0;
+    gap: 0;
+}
+
+/* ── Sidebar ── */
+.sidebar {
+    width: 220px;
+    min-width: 220px;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    padding: 0.75rem 0;
+    overflow-y: auto;
+    height: calc(100vh - 49px);
+    position: sticky;
+    top: 49px;
+}
+.sidebar-section {
+    margin-bottom: 0.75rem;
+}
+.sidebar-label {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.35rem 0.75rem;
+    font-size: 0.6rem;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+}
+.sidebar-add {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    width: 18px;
+    height: 18px;
+    font-size: 0.7rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    border-radius: 3px;
+    padding: 0;
+    box-shadow: none;
+    transition: color 0.15s, border-color 0.15s;
+}
+.sidebar-add:hover {
+    color: var(--accent);
+    border-color: var(--accent);
+}
+.sidebar-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.35rem 0.75rem;
+    cursor: pointer;
+    transition: background 0.1s;
+    border-left: 3px solid transparent;
+}
+.sidebar-item:hover {
+    background: var(--surface-hover);
+}
+.sidebar-item-active {
+    background: var(--accent-subtle);
+    border-left-color: var(--accent);
+}
+.sidebar-item-name {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.8rem;
+    color: var(--text-primary);
+    font-weight: 500;
+}
+.sidebar-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+    flex-shrink: 0;
+}
+.sidebar-count {
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    color: var(--text-muted);
+    min-width: 20px;
+    text-align: right;
+}
+.sidebar-count-warn {
+    color: var(--priority-p2);
+}
+.sidebar-count-crit {
+    color: var(--priority-p0);
+    font-weight: 600;
+}
+.sidebar-dept {
+    padding: 0.5rem 0.75rem 0.15rem;
+    font-size: 0.55rem;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+}
+.sidebar-empty {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+.sidebar-form {
+    padding: 0.5rem 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+.sidebar-form input {
+    padding: 0.3rem 0.5rem;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text-primary);
+    font-size: 0.75rem;
+    outline: none;
+}
+.sidebar-form input:focus {
+    border-color: var(--accent);
+}
+
+/* ── Queue Main Area ── */
+.queue-main {
+    flex: 1;
+    padding: 1rem 1.5rem;
+    overflow-y: auto;
+    height: calc(100vh - 49px);
+    min-width: 0;
+}
+.queue-main-header {
+    margin-bottom: 0.75rem;
+}
+.queue-title-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+.queue-title-row h2 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+/* ── Sidebar Responsive ── */
+@media (max-width: 768px) {
+    .view-split {
+        flex-direction: column;
+    }
+    .sidebar {
+        width: 100%;
+        min-width: 100%;
+        height: auto;
+        position: static;
+        border-right: none;
+        border-bottom: 1px solid var(--border);
+        padding: 0.5rem 0;
+        display: flex;
+        overflow-x: auto;
+        gap: 0;
+    }
+    .sidebar-section {
+        display: flex;
+        align-items: center;
+        gap: 0;
+        margin-bottom: 0;
+        white-space: nowrap;
+    }
+    .sidebar-label {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.55rem;
+    }
+    .sidebar-item {
+        padding: 0.25rem 0.5rem;
+        border-left: none;
+        border-bottom: 2px solid transparent;
+        font-size: 0.75rem;
+    }
+    .sidebar-item-active {
+        border-bottom-color: var(--accent);
+        border-left-color: transparent;
+    }
+    .sidebar-dept {
+        display: none;
+    }
+    .sidebar-form {
+        display: none;
+    }
+    .queue-main {
+        height: auto;
+        padding: 0.75rem;
+    }
+}
