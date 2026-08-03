@@ -247,7 +247,31 @@
                     <h1>Account Settings</h1>
                 </div>
                 <div class="settings-card">
-                    <p class="empty">Account settings coming soon — password, MFA, profile.</p>
+                    <div class="settings-card-header">Profile</div>
+                    <div class="settings-field">
+                        <label class="settings-label">Handle</label>
+                        <input type="text" id="settings-handle" class="settings-input" disabled>
+                    </div>
+                    <div class="settings-field">
+                        <label class="settings-label">Email</label>
+                        <input type="email" id="settings-email" class="settings-input" disabled>
+                    </div>
+                </div>
+                <div class="settings-card">
+                    <div class="settings-card-header">Passkeys</div>
+                    <p class="settings-hint" style="margin-bottom:0.75rem">Sign in with biometrics — Face ID, Touch ID, or security key</p>
+                    <div id="passkey-list"></div>
+                    <div class="settings-field" style="margin-top: 0.75rem;">
+                        <button onclick="registerPasskey()" class="btn btn-primary btn-sm">+ Add Passkey</button>
+                        <span id="passkey-status" class="settings-status"></span>
+                    </div>
+                </div>
+                <div class="settings-card">
+                    <div class="settings-card-header">Security</div>
+                    <div class="settings-field">
+                        <label class="settings-label">MFA Status</label>
+                        <span id="settings-mfa-status" class="settings-hint">Loading...</span>
+                    </div>
                 </div>
             </div>
 
@@ -339,6 +363,7 @@ function showView(name) {
 
     if (name === 'settings-org') loadOrgSettings();
     if (name === 'settings-queue') loadQueueSettings();
+    if (name === 'settings-account') loadAccountSettings();
 }
 
 function showQueue() {
@@ -1191,6 +1216,105 @@ async function removeQueueMember(userID) {
         const d = await res.json();
         showToast('error', d.error || 'Failed to remove member');
     }
+}
+
+
+// ── Account Settings ─────────────────────────────────────────────────────────
+async function loadAccountSettings() {
+    const res = await fetch('/api/auth/me');
+    if (!res.ok) return;
+    const user = await res.json();
+    document.getElementById('settings-handle').value = user.handle || '';
+    document.getElementById('settings-email').value = user.email || '';
+    document.getElementById('settings-mfa-status').textContent = user.mfa_enabled ? 'Enabled ✓' : 'Not enabled';
+    loadPasskeys();
+}
+
+async function loadPasskeys() {
+    // Passkeys are loaded via registration begin (no separate list endpoint yet)
+    // For now show a placeholder
+    const list = document.getElementById('passkey-list');
+    list.innerHTML = '<p class="settings-hint">Passkey management active — add your first passkey below.</p>';
+}
+
+async function registerPasskey() {
+    const statusEl = document.getElementById('passkey-status');
+    statusEl.textContent = 'Starting...';
+    statusEl.style.color = 'var(--text-secondary)';
+
+    try {
+        // Step 1: Begin registration
+        const beginRes = await fetch('/api/auth/passkey/register/begin', {method: 'POST'});
+        if (!beginRes.ok) {
+            const d = await beginRes.json();
+            statusEl.textContent = d.error || 'Failed to start';
+            statusEl.style.color = 'var(--priority-p0)';
+            return;
+        }
+
+        const options = await beginRes.json();
+
+        // Convert base64url fields to ArrayBuffers
+        options.publicKey.challenge = base64urlToBuffer(options.publicKey.challenge);
+        options.publicKey.user.id = base64urlToBuffer(options.publicKey.user.id);
+        if (options.publicKey.excludeCredentials) {
+            options.publicKey.excludeCredentials = options.publicKey.excludeCredentials.map(function(c) {
+                c.id = base64urlToBuffer(c.id);
+                return c;
+            });
+        }
+
+        // Step 2: Browser creates credential
+        statusEl.textContent = 'Waiting for device...';
+        const credential = await navigator.credentials.create({publicKey: options.publicKey});
+
+        // Step 3: Send attestation to server
+        const attestation = {
+            id: credential.id,
+            rawId: bufferToBase64url(credential.rawId),
+            type: credential.type,
+            response: {
+                attestationObject: bufferToBase64url(credential.response.attestationObject),
+                clientDataJSON: bufferToBase64url(credential.response.clientDataJSON)
+            }
+        };
+
+        const finishRes = await fetch('/api/auth/passkey/register/finish', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(attestation)
+        });
+
+        if (finishRes.ok) {
+            statusEl.textContent = '✓ Passkey registered';
+            statusEl.style.color = 'var(--status-resolved)';
+            showToast('success', 'Passkey registered successfully');
+        } else {
+            const d = await finishRes.json();
+            statusEl.textContent = d.error || 'Registration failed';
+            statusEl.style.color = 'var(--priority-p0)';
+        }
+    } catch (err) {
+        statusEl.textContent = 'Cancelled or not supported';
+        statusEl.style.color = 'var(--priority-p0)';
+    }
+}
+
+function base64urlToBuffer(base64url) {
+    const base64 = base64url.replace(/-/g, '+').replace(/_/g, '/');
+    const pad = base64.length % 4;
+    const padded = pad ? base64 + '='.repeat(4 - pad) : base64;
+    const binary = atob(padded);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    return bytes.buffer;
+}
+
+function bufferToBase64url(buffer) {
+    const bytes = new Uint8Array(buffer);
+    let binary = '';
+    for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+    return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
 init();

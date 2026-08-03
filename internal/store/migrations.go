@@ -502,6 +502,18 @@ func RunMigrations(db *sql.DB) {
 		{name: "idx_approvals_change", sql: `CREATE INDEX IF NOT EXISTS idx_approvals_change ON change_approvals(change_id)`},
 		{name: "add_queue_prefix", sql: `ALTER TABLE queues ADD COLUMN IF NOT EXISTS prefix TEXT`},
 		{name: "idx_queue_prefix_unique", sql: `CREATE UNIQUE INDEX IF NOT EXISTS idx_queue_prefix_org ON queues(org_id, prefix) WHERE prefix IS NOT NULL`},
+		{name: "create_passkeys_table", sql: `CREATE TABLE IF NOT EXISTS passkeys (
+			id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+			user_id         UUID NOT NULL REFERENCES users(id),
+			credential_id   BYTEA NOT NULL UNIQUE,
+			public_key      BYTEA NOT NULL,
+			aaguid          BYTEA,
+			sign_count      BIGINT NOT NULL DEFAULT 0,
+			name            TEXT NOT NULL DEFAULT 'Passkey',
+			created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+			last_used_at    TIMESTAMPTZ
+		)`},
+		{name: "idx_passkeys_user", sql: `CREATE INDEX IF NOT EXISTS idx_passkeys_user ON passkeys(user_id)`},
 	}
 
 	for _, m := range migrations {

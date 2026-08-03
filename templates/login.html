@@ -31,6 +31,14 @@
                 <a href="/reset">Forgot password?</a>
                 <a href="/register">Create account</a>
             </div>
+
+            <div class="auth-divider">
+                <span>or</span>
+            </div>
+
+            <button onclick="passkeyLogin()" class="btn btn-ghost btn-full" id="passkey-btn">
+                🔑 Sign in with Passkey
+            </button>
         </div>
     </div>
 
@@ -70,6 +78,95 @@
             errEl.textContent = 'Network error';
             errEl.style.display = 'block';
         }
+    }
+
+    async function passkeyLogin() {
+        const errEl = document.getElementById('error-msg');
+        errEl.style.display = 'none';
+
+        const email = document.getElementById('identifier').value.trim();
+        if (!email) {
+            errEl.textContent = 'Enter your email first';
+            errEl.style.display = 'block';
+            return;
+        }
+
+        try {
+            // Step 1: Begin login
+            const beginRes = await fetch('/api/auth/passkey/login/begin', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({email: email})
+            });
+
+            if (!beginRes.ok) {
+                const d = await beginRes.json();
+                errEl.textContent = d.error || 'No passkey found';
+                errEl.style.display = 'block';
+                return;
+            }
+
+            const data = await beginRes.json();
+            const options = data.options;
+            const userID = data.user_id;
+
+            // Convert base64url to ArrayBuffer
+            options.publicKey.challenge = base64urlToBuffer(options.publicKey.challenge);
+            options.publicKey.allowCredentials = (options.publicKey.allowCredentials || []).map(function(c) {
+                c.id = base64urlToBuffer(c.id);
+                return c;
+            });
+
+            // Step 2: Browser authenticates
+            const assertion = await navigator.credentials.get({publicKey: options.publicKey});
+
+            // Step 3: Send to server
+            const body = {
+                id: assertion.id,
+                rawId: bufferToBase64url(assertion.rawId),
+                type: assertion.type,
+                response: {
+                    authenticatorData: bufferToBase64url(assertion.response.authenticatorData),
+                    clientDataJSON: bufferToBase64url(assertion.response.clientDataJSON),
+                    signature: bufferToBase64url(assertion.response.signature),
+                    userHandle: assertion.response.userHandle ? bufferToBase64url(assertion.response.userHandle) : null
+                }
+            };
+
+            const finishRes = await fetch('/api/auth/passkey/login/finish?user_id=' + userID, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(body)
+            });
+
+            if (finishRes.ok) {
+                window.location.href = '/dashboard';
+            } else {
+                const d = await finishRes.json();
+                errEl.textContent = d.error || 'Passkey login failed';
+                errEl.style.display = 'block';
+            }
+        } catch (err) {
+            errEl.textContent = 'Passkey cancelled or not supported';
+            errEl.style.display = 'block';
+        }
+    }
+
+    function base64urlToBuffer(base64url) {
+        const base64 = base64url.replace(/-/g, '+').replace(/_/g, '/');
+        const pad = base64.length % 4;
+        const padded = pad ? base64 + '='.repeat(4 - pad) : base64;
+        const binary = atob(padded);
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+        return bytes.buffer;
+    }
+
+    function bufferToBase64url(buffer) {
+        const bytes = new Uint8Array(buffer);
+        let binary = '';
+        for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+        return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
     }
     </script>
 </body>
