@@ -490,16 +490,19 @@ function renderSidebar() {
                 countEl.textContent = q.open_count || 0;
                 item.appendChild(countEl);
 
-                // Settings gear for queue
-                const gear = document.createElement('span');
-                gear.className = 'sidebar-gear';
-                gear.textContent = '⚙';
-                gear.onclick = function(e) {
-                    e.stopPropagation();
-                    currentSettingsQueueID = q.id;
-                    showView('settings-queue');
-                };
-                item.appendChild(gear);
+                // Settings gear for queue — admin/owner only
+                const role = (sidebarData && sidebarData.role) || 'viewer';
+                if (role === 'owner' || role === 'admin') {
+                    const gear = document.createElement('span');
+                    gear.className = 'sidebar-gear';
+                    gear.textContent = '⚙';
+                    gear.onclick = function(e) {
+                        e.stopPropagation();
+                        currentSettingsQueueID = q.id;
+                        showView('settings-queue');
+                    };
+                    item.appendChild(gear);
+                }
 
                 list.appendChild(item);
             });
