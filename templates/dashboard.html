@@ -34,15 +34,15 @@
                 <div class="sidebar-label">Requests</div>
                 <div id="sidebar-all" class="sidebar-item sidebar-item-active"
                      onclick="selectAllTickets()">
-                    <span class="sidebar-item-name">My Requests</span>
+                    <span class="sidebar-item-name"><svg class="icon icon-sm"><use href="/static/icons/sprite.svg#icon-ticket"></use></svg> Assigned to Me</span>
                     <span id="count-total" class="sidebar-count"></span>
                 </div>
                 <div class="sidebar-item" onclick="selectUnassigned()">
-                    <span class="sidebar-item-name">Unassigned Requests</span>
+                    <span class="sidebar-item-name"><svg class="icon icon-sm"><use href="/static/icons/sprite.svg#icon-clipboard-list"></use></svg> Unassigned</span>
                     <span id="count-unassigned" class="sidebar-count sidebar-count-warn"></span>
                 </div>
                 <div class="sidebar-item" onclick="selectUrgent()">
-                    <span class="sidebar-item-name">🔴 Urgent (P0/P1)</span>
+                    <span class="sidebar-item-name"><svg class="icon icon-sm" style="color:var(--priority-p0)"><use href="/static/icons/sprite.svg#icon-alert-triangle"></use></svg> Urgent (P0/P1)</span>
                     <span id="count-urgent" class="sidebar-count sidebar-count-crit"></span>
                 </div>
             </div>
@@ -50,7 +50,7 @@
             <div class="sidebar-section">
                 <div class="sidebar-label">
                     Queues
-                    <button onclick="showCreateQueue()" class="sidebar-add">+</button>
+                    <button onclick="showCreateQueue()" class="sidebar-add"><svg class="icon icon-sm"><use href="/static/icons/sprite.svg#icon-plus"></use></svg></button>
                 </div>
                 <div id="queue-list"></div>
             </div>
@@ -69,10 +69,10 @@
             <div class="sidebar-section sidebar-section-bottom">
                 <div class="sidebar-label">Settings</div>
                 <div id="nav-settings-org" class="sidebar-item" onclick="showView('settings-org')" style="display:none;">
-                    <span class="sidebar-item-name">⚙ Org Settings</span>
+                    <span class="sidebar-item-name"><svg class="icon icon-sm"><use href="/static/icons/sprite.svg#icon-settings"></use></svg> Org Settings</span>
                 </div>
                 <div class="sidebar-item" onclick="showView('settings-account')">
-                    <span class="sidebar-item-name">👤 Account</span>
+                    <span class="sidebar-item-name"><svg class="icon icon-sm"><use href="/static/icons/sprite.svg#icon-user"></use></svg> Account</span>
                 </div>
             </div>
         </aside>
@@ -593,7 +593,7 @@ function renderSidebar() {
                 if (role === 'owner' || role === 'admin') {
                     const gear = document.createElement('span');
                     gear.className = 'sidebar-gear';
-                    gear.textContent = '⚙';
+                    gear.innerHTML = icon('settings', 'sm');
                     gear.onclick = function(e) {
                         e.stopPropagation();
                         currentSettingsQueueID = q.id;
