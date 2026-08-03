@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="/static/css/app.css">
 </head>
 <body>
+<div id="toast-container" class="toast-container"></div>
 <div class="dashboard">
 
     <!-- ── Nav ── -->
@@ -413,7 +414,7 @@ async function createOrg() {
         loadOrgs();
     } else {
         const data = await res.json();
-        alert(data.error || 'Failed to create organization');
+        showToast('error', data.error || 'Failed to create organization');
     }
 }
 
@@ -578,7 +579,7 @@ async function createQueue() {
     const name  = document.getElementById('queue-name').value.trim();
     const dept  = document.getElementById('queue-dept').value.trim();
     const color = document.getElementById('queue-color').value.trim();
-    if (!name) { alert('Queue name is required'); return; }
+    if (!name) { showToast('warn', 'Queue name is required'); return; }
 
     const body = {name: name};
     if (dept)  body.department = dept;
@@ -598,7 +599,7 @@ async function createQueue() {
         loadSidebar();
     } else {
         const data = await res.json();
-        alert(data.error || 'Failed to create queue');
+        showToast('error', data.error || 'Failed to create queue');
     }
 }
 
@@ -728,7 +729,7 @@ async function quickAssignToMe(ticketID) {
         body: JSON.stringify({assignee_user_id: user.id})
     });
     if (r.ok) { loadTickets(currentFilter); loadSidebar(); }
-    else { const d = await r.json(); alert(d.error || 'Failed'); }
+    else { const d = await r.json(); showToast('error', d.error || 'Action failed'); }
 }
 
 async function quickStatus(ticketID, status) {
@@ -739,14 +740,14 @@ async function quickStatus(ticketID, status) {
         body: JSON.stringify({status: status})
     });
     if (res.ok) { loadTickets(currentFilter); loadSidebar(); }
-    else { const d = await res.json(); alert(d.error || 'Failed'); }
+    else { const d = await res.json(); showToast('error', d.error || 'Action failed'); }
 }
 
 async function quickDelete(ticketID) {
     closeAllMenus();
     if (!confirm('Delete this ticket? This cannot be undone.')) return;
     // TODO: implement delete endpoint
-    alert('Delete not yet implemented');
+    showToast('info', 'Delete not yet implemented');
 }
 
 function showCreateTicket() { document.getElementById('create-ticket-form').style.display = 'flex'; }
@@ -758,7 +759,7 @@ async function createTicket() {
     const subject  = document.getElementById('ticket-subject').value.trim();
     const body     = document.getElementById('ticket-body').value.trim();
     const priority = document.getElementById('ticket-priority').value;
-    if (!subject || !body) { alert('Subject and description are required'); return; }
+    if (!subject || !body) { showToast('warn', 'Subject and description are required'); return; }
 
     const res = await fetch('/api/orgs/' + currentOrgID + '/tickets', {
         method: 'POST',
@@ -775,7 +776,7 @@ async function createTicket() {
         loadTickets(currentFilter); showView('queue');
     } else {
         const data = await res.json();
-        alert(data.error || 'Failed to create ticket');
+        showToast('error', data.error || 'Failed to create ticket');
     }
 }
 
@@ -785,7 +786,7 @@ async function openTicket(ticketID) {
     currentTicketID = ticketID;
 
     const res = await fetch('/api/orgs/' + currentOrgID + '/tickets/' + ticketID);
-    if (!res.ok) { alert('Failed to load ticket'); return; }
+    if (!res.ok) { showToast('error', 'Failed to load ticket'); return; }
     const ctx = await res.json();
     const t = ctx.ticket;
 
@@ -899,7 +900,7 @@ async function changeStatus(newStatus) {
         loadSidebar();
     } else {
         const data = await res.json();
-        alert(data.error || 'Invalid status transition');
+        showToast('error', data.error || 'Invalid status transition');
         openTicket(currentTicketID);
     }
 }
@@ -915,7 +916,7 @@ async function changePriority(newPriority) {
 
     if (!res.ok) {
         const data = await res.json();
-        alert(data.error || 'Failed to update priority');
+        showToast('error', data.error || 'Failed to update priority');
         openTicket(currentTicketID);
     } else {
         loadSidebar();
@@ -940,7 +941,7 @@ async function addComment() {
         openTicket(currentTicketID);
     } else {
         const data = await res.json();
-        alert(data.error || 'Failed to add comment');
+        showToast('error', data.error || 'Failed to add comment');
     }
 }
 
@@ -956,6 +957,18 @@ function escapeHTML(str) {
     const div = document.createElement('div');
     div.textContent = str;
     return div.innerHTML;
+}
+
+function showToast(type, message) {
+    const container = document.getElementById('toast-container');
+    const toast = document.createElement('div');
+    toast.className = 'toast toast-' + type;
+    toast.textContent = message;
+    container.appendChild(toast);
+    setTimeout(function() {
+        toast.style.animation = 'toastOut 0.25s ease-in forwards';
+        setTimeout(function() { toast.remove(); }, 250);
+    }, 3500);
 }
 
 function timeAgo(dateStr) {
@@ -1043,7 +1056,7 @@ async function inviteMember() {
     if (!currentOrgID) return;
     const email = document.getElementById('settings-invite-email').value.trim();
     const role = document.getElementById('settings-invite-role').value;
-    if (!email) { alert('Email is required'); return; }
+    if (!email) { showToast('warn', 'Email is required'); return; }
 
     const res = await fetch('/api/orgs/' + currentOrgID + '/members', {
         method: 'POST',
@@ -1056,7 +1069,7 @@ async function inviteMember() {
         loadMembers();
     } else {
         const d = await res.json();
-        alert(d.error || 'Failed to invite');
+        showToast('error', d.error || 'Failed to invite');
     }
 }
 
@@ -1147,7 +1160,7 @@ async function addQueueMember() {
     if (!currentOrgID || !currentSettingsQueueID) return;
     const userID = document.getElementById('queue-member-select').value;
     const role = document.getElementById('queue-member-role').value;
-    if (!userID) { alert('Select an agent'); return; }
+    if (!userID) { showToast('warn', 'Select an agent'); return; }
 
     const res = await fetch('/api/orgs/' + currentOrgID + '/queues/' + currentSettingsQueueID + '/members', {
         method: 'POST',
@@ -1159,7 +1172,7 @@ async function addQueueMember() {
         loadQueueSettings();
     } else {
         const d = await res.json();
-        alert(d.error || 'Failed to add member');
+        showToast('error', d.error || 'Failed to add member');
     }
 }
 
@@ -1175,7 +1188,7 @@ async function removeQueueMember(userID) {
         loadQueueSettings();
     } else {
         const d = await res.json();
-        alert(d.error || 'Failed to remove member');
+        showToast('error', d.error || 'Failed to remove member');
     }
 }
 
