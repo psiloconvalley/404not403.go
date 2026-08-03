@@ -948,6 +948,13 @@ async function handleLogout() {
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
+
+function escapeHTML(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
+
 function timeAgo(dateStr) {
     const now  = new Date();
     const then = new Date(dateStr);
@@ -1022,9 +1029,9 @@ async function loadMembers() {
         const row = document.createElement('div');
         row.className = 'settings-member-row';
         row.innerHTML =
-            '<span class="settings-member-name">' + (m.handle || m.email) + '</span>' +
-            '<span class="settings-member-email">' + m.email + '</span>' +
-            '<span class="org-role">' + m.role + '</span>';
+            '<span class="settings-member-name">' + escapeHTML(m.handle || m.email) + '</span>' +
+            '<span class="settings-member-email">' + escapeHTML(m.email) + '</span>' +
+            '<span class="org-role">' + escapeHTML(m.role) + '</span>';
         list.appendChild(row);
     });
 }
@@ -1111,7 +1118,7 @@ function renderQueueMembers(members) {
         row.className = 'settings-member-row';
         row.innerHTML =
             '<span class="settings-member-name">' + m.user_id.substring(0, 8) + '...</span>' +
-            '<span class="org-role">' + m.role + '</span>' +
+            '<span class="org-role">' + escapeHTML(m.role) + '</span>' +
             '<button class="btn btn-ghost btn-sm" onclick="removeQueueMember(\'' + m.user_id + '\')">✕</button>';
         list.appendChild(row);
     });
