@@ -277,6 +277,8 @@ func (s *Service) RequireRole(ctx context.Context, orgID, userID, minimumRole st
 }
 
 // roleAtLeast returns true if actual role meets or exceeds the required role.
+// roleAtLeast returns true if actual role meets or exceeds the required role.
+// Unknown roles always return false — fail closed.
 func roleAtLeast(actual, required string) bool {
 	order := map[string]int{
 		"viewer": 1,
@@ -284,7 +286,12 @@ func roleAtLeast(actual, required string) bool {
 		"admin":  3,
 		"owner":  4,
 	}
-	return order[actual] >= order[required]
+	a, aOK := order[actual]
+	r, rOK := order[required]
+	if !aOK || !rOK {
+		return false
+	}
+	return a >= r
 }
 
 // ── Update Org ───────────────────────────────────────────────────────────────
