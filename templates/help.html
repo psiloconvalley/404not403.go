@@ -14,86 +14,106 @@
         <div class="logo">
             <span class="logo-404">404</span><span class="logo-not">NOT</span><span class="logo-403">403</span>
         </div>
-        <span class="portal-org">{{.OrgName}} IT Support</span>
+        <span class="portal-org">{{.OrgName}}</span>
     </div>
 
     <div class="portal-hero">
         <h1>How can we help?</h1>
-        <p>Describe your issue and we'll get back to you as soon as possible.</p>
+        <p>Select a service below or describe your issue.</p>
     </div>
 
     <div class="portal-card">
 
+        <!-- Success Message -->
         <div id="success-msg" class="portal-success" style="display:none;">
-            <div class="success-icon">✓</div>
+            <div class="success-icon">
+                <svg class="icon icon-xl" style="color:var(--status-resolved)"><use href="/static/icons/sprite.svg#icon-check"></use></svg>
+            </div>
             <h2>Request received</h2>
-            <p>We've got your request. Check your email for a link to track its progress.</p>
+            <p>We've got your request. Check your email for a tracking link.</p>
             <p class="success-ticket-id"></p>
         </div>
 
-        <form id="help-form" onsubmit="return handleSubmit(event)">
-            <div id="error-msg" class="error-msg" style="display:none;"></div>
-
-            <div class="portal-form-group">
-                <label for="name">Your Name</label>
-                <input type="text" id="name" placeholder="Jane Smith" required>
+        <!-- Step 1: Service Catalog -->
+        <div id="catalog-view">
+            {{if .Catalog}}
+            <div class="catalog-grid">
+                {{range .Catalog}}
+                <div class="catalog-card" data-category="{{if .Category}}{{.Category}}{{else}}General{{end}}" onclick="selectService('{{.ID}}', '{{.Name}}', '{{.TicketType}}', '{{.DefaultPriority}}', {{if .SLAHours}}{{.SLAHours}}{{else}}0{{end}}, '{{if .Category}}{{.Category}}{{else}}General{{end}}')">
+                    <div class="catalog-card-icon">
+                        <svg class="icon icon-lg"><use href="/static/icons/sprite.svg#icon-clipboard-list" id="cat-icon-{{.ID}}"></use></svg>
+                    </div>
+                    <div class="catalog-card-body">
+                        <div class="catalog-card-name">{{.Name}}</div>
+                        {{if .Description}}<div class="catalog-card-desc">{{.Description}}</div>{{end}}
+                        {{if .SLAHours}}<div class="catalog-card-sla">
+                            <svg class="icon icon-sm"><use href="/static/icons/sprite.svg#icon-clock"></use></svg>
+                            {{.SLAHours}}h SLA
+                        </div>{{end}}
+                    </div>
+                </div>
+                {{end}}
             </div>
 
-            <div class="portal-form-group">
-                <label for="email">Work Email</label>
-                <input type="email" id="email" placeholder="jane@company.com" required>
+            <div class="catalog-divider">
+                <span>or describe your issue</span>
+            </div>
+            {{end}}
+
+            <div class="catalog-other" onclick="selectService('', 'Other Request', 'service_request', 'P2', 0, 'General')">
+                <svg class="icon icon-md"><use href="/static/icons/sprite.svg#icon-mail"></use></svg>
+                <span>Can't find what you need? Submit a general request.</span>
+                <svg class="icon icon-sm" style="margin-left:auto"><use href="/static/icons/sprite.svg#icon-chevron-right"></use></svg>
+            </div>
+        </div>
+
+        <!-- Step 2: Request Form -->
+        <div id="form-view" style="display:none;">
+            <div class="form-back" onclick="showCatalog()">
+                <svg class="icon icon-sm"><use href="/static/icons/sprite.svg#icon-chevron-right" style="transform:rotate(180deg)"></use></svg>
+                Back to services
             </div>
 
-            <div class="portal-form-group">
-                <label for="subject">What's the issue?</label>
-                <input type="text" id="subject"
-                    placeholder="e.g. Laptop won't connect to WiFi" required>
-            </div>
-
-            <div class="portal-form-group">
-                <label for="body">Tell us more</label>
-                <textarea id="body" rows="5"
-                    placeholder="Describe the problem in detail. The more context you give us, the faster we can help." required></textarea>
-            </div>
-
-            <div class="portal-form-group">
-                <label>How urgent is this?</label>
-                <div class="urgency-grid">
-                    <label class="urgency-option">
-                        <input type="radio" name="urgency" value="low">
-                        <div class="urgency-card">
-                            <span class="urgency-label">Low</span>
-                            <span class="urgency-desc">Minor issue, can wait</span>
-                        </div>
-                    </label>
-                    <label class="urgency-option">
-                        <input type="radio" name="urgency" value="medium" checked>
-                        <div class="urgency-card">
-                            <span class="urgency-label">Medium</span>
-                            <span class="urgency-desc">Affecting my work</span>
-                        </div>
-                    </label>
-                    <label class="urgency-option">
-                        <input type="radio" name="urgency" value="high">
-                        <div class="urgency-card">
-                            <span class="urgency-label">High</span>
-                            <span class="urgency-desc">Blocking me completely</span>
-                        </div>
-                    </label>
-                    <label class="urgency-option">
-                        <input type="radio" name="urgency" value="critical">
-                        <div class="urgency-card urgency-critical">
-                            <span class="urgency-label">Critical</span>
-                            <span class="urgency-desc">System down, team affected</span>
-                        </div>
-                    </label>
+            <div class="form-service-header">
+                <h2 id="form-service-name"></h2>
+                <div id="form-sla-hint" class="catalog-card-sla" style="display:none;">
+                    <svg class="icon icon-sm"><use href="/static/icons/sprite.svg#icon-clock"></use></svg>
+                    <span id="form-sla-text"></span>
                 </div>
             </div>
 
-            <button type="submit" class="btn btn-primary btn-full" id="submit-btn">
-                Submit Request
-            </button>
-        </form>
+            <form id="help-form" onsubmit="return handleSubmit(event)">
+                <div id="error-msg" class="error-msg" style="display:none;"></div>
+                <input type="hidden" id="catalog-item-id" value="">
+                <input type="hidden" id="ticket-type" value="service_request">
+                <input type="hidden" id="ticket-priority" value="P2">
+
+                <div class="portal-form-group">
+                    <label for="name">Your Name</label>
+                    <input type="text" id="name" placeholder="Jane Smith" required>
+                </div>
+
+                <div class="portal-form-group">
+                    <label for="email">Work Email</label>
+                    <input type="email" id="email" placeholder="jane@company.com" required>
+                </div>
+
+                <div class="portal-form-group">
+                    <label for="subject">Subject</label>
+                    <input type="text" id="subject" placeholder="Brief description of your request" required>
+                </div>
+
+                <div class="portal-form-group">
+                    <label for="body">Details</label>
+                    <textarea id="body" rows="4"
+                        placeholder="Provide any additional context that will help us resolve this faster." required></textarea>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-full" id="submit-btn">
+                    Submit Request
+                </button>
+            </form>
+        </div>
 
         <div class="portal-footer-link">
             Already submitted? <a href="/help/track">Track your request →</a>
@@ -106,31 +126,89 @@
 </div>
 
 <script>
+var selectedCatalogItemID = '';
+
+var CATEGORY_ICONS = {
+    'Hardware': 'laptop',
+    'Software': 'package',
+    'Access': 'key',
+    'Network': 'wifi',
+    'Security': 'shield',
+    'People': 'users',
+    'Facilities': 'building',
+    'Email': 'mail',
+    'General': 'clipboard-list',
+    'Bug': 'bug',
+    'Maintenance': 'wrench',
+    'Training': 'graduation-cap',
+    'Infrastructure': 'hard-drive',
+    'Printing': 'printer',
+    'Telecom': 'phone'
+};
+
+// Set category-based icons on load
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('[id^="cat-icon-"]').forEach(function(use) {
+        var card = use.closest('.catalog-card');
+        if (!card) return;
+        var category = card.getAttribute('data-category') || 'General';
+        var iconName = CATEGORY_ICONS[category] || 'clipboard-list';
+        use.setAttribute('href', '/static/icons/sprite.svg#icon-' + iconName);
+    });
+});
+
+function selectService(itemID, name, ticketType, priority, slaHours, category) {
+    selectedCatalogItemID = itemID;
+    document.getElementById('catalog-item-id').value = itemID;
+    document.getElementById('ticket-type').value = ticketType;
+    document.getElementById('ticket-priority').value = priority;
+    document.getElementById('form-service-name').textContent = name;
+    document.getElementById('subject').value = name !== 'Other Request' ? name : '';
+
+    var slaHint = document.getElementById('form-sla-hint');
+    if (slaHours > 0) {
+        var days = Math.floor(slaHours / 24);
+        var label = days > 0 ? days + ' business day' + (days > 1 ? 's' : '') : slaHours + ' hours';
+        document.getElementById('form-sla-text').textContent = 'Expected resolution: ' + label;
+        slaHint.style.display = 'flex';
+    } else {
+        slaHint.style.display = 'none';
+    }
+
+    document.getElementById('catalog-view').style.display = 'none';
+    document.getElementById('form-view').style.display = 'block';
+}
+
+function showCatalog() {
+    document.getElementById('catalog-view').style.display = 'block';
+    document.getElementById('form-view').style.display = 'none';
+}
+
 async function handleSubmit(e) {
     e.preventDefault();
-    const errEl  = document.getElementById('error-msg');
-    const btn    = document.getElementById('submit-btn');
-    const urgency = document.querySelector('input[name="urgency"]:checked');
+    var errEl = document.getElementById('error-msg');
+    var btn = document.getElementById('submit-btn');
 
     errEl.style.display = 'none';
     btn.textContent = 'Submitting...';
     btn.disabled = true;
 
-    const body = {
-        name:    document.getElementById('name').value.trim(),
-        email:   document.getElementById('email').value.trim(),
-        subject: document.getElementById('subject').value.trim(),
-        body:    document.getElementById('body').value.trim(),
-        urgency: urgency ? urgency.value : 'medium'
+    var body = {
+        name:            document.getElementById('name').value.trim(),
+        email:           document.getElementById('email').value.trim(),
+        subject:         document.getElementById('subject').value.trim(),
+        body:            document.getElementById('body').value.trim(),
+        urgency:         'medium',
+        catalog_item_id: document.getElementById('catalog-item-id').value
     };
 
     try {
-        const res = await fetch(window.location.pathname, {
+        var res = await fetch(window.location.pathname, {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify(body)
         });
-        const data = await res.json();
+        var data = await res.json();
 
         if (!res.ok) {
             errEl.textContent = data.error || 'Something went wrong. Please try again.';
@@ -140,11 +218,10 @@ async function handleSubmit(e) {
             return;
         }
 
-        // Show success
-        document.getElementById('help-form').style.display = 'none';
-        const success = document.getElementById('success-msg');
-        success.querySelector('.success-ticket-id').textContent =
-            'Reference: ' + data.ticket_id.slice(0, 8).toUpperCase();
+        document.getElementById('form-view').style.display = 'none';
+        document.getElementById('catalog-view').style.display = 'none';
+        var success = document.getElementById('success-msg');
+        success.querySelector('.success-ticket-id').textContent = 'Reference: ' + data.ticket_id.slice(0, 8).toUpperCase();
         success.style.display = 'block';
 
     } catch (err) {

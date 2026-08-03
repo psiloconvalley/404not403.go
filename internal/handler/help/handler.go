@@ -89,7 +89,7 @@ func (h *Handler) Portal(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// showForm renders the help submission form.
+// showForm renders the help submission form with service catalog.
 func (h *Handler) showForm(w http.ResponseWriter, r *http.Request, slug string) {
 	org, err := store.GetOrgBySlug(h.app.DB, slug)
 	if err != nil || org == nil {
@@ -97,9 +97,24 @@ func (h *Handler) showForm(w http.ResponseWriter, r *http.Request, slug string) 
 		return
 	}
 
+	// Load service catalog for this org
+	catalogItems, err := store.ListCatalogItems(h.app.DB, org.ID)
+	if err != nil {
+		catalogItems = []store.CatalogItem{}
+	}
+
+	// Group catalog items by queue for department display
+	queues, err := store.ListQueuesWithCounts(h.app.DB, org.ID)
+	if err != nil {
+		queues = []store.QueueWithCounts{}
+	}
+
 	if err := h.app.Templates.ExecuteTemplate(w, "help.html", map[string]interface{}{
-		"OrgName": org.Name,
-		"OrgSlug": org.Slug,
+		"OrgName":  org.Name,
+		"OrgSlug":  org.Slug,
+		"OrgID":    org.ID,
+		"Catalog":  catalogItems,
+		"Queues":   queues,
 	}); err != nil {
 		http.Error(w, "System Error", http.StatusInternalServerError)
 	}
