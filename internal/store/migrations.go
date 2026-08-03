@@ -500,6 +500,8 @@ func RunMigrations(db *sql.DB) {
 			)`,
 		},
 		{name: "idx_approvals_change", sql: `CREATE INDEX IF NOT EXISTS idx_approvals_change ON change_approvals(change_id)`},
+		{name: "add_queue_prefix", sql: `ALTER TABLE queues ADD COLUMN IF NOT EXISTS prefix TEXT`},
+		{name: "idx_queue_prefix_unique", sql: `CREATE UNIQUE INDEX IF NOT EXISTS idx_queue_prefix_org ON queues(org_id, prefix) WHERE prefix IS NOT NULL`},
 	}
 
 	for _, m := range migrations {

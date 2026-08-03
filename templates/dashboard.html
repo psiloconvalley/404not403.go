@@ -29,14 +29,14 @@
         <!-- ── Global Sidebar ── -->
         <aside class="sidebar" id="global-sidebar" style="display:none;">
             <div class="sidebar-section">
-                <div class="sidebar-label">All Tickets</div>
+                <div class="sidebar-label">Requests</div>
                 <div id="sidebar-all" class="sidebar-item sidebar-item-active"
                      onclick="selectAllTickets()">
-                    <span class="sidebar-item-name">All Open</span>
+                    <span class="sidebar-item-name">My Requests</span>
                     <span id="count-total" class="sidebar-count"></span>
                 </div>
                 <div class="sidebar-item" onclick="selectUnassigned()">
-                    <span class="sidebar-item-name">Unassigned</span>
+                    <span class="sidebar-item-name">Unassigned Requests</span>
                     <span id="count-unassigned" class="sidebar-count sidebar-count-warn"></span>
                 </div>
                 <div class="sidebar-item" onclick="selectUrgent()">
@@ -101,7 +101,7 @@
                 <main class="queue-main">
             <div class="queue-main-header">
                 <div class="queue-title-row">
-                    <h2 id="queue-title">All Tickets</h2>
+                    <h2 id="queue-title">My Requests</h2>
                     <button onclick="showCreateTicket()" class="btn btn-primary btn-sm">New Ticket</button>
                 </div>
                 <div class="queue-filters">
@@ -258,6 +258,11 @@
                     <div class="settings-field">
                         <label class="settings-label">Queue Name</label>
                         <input type="text" id="settings-queue-name" class="settings-input">
+                    </div>
+                    <div class="settings-field">
+                        <label class="settings-label">Prefix</label>
+                        <input type="text" id="settings-queue-prefix" class="settings-input" placeholder="e.g. IT-OPS, HR, FAC">
+                        <span class="settings-hint">Short unique label used in ticket IDs</span>
                     </div>
                     <div class="settings-field">
                         <label class="settings-label">Department</label>
@@ -505,15 +510,15 @@ function renderSidebar() {
 function selectAllTickets() {
     currentQueueID   = null;
     currentQueueName = null;
-    document.getElementById('queue-title').textContent = 'All Tickets';
+    document.getElementById('queue-title').textContent = 'My Requests';
     setSidebarActive('sidebar-all');
     loadTickets(currentFilter); showView('queue');
 }
 
 function selectUnassigned() {
     currentQueueID   = null;
-    currentQueueName = 'Unassigned';
-    document.getElementById('queue-title').textContent = 'Unassigned';
+    currentQueueName = 'Needs Owner';
+    document.getElementById('queue-title').textContent = 'Needs Owner';
     loadTicketsFiltered({assigned_to: 'null'}); showView('queue');
 }
 
@@ -1055,6 +1060,7 @@ async function loadQueueSettings() {
     const q = data.queue;
     document.getElementById('queue-settings-title').textContent = 'Queue: ' + q.name;
     document.getElementById('settings-queue-name').value = q.name || '';
+    document.getElementById('settings-queue-prefix').value = q.prefix || '';
     document.getElementById('settings-queue-dept').value = q.department || '';
     document.getElementById('settings-queue-color').value = q.color || '';
     renderQueueMembers(data.members || []);
@@ -1063,12 +1069,14 @@ async function loadQueueSettings() {
 
 async function saveQueueSettings() {
     if (!currentOrgID || !currentSettingsQueueID) return;
+    const prefix = document.getElementById('settings-queue-prefix').value.trim();
     const name = document.getElementById('settings-queue-name').value.trim();
     const dept = document.getElementById('settings-queue-dept').value.trim();
     const color = document.getElementById('settings-queue-color').value.trim();
     const statusEl = document.getElementById('settings-queue-status');
 
     const body = {};
+    if (prefix) body.prefix = prefix;
     if (name) body.name = name;
     if (dept) body.department = dept;
     if (color) body.color = color;

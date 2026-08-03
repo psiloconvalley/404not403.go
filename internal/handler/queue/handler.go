@@ -307,6 +307,7 @@ func (h *Handler) UpdateQueueSettings(w http.ResponseWriter, r *http.Request) {
 
 	var input struct {
 		Name       *string `json:"name"`
+		Prefix     *string `json:"prefix"`
 		Department *string `json:"department"`
 		Color      *string `json:"color"`
 	}
@@ -315,7 +316,7 @@ func (h *Handler) UpdateQueueSettings(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := store.UpdateQueue(h.app.DB, orgID, queueID, input.Name, nil, input.Department, input.Color, nil); err != nil {
+	if err := store.UpdateQueue(h.app.DB, orgID, queueID, input.Name, input.Prefix, nil, input.Department, input.Color, nil); err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to update queue")
 		return
 	}

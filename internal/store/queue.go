@@ -15,6 +15,7 @@ type Queue struct {
 	ID          string          `json:"id"`
 	OrgID       string          `json:"org_id"`
 	Name        string          `json:"name"`
+	Prefix      *string         `json:"prefix,omitempty"`
 	Description *string         `json:"description,omitempty"`
 	Department  *string         `json:"department,omitempty"`
 	Color       string          `json:"color"`
@@ -53,6 +54,7 @@ type QueueMember struct {
 type CreateQueueParams struct {
 	OrgID       string
 	Name        string
+	Prefix      *string
 	Description *string
 	Department  *string
 	Color       string
@@ -74,14 +76,14 @@ func CreateQueue(db *sql.DB, p CreateQueueParams) (*Queue, error) {
 
 	var q Queue
 	err = tx.QueryRow(`
-		INSERT INTO queues (org_id, name, description, department, color, icon, created_by)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
-		RETURNING id, org_id, name, description, department, color, icon,
+		INSERT INTO queues (org_id, name, prefix, description, department, color, icon, created_by)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		RETURNING id, org_id, name, prefix, description, department, color, icon,
 		          filters, sla_config, active, sort_order, created_by,
 		          created_at, updated_at`,
-		p.OrgID, p.Name, p.Description, p.Department, p.Color, p.Icon, p.CreatedBy,
+		p.OrgID, p.Name, p.Prefix, p.Description, p.Department, p.Color, p.Icon, p.CreatedBy,
 	).Scan(
-		&q.ID, &q.OrgID, &q.Name, &q.Description, &q.Department, &q.Color, &q.Icon,
+		&q.ID, &q.OrgID, &q.Name, &q.Prefix, &q.Description, &q.Department, &q.Color, &q.Icon,
 		&q.Filters, &q.SLAConfig, &q.Active, &q.SortOrder, &q.CreatedBy,
 		&q.CreatedAt, &q.UpdatedAt,
 	)
@@ -112,14 +114,14 @@ func CreateQueue(db *sql.DB, p CreateQueueParams) (*Queue, error) {
 func GetQueueByID(db *sql.DB, orgID, queueID string) (*Queue, error) {
 	var q Queue
 	err := db.QueryRow(`
-		SELECT id, org_id, name, description, department, color, icon,
+		SELECT id, org_id, name, prefix, description, department, color, icon,
 		       filters, sla_config, active, sort_order, created_by,
 		       created_at, updated_at
 		FROM queues
 		WHERE org_id = $1 AND id = $2`,
 		orgID, queueID,
 	).Scan(
-		&q.ID, &q.OrgID, &q.Name, &q.Description, &q.Department, &q.Color, &q.Icon,
+		&q.ID, &q.OrgID, &q.Name, &q.Prefix, &q.Description, &q.Department, &q.Color, &q.Icon,
 		&q.Filters, &q.SLAConfig, &q.Active, &q.SortOrder, &q.CreatedBy,
 		&q.CreatedAt, &q.UpdatedAt,
 	)
@@ -139,7 +141,7 @@ func GetQueueByID(db *sql.DB, orgID, queueID string) (*Queue, error) {
 func ListQueuesWithCounts(db *sql.DB, orgID string) ([]QueueWithCounts, error) {
 	rows, err := db.Query(`
 		SELECT
-			q.id, q.org_id, q.name, q.description, q.department,
+			q.id, q.org_id, q.name, q.prefix, q.description, q.department,
 			q.color, q.icon, q.filters, q.sla_config,
 			q.active, q.sort_order, q.created_by,
 			q.created_at, q.updated_at,
@@ -165,7 +167,7 @@ func ListQueuesWithCounts(db *sql.DB, orgID string) ([]QueueWithCounts, error) {
 	for rows.Next() {
 		var qc QueueWithCounts
 		if err := rows.Scan(
-			&qc.ID, &qc.OrgID, &qc.Name, &qc.Description, &qc.Department,
+			&qc.ID, &qc.OrgID, &qc.Name, &qc.Prefix, &qc.Description, &qc.Department,
 			&qc.Color, &qc.Icon, &qc.Filters, &qc.SLAConfig,
 			&qc.Active, &qc.SortOrder, &qc.CreatedBy,
 			&qc.CreatedAt, &qc.UpdatedAt,
@@ -182,7 +184,7 @@ func ListQueuesWithCounts(db *sql.DB, orgID string) ([]QueueWithCounts, error) {
 func ListQueuesForUser(db *sql.DB, orgID, userID string) ([]QueueWithCounts, error) {
 	rows, err := db.Query(`
 		SELECT
-			q.id, q.org_id, q.name, q.description, q.department,
+			q.id, q.org_id, q.name, q.prefix, q.description, q.department,
 			q.color, q.icon, q.filters, q.sla_config,
 			q.active, q.sort_order, q.created_by,
 			q.created_at, q.updated_at,
@@ -209,7 +211,7 @@ func ListQueuesForUser(db *sql.DB, orgID, userID string) ([]QueueWithCounts, err
 	for rows.Next() {
 		var qc QueueWithCounts
 		if err := rows.Scan(
-			&qc.ID, &qc.OrgID, &qc.Name, &qc.Description, &qc.Department,
+			&qc.ID, &qc.OrgID, &qc.Name, &qc.Prefix, &qc.Description, &qc.Department,
 			&qc.Color, &qc.Icon, &qc.Filters, &qc.SLAConfig,
 			&qc.Active, &qc.SortOrder, &qc.CreatedBy,
 			&qc.CreatedAt, &qc.UpdatedAt,
@@ -279,17 +281,18 @@ func ListQueueMembers(db *sql.DB, orgID, queueID string) ([]QueueMember, error) 
 // ── Update ────────────────────────────────────────────────────────────────────
 
 // UpdateQueue updates mutable queue fields.
-func UpdateQueue(db *sql.DB, orgID, queueID string, name, description, department, color, icon *string) error {
+func UpdateQueue(db *sql.DB, orgID, queueID string, name, prefix, description, department, color, icon *string) error {
 	_, err := db.Exec(`
 		UPDATE queues
 		SET name        = COALESCE($1, name),
-		    description = COALESCE($2, description),
-		    department  = COALESCE($3, department),
-		    color       = COALESCE($4, color),
-		    icon        = COALESCE($5, icon),
+		    prefix      = COALESCE($2, prefix),
+		    description = COALESCE($3, description),
+		    department  = COALESCE($4, department),
+		    color       = COALESCE($5, color),
+		    icon        = COALESCE($6, icon),
 		    updated_at  = now()
-		WHERE org_id = $6 AND id = $7`,
-		name, description, department, color, icon, orgID, queueID,
+		WHERE org_id = $7 AND id = $8`,
+		name, prefix, description, department, color, icon, orgID, queueID,
 	)
 	return err
 }
