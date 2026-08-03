@@ -143,11 +143,12 @@ func (h *Handler) Submit(w http.ResponseWriter, r *http.Request) {
 
 	// Parse input
 	var input struct {
-		Name     string `json:"name"`
-		Email    string `json:"email"`
-		Subject  string `json:"subject"`
-		Body     string `json:"body"`
-		Urgency  string `json:"urgency"`
+		Name           string `json:"name"`
+		Email          string `json:"email"`
+		Subject        string `json:"subject"`
+		Body           string `json:"body"`
+		Urgency        string `json:"urgency"`
+		CatalogItemID  string `json:"catalog_item_id"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid JSON")
@@ -170,33 +171,35 @@ func (h *Handler) Submit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Domain validation — Option C:
-	// If org has a domain configured, validate email domain matches.
-	// If org has no domain configured, allow any email.
-	// This supports both strict company-only access and flexible access
-	// for contractors or vendors using personal email.
+	// Domain validation
 	if org.Domain != nil && *org.Domain != "" {
 		emailDomain := extractDomain(input.Email)
-		if emailDomain != *org.Domain {
-			// Still allow submission but flag as external
-			// Agents will see the email domain in the ticket
-			// Org admins can configure strict mode in future
-			_ = emailDomain // non-blocking for now — log in future
-		}
+		_ = emailDomain // non-blocking for now
 	}
 
-
-	// Map urgency to priority
+	// Resolve catalog item → queue, type, priority, SLA
+	var queueID *string
+	var ticketType string = "service_request"
 	priority := "P2"
-	switch input.Urgency {
-	case "low":
-		priority = "P3"
-	case "medium":
-		priority = "P2"
-	case "high":
-		priority = "P1"
-	case "critical":
-		priority = "P0"
+
+	if input.CatalogItemID != "" {
+		catalogItem, err := store.GetCatalogItem(h.app.DB, org.ID, input.CatalogItemID)
+		if err == nil && catalogItem != nil {
+			queueID = catalogItem.QueueID
+			ticketType = catalogItem.TicketType
+			priority = catalogItem.DefaultPriority
+			// SLA will be wired when sla_due_at is implemented
+		}
+	} else {
+		// Fallback: map urgency to priority for generic requests
+		switch input.Urgency {
+		case "low":
+			priority = "P3"
+		case "high":
+			priority = "P1"
+		case "critical":
+			priority = "P0"
+		}
 	}
 
 	// Find or create customer
@@ -214,29 +217,34 @@ func (h *Handler) Submit(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		expires := time.Now().Add(30 * 24 * time.Hour) // 30 days
+		expires := time.Now().Add(30 * 24 * time.Hour)
 		if err := store.SetTrackingToken(h.app.DB, customer.ID, tokenHash, expires); err != nil {
 			writeError(w, http.StatusInternalServerError, "failed to store tracking token")
 			return
 		}
-
-		// TODO: Send confirmation email with tracking link
-		// For now, return the token in the response (development only)
 		_ = rawToken
 	}
 
-	// Create ticket
-	ticket, err := store.CreateTicket(h.app.DB, store.CreateTicketParams{
+	// Create ticket with catalog-derived routing
+	createParams := store.CreateTicketParams{
 		OrgID:      org.ID,
 		CustomerID: &customer.ID,
 		Subject:    input.Subject,
 		Body:       input.Body,
 		Priority:   priority,
 		SourceType: string(domain.SourceWeb),
-	})
+		TicketType: ticketType,
+	}
+
+	ticket, err := store.CreateTicket(h.app.DB, createParams)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to create request")
 		return
+	}
+
+	// Assign to queue if catalog item specified one
+	if queueID != nil {
+		store.AssignTicketToQueue(h.app.DB, org.ID, ticket.ID, *queueID)
 	}
 
 	// Enqueue AI classification job

@@ -45,6 +45,7 @@ type CreateTicketParams struct {
 	Priority   string // validated domain.Priority
 	SourceType string // validated domain.SourceType
 	ThreadID   *string
+	TicketType string // service_request, incident, change, problem, task
 }
 
 // CreateTicket inserts a new ticket and records the creation event.
@@ -56,12 +57,16 @@ func CreateTicket(db *sql.DB, p CreateTicketParams) (*Ticket, error) {
 	}
 	defer tx.Rollback()
 
+	if p.TicketType == "" {
+		p.TicketType = "service_request"
+	}
+
 	var t Ticket
 	err = tx.QueryRow(`
 		INSERT INTO tickets (
 			org_id, customer_id, subject, body,
-			status, priority, source_type, thread_id
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+			status, priority, source_type, thread_id, ticket_type
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 		RETURNING id, org_id, customer_id, assigned_to,
 		          subject, body, status, priority, category,
 		          source_type, thread_id, incident_id,
@@ -70,7 +75,7 @@ func CreateTicket(db *sql.DB, p CreateTicketParams) (*Ticket, error) {
 		p.OrgID, p.CustomerID, p.Subject, p.Body,
 		string(domain.DefaultStatus()),
 		p.Priority,
-		p.SourceType, p.ThreadID,
+		p.SourceType, p.ThreadID, p.TicketType,
 	).Scan(
 		&t.ID, &t.OrgID, &t.CustomerID, &t.AssignedTo,
 		&t.Subject, &t.Body, &t.Status, &t.Priority, &t.Category,
