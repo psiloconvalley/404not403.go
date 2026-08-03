@@ -1,0 +1,11 @@
+.git
+.gitignore
+.DS_Store
+Thumbs.db
+*.exe
+*.test
+*.out
+404not403
+README.md
+tmp
+*.log
