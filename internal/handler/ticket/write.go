@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/psiloconvalley/404not403/internal/domain"
+	"github.com/psiloconvalley/404not403/internal/handler/shared"
 	"github.com/psiloconvalley/404not403/internal/middleware"
 	ticketsvc "github.com/psiloconvalley/404not403/internal/service/ticket"
 )
@@ -63,7 +64,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		CustomerEmail: customerEmailPtr,
 	})
 	if err != nil {
-		writeError(w, domainErrStatus(err), err.Error())
+		writeError(w, shared.DomainErrStatus(err), err.Error())
 		return
 	}
 
@@ -106,7 +107,7 @@ func (h *Handler) UpdateStatus(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.svc.UpdateStatus(r.Context(), orgID, ticketID, userID, input.Status); err != nil {
-		writeError(w, domainErrStatus(err), err.Error())
+		writeError(w, shared.DomainErrStatus(err), err.Error())
 		return
 	}
 
@@ -152,7 +153,7 @@ func (h *Handler) Assign(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.svc.Assign(r.Context(), orgID, ticketID, userID, input.AssigneeUserID); err != nil {
-		writeError(w, domainErrStatus(err), err.Error())
+		writeError(w, shared.DomainErrStatus(err), err.Error())
 		return
 	}
 
@@ -205,7 +206,7 @@ func (h *Handler) AddComment(w http.ResponseWriter, r *http.Request) {
 		SourceType: string(domain.SourceApp),
 	})
 	if err != nil {
-		writeError(w, domainErrStatus(err), err.Error())
+		writeError(w, shared.DomainErrStatus(err), err.Error())
 		return
 	}
 
@@ -251,7 +252,7 @@ func (h *Handler) UpdatePriority(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.svc.UpdatePriority(r.Context(), orgID, ticketID, userID, input.Priority); err != nil {
-		writeError(w, domainErrStatus(err), err.Error())
+		writeError(w, shared.DomainErrStatus(err), err.Error())
 		return
 	}
 

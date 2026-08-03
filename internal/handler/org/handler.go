@@ -12,12 +12,11 @@ package org
 
 import (
 	"encoding/json"
-	"errors"
 	"net/http"
 	"strings"
 
 	"github.com/psiloconvalley/404not403/internal/app"
-	"github.com/psiloconvalley/404not403/internal/domain"
+	"github.com/psiloconvalley/404not403/internal/handler/shared"
 	"github.com/psiloconvalley/404not403/internal/middleware"
 	"github.com/psiloconvalley/404not403/internal/store"
 	orgsvc "github.com/psiloconvalley/404not403/internal/service/org"
@@ -49,12 +48,6 @@ func writeError(w http.ResponseWriter, status int, msg string) {
 	writeJSON(w, status, map[string]string{"error": msg})
 }
 
-func domainErrStatus(err error) int {
-	if errors.Is(err, domain.ErrUnauthorized) {
-		return http.StatusForbidden
-	}
-	return http.StatusInternalServerError
-}
 
 // orgIDFromPath extracts org ID from /api/orgs/{orgID}/...
 func orgIDFromPath(r *http.Request) string {
@@ -126,7 +119,7 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 
 	ctx, err := h.svc.Get(r.Context(), orgID, userID)
 	if err != nil {
-		writeError(w, domainErrStatus(err), err.Error())
+		writeError(w, shared.DomainErrStatus(err), err.Error())
 		return
 	}
 
@@ -208,7 +201,7 @@ func (h *Handler) Invite(w http.ResponseWriter, r *http.Request) {
 		TargetUserID:     input.TargetUserID,
 		Role:             input.Role,
 	}); err != nil {
-		writeError(w, domainErrStatus(err), err.Error())
+		writeError(w, shared.DomainErrStatus(err), err.Error())
 		return
 	}
 
@@ -263,7 +256,7 @@ func (h *Handler) UpdateRole(w http.ResponseWriter, r *http.Request) {
 		TargetUserID:     targetUserID,
 		NewRole:          input.Role,
 	}); err != nil {
-		writeError(w, domainErrStatus(err), err.Error())
+		writeError(w, shared.DomainErrStatus(err), err.Error())
 		return
 	}
 
@@ -300,7 +293,7 @@ func (h *Handler) RemoveMember(w http.ResponseWriter, r *http.Request) {
 	targetUserID := parts[1]
 
 	if err := h.svc.RemoveMember(r.Context(), orgID, userID, targetUserID); err != nil {
-		writeError(w, domainErrStatus(err), err.Error())
+		writeError(w, shared.DomainErrStatus(err), err.Error())
 		return
 	}
 
@@ -349,7 +342,7 @@ func (h *Handler) UpdateSettings(w http.ResponseWriter, r *http.Request) {
 		InboundEmail:     input.InboundEmail,
 	})
 	if err != nil {
-		writeError(w, domainErrStatus(err), err.Error())
+		writeError(w, shared.DomainErrStatus(err), err.Error())
 		return
 	}
 

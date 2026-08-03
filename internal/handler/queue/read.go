@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/psiloconvalley/404not403/internal/handler/shared"
 	"github.com/psiloconvalley/404not403/internal/middleware"
 	"github.com/psiloconvalley/404not403/internal/store"
 )
@@ -32,7 +33,7 @@ func (h *Handler) Sidebar(w http.ResponseWriter, r *http.Request) {
 
 	data, err := h.svc.ListForSidebar(r.Context(), orgID, userID)
 	if err != nil {
-		writeError(w, domainErrStatus(err), err.Error())
+		writeError(w, shared.DomainErrStatus(err), err.Error())
 		return
 	}
 
@@ -71,7 +72,7 @@ func (h *Handler) ListTickets(w http.ResponseWriter, r *http.Request) {
 
 	tickets, err := h.svc.ListTicketsByQueue(r.Context(), orgID, queueID, userID)
 	if err != nil {
-		writeError(w, domainErrStatus(err), err.Error())
+		writeError(w, shared.DomainErrStatus(err), err.Error())
 		return
 	}
 

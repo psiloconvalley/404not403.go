@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/psiloconvalley/404not403/internal/handler/shared"
 	"github.com/psiloconvalley/404not403/internal/middleware"
 	"github.com/psiloconvalley/404not403/internal/store"
 	ticketsvc "github.com/psiloconvalley/404not403/internal/service/ticket"
@@ -36,7 +37,7 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 
 	ctx, err := h.svc.Get(r.Context(), orgID, ticketID)
 	if err != nil {
-		writeError(w, domainErrStatus(err), err.Error())
+		writeError(w, shared.DomainErrStatus(err), err.Error())
 		return
 	}
 
@@ -85,7 +86,7 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 		Limit:      50,
 	})
 	if err != nil {
-		writeError(w, domainErrStatus(err), err.Error())
+		writeError(w, shared.DomainErrStatus(err), err.Error())
 		return
 	}
 
@@ -130,7 +131,7 @@ func (h *Handler) Search(w http.ResponseWriter, r *http.Request) {
 
 	tickets, err := h.svc.Search(r.Context(), orgID, query, 50)
 	if err != nil {
-		writeError(w, domainErrStatus(err), err.Error())
+		writeError(w, shared.DomainErrStatus(err), err.Error())
 		return
 	}
 

@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/psiloconvalley/404not403/internal/handler/shared"
 	"github.com/psiloconvalley/404not403/internal/middleware"
 	queuesvc "github.com/psiloconvalley/404not403/internal/service/queue"
 	"github.com/psiloconvalley/404not403/internal/store"
@@ -55,7 +56,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		Icon:             input.Icon,
 	})
 	if err != nil {
-		writeError(w, domainErrStatus(err), err.Error())
+		writeError(w, shared.DomainErrStatus(err), err.Error())
 		return
 	}
 
@@ -102,7 +103,7 @@ func (h *Handler) AssignTicket(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.svc.AssignTicket(r.Context(), orgID, queueID, input.TicketID, userID); err != nil {
-		writeError(w, domainErrStatus(err), err.Error())
+		writeError(w, shared.DomainErrStatus(err), err.Error())
 		return
 	}
 

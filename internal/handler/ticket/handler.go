@@ -13,12 +13,10 @@ package ticket
 
 import (
 	"encoding/json"
-	"errors"
 	"net/http"
 	"strings"
 
 	"github.com/psiloconvalley/404not403/internal/app"
-	"github.com/psiloconvalley/404not403/internal/domain"
 	ticketsvc "github.com/psiloconvalley/404not403/internal/service/ticket"
 )
 
@@ -61,23 +59,6 @@ func orgIDFromPath(r *http.Request, prefix string) string {
 	return parts[0]
 }
 
-// domainErrStatus maps domain errors to HTTP status codes.
-func domainErrStatus(err error) int {
-	switch {
-	case errors.Is(err, domain.ErrUnauthorized):
-		return http.StatusForbidden
-	case errors.Is(err, domain.ErrInvalidTransition):
-		return http.StatusUnprocessableEntity
-	case errors.Is(err, domain.ErrInvalidPriority):
-		return http.StatusBadRequest
-	case errors.Is(err, domain.ErrInvalidStatus):
-		return http.StatusBadRequest
-	case errors.Is(err, domain.ErrTicketClosed):
-		return http.StatusUnprocessableEntity
-	default:
-		return http.StatusInternalServerError
-	}
-}
 
 // ── Create ────────────────────────────────────────────────────────────────────
 
