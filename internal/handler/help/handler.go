@@ -24,6 +24,7 @@ import (
 	"github.com/psiloconvalley/404not403/internal/app"
 	"github.com/psiloconvalley/404not403/internal/domain"
 	"github.com/psiloconvalley/404not403/internal/store"
+	"github.com/psiloconvalley/404not403/internal/provider/email"
 )
 
 // Handler holds help portal dependencies.
@@ -210,6 +211,7 @@ func (h *Handler) Submit(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Generate tracking token if customer doesn't have one
+	var trackingURL string
 	if customer.TrackingTokenHash == nil {
 		rawToken, tokenHash, err := generateToken()
 		if err != nil {
@@ -222,7 +224,26 @@ func (h *Handler) Submit(w http.ResponseWriter, r *http.Request) {
 			writeError(w, http.StatusInternalServerError, "failed to store tracking token")
 			return
 		}
-		_ = rawToken
+
+		trackingURL = fmt.Sprintf("https://404not403.com/help/track?token=%s", rawToken)
+
+		// Send confirmation email with tracking link
+		h.app.Email.Send(r.Context(), email.SendInput{
+			To:      input.Email,
+			Subject: "Your request has been received — " + input.Subject,
+			Body: fmt.Sprintf(
+				`<div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:2rem;">
+				<h2 style="color:#292524;">We've received your request</h2>
+				<p style="color:#57534e;">Hi %s,</p>
+				<p style="color:#57534e;">Your request <strong>"%s"</strong> has been submitted to %s. Our team will get back to you shortly.</p>
+				<p><a href="%s" style="display:inline-block;padding:0.6rem 1.2rem;background:#c2410c;color:#fff;text-decoration:none;border-radius:6px;">Track Your Request</a></p>
+				<p style="color:#a8a29e;font-size:0.85rem;">This link expires in 30 days.</p>
+				<hr style="border:none;border-top:1px solid #e2ddd5;margin:1.5rem 0;">
+				<p style="color:#a8a29e;font-size:0.8rem;">Powered by 404NOT403</p>
+				</div>`,
+				input.Name, input.Subject, org.Name, trackingURL,
+			),
+		})
 	}
 
 	// Create ticket with catalog-derived routing
