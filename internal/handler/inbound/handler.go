@@ -13,6 +13,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"os"
 	"strings"
 
 	"github.com/psiloconvalley/404not403/internal/app"
@@ -41,6 +42,17 @@ func (h *Handler) ResendEmail(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "use POST", http.StatusMethodNotAllowed)
 		return
+	}
+
+	// Verify webhook secret if configured
+	webhookSecret := os.Getenv("INBOUND_WEBHOOK_SECRET")
+	if webhookSecret != "" {
+		providedSecret := r.Header.Get("X-Webhook-Secret")
+		if providedSecret != webhookSecret {
+			log.Printf("inbound: invalid webhook secret")
+			http.Error(w, "unauthorized", http.StatusUnauthorized)
+			return
+		}
 	}
 
 	// Read raw body — we store this before any parsing
