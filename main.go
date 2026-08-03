@@ -20,6 +20,7 @@ import (
 	orghandler "github.com/psiloconvalley/404not403/internal/handler/org"
 	tickethandler "github.com/psiloconvalley/404not403/internal/handler/ticket"
 	inboundhandler "github.com/psiloconvalley/404not403/internal/handler/inbound"
+	cataloghandler "github.com/psiloconvalley/404not403/internal/handler/catalog"
 	"github.com/psiloconvalley/404not403/internal/middleware"
 	"github.com/psiloconvalley/404not403/internal/provider/ai"
 	"github.com/psiloconvalley/404not403/internal/provider/email"
@@ -83,6 +84,7 @@ func main() {
 	helpPortal := helphandler.New(a)
 	queues := queuehandler.New(a)
 	inbound := inboundhandler.New(a)
+	catalog := cataloghandler.New(a)
 
 	// 7. Worker — background job processor (AI enrichment)
 	go worker.Start(ctx, a)
@@ -127,7 +129,7 @@ func main() {
 	// ── Org routes ────────────────────────────────────────────────────
 	mux.HandleFunc("/api/orgs", middleware.RequireAuth(a, orgs.Create))
 	mux.HandleFunc("/api/orgs/me", middleware.RequireAuth(a, orgs.ListMine))
-	mux.HandleFunc("/api/orgs/", middleware.RequireAuth(a, orgRouter(orgs, tickets, queues)))
+	mux.HandleFunc("/api/orgs/", middleware.RequireAuth(a, orgRouter(orgs, tickets, queues, catalog)))
 
 	// ── Ticket routes ─────────────────────────────────────────────────
 	// All ticket routes go through /api/orgs/{orgID}/tickets/...
@@ -182,7 +184,7 @@ func main() {
 // orgRouter routes /api/orgs/{orgID}/... requests to the correct handler.
 // This avoids registering dozens of individual routes.
 // Standard library ServeMux matches by prefix — this function does the sub-routing.
-func orgRouter(orgs *orghandler.Handler, tickets *tickethandler.Handler, qh *queuehandler.Handler) http.HandlerFunc {
+func orgRouter(orgs *orghandler.Handler, tickets *tickethandler.Handler, qh *queuehandler.Handler, cat *cataloghandler.Handler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		path := r.URL.Path
 
@@ -237,6 +239,20 @@ func orgRouter(orgs *orghandler.Handler, tickets *tickethandler.Handler, qh *que
 		case hasSuffix(path, "/settings"):
 			orgs.UpdateSettings(w, r)
 
+
+		// Catalog routes: /api/orgs/{orgID}/catalog/...
+		case contains(path, "/catalog/"):
+			if r.Method == http.MethodDelete {
+				cat.Delete(w, r)
+			} else {
+				cat.Update(w, r)
+			}
+		case hasSuffix(path, "/catalog"):
+			if r.Method == http.MethodPost {
+				cat.Create(w, r)
+			} else {
+				cat.List(w, r)
+			}
 		// Org detail: /api/orgs/{orgID}
 		default:
 			orgs.Get(w, r)
