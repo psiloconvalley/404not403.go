@@ -513,3 +513,18 @@ func ListTicketsForAgent(db *sql.DB, orgID, userID string, limit int) ([]Ticket,
 	}
 	return tickets, rows.Err()
 }
+
+// NextTicketSequence atomically increments and returns the next ticket number for an org.
+// Uses INSERT ON CONFLICT to initialize the counter if it doesn't exist.
+func NextTicketSequence(db *sql.DB, orgID string) (int64, error) {
+	var seq int64
+	err := db.QueryRow(`
+		INSERT INTO ticket_sequences (org_id, counter)
+		VALUES ($1, 1)
+		ON CONFLICT (org_id) DO UPDATE
+		SET counter = ticket_sequences.counter + 1
+		RETURNING counter`,
+		orgID,
+	).Scan(&seq)
+	return seq, err
+}

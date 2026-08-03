@@ -514,6 +514,53 @@ func RunMigrations(db *sql.DB) {
 			last_used_at    TIMESTAMPTZ
 		)`},
 		{name: "idx_passkeys_user", sql: `CREATE INDEX IF NOT EXISTS idx_passkeys_user ON passkeys(user_id)`},
+		{name: "add_ticket_type", sql: `ALTER TABLE tickets ADD COLUMN IF NOT EXISTS ticket_type TEXT NOT NULL DEFAULT 'service_request'`},
+		{name: "add_ticket_sequence", sql: `ALTER TABLE tickets ADD COLUMN IF NOT EXISTS sequence_num INT NOT NULL DEFAULT 0`},
+		{name: "add_ticket_display_id", sql: `ALTER TABLE tickets ADD COLUMN IF NOT EXISTS display_id TEXT NOT NULL DEFAULT ''`},
+		{name: "idx_ticket_display_id", sql: `CREATE UNIQUE INDEX IF NOT EXISTS idx_ticket_display_id ON tickets(org_id, display_id) WHERE display_id != ''`},
+		{name: "create_ticket_sequences", sql: `CREATE TABLE IF NOT EXISTS ticket_sequences (
+			org_id  UUID NOT NULL REFERENCES organizations(id),
+			counter BIGINT NOT NULL DEFAULT 0,
+			PRIMARY KEY (org_id)
+		)`},
+		{name: "create_catalog_items", sql: `CREATE TABLE IF NOT EXISTS catalog_items (
+			id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+			org_id           UUID NOT NULL REFERENCES organizations(id),
+			queue_id         UUID REFERENCES queues(id),
+			name             TEXT NOT NULL,
+			description      TEXT,
+			category         TEXT,
+			ticket_type      TEXT NOT NULL DEFAULT 'service_request',
+			default_priority TEXT NOT NULL DEFAULT 'P2',
+			sla_hours        INT,
+			form_fields      JSONB,
+			icon             TEXT,
+			active           BOOLEAN NOT NULL DEFAULT true,
+			sort_order       INT NOT NULL DEFAULT 0,
+			created_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
+			updated_at       TIMESTAMPTZ NOT NULL DEFAULT now()
+		)`},
+		{name: "idx_catalog_org", sql: `CREATE INDEX IF NOT EXISTS idx_catalog_org ON catalog_items(org_id)`},
+		{name: "idx_catalog_queue", sql: `CREATE INDEX IF NOT EXISTS idx_catalog_queue ON catalog_items(queue_id)`},
+		{name: "create_catalog_items", sql: `CREATE TABLE IF NOT EXISTS catalog_items (
+			id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+			org_id           UUID NOT NULL REFERENCES organizations(id),
+			queue_id         UUID REFERENCES queues(id),
+			name             TEXT NOT NULL,
+			description      TEXT,
+			category         TEXT,
+			ticket_type      TEXT NOT NULL DEFAULT 'service_request',
+			default_priority TEXT NOT NULL DEFAULT 'P2',
+			sla_hours        INT,
+			form_fields      JSONB,
+			icon             TEXT,
+			active           BOOLEAN NOT NULL DEFAULT true,
+			sort_order       INT NOT NULL DEFAULT 0,
+			created_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
+			updated_at       TIMESTAMPTZ NOT NULL DEFAULT now()
+		)`},
+		{name: "idx_catalog_org", sql: `CREATE INDEX IF NOT EXISTS idx_catalog_org ON catalog_items(org_id)`},
+		{name: "idx_catalog_queue", sql: `CREATE INDEX IF NOT EXISTS idx_catalog_queue ON catalog_items(queue_id)`},
 	}
 
 	for _, m := range migrations {
