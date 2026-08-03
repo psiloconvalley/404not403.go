@@ -230,9 +230,12 @@
 }
 
 /* ── Views ── */
+/* ── Views ── */
 .view {
-    width: 100%;
-    max-width: 100%;
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem;
+}
     padding: 1.5rem;
 }
 .view-header {
@@ -1025,14 +1028,6 @@
     max-width: 600px;
 }
 
-/* ── Settings View Centering ── */
-#view-settings-org,
-#view-settings-account,
-#view-settings-queue {
-    max-width: 700px;
-    margin: 0 auto;
-    padding: 2rem 1.5rem;
-}
 
 /* ── Toast Notifications ── */
 .toast-container {
@@ -1087,14 +1082,6 @@
     to   { opacity: 0; transform: translateX(1rem); }
 }
 
-/* ── Content Density ── */
-.queue-main-header,
-.ticket-list,
-.inline-form,
-.detail-card,
-.detail-topbar {
-    max-width: 900px;
-}
 
 .ticket-card {
     padding: 0.45rem 0.75rem;
