@@ -1,0 +1,137 @@
+/* ── 404NOT403 · ITSM Design System — Cloud Dancer + Terracotta ──────────── */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+:root {
+    /* Cloud Dancer — Pantone 2026 */
+    --bg:             #faf9f7;
+    --bg-subtle:      #f3f1ed;
+    --surface:        #ffffff;
+    --surface-hover:  #f7f5f2;
+    --border:         #e2ddd5;
+    --border-bright:  #c5bdb2;
+
+    /* Text — warm grays, not blue-grays */
+    --text-primary:   #292524;
+    --text-secondary: #57534e;
+    --text-muted:     #a8a29e;
+
+    /* Terracotta — Burnt Sienna accent */
+    --accent:         #c2410c;
+    --accent-hover:   #9a3412;
+    --accent-subtle:  rgba(194, 65, 12, 0.07);
+    --accent-text:    #ffffff;
+
+    /* Priority — semantic, universal */
+    --priority-p0:    #dc2626;
+    --priority-p0-bg: rgba(220, 38, 38, 0.07);
+    --priority-p1:    #ea580c;
+    --priority-p1-bg: rgba(234, 88, 12, 0.07);
+    --priority-p2:    #ca8a04;
+    --priority-p2-bg: rgba(202, 138, 4, 0.07);
+    --priority-p3:    #78716c;
+    --priority-p3-bg: rgba(120, 113, 108, 0.06);
+
+    /* Status — muted, professional */
+    --status-open:       #2563eb;
+    --status-open-bg:    rgba(37, 99, 235, 0.07);
+    --status-assigned:   #7c3aed;
+    --status-assigned-bg: rgba(124, 58, 237, 0.07);
+    --status-progress:   #0891b2;
+    --status-progress-bg: rgba(8, 145, 178, 0.07);
+    --status-pending:    #d97706;
+    --status-pending-bg: rgba(217, 119, 6, 0.07);
+    --status-resolved:   #16a34a;
+    --status-resolved-bg: rgba(22, 163, 74, 0.07);
+    --status-closed:     #78716c;
+    --status-closed-bg:  rgba(120, 113, 108, 0.05);
+
+    /* Shadows — warm tinted */
+    --shadow-sm:  0 1px 2px rgba(41, 37, 36, 0.04);
+    --shadow-md:  0 4px 6px rgba(41, 37, 36, 0.04), 0 1px 3px rgba(41, 37, 36, 0.06);
+    --shadow-lg:  0 10px 15px rgba(41, 37, 36, 0.06), 0 4px 6px rgba(41, 37, 36, 0.04);
+
+    /* Typography */
+    --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+
+    /* Radius */
+    --radius-sm: 6px;
+    --radius-md: 8px;
+    --radius-lg: 12px;
+}
+
+/* ── Reset ── */
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { height: 100%; }
+
+body {
+    background: var(--bg-subtle);
+    color: var(--text-secondary);
+    font-family: var(--font-sans);
+    font-size: 14px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+}
+
+a { color: var(--accent); text-decoration: none; }
+a:hover { color: var(--accent-hover); }
+
+/* ── Logo ── */
+.logo {
+    font-size: 1.4rem;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    line-height: 1;
+}
+.logo-404 { color: var(--priority-p0); }
+.logo-not { color: var(--text-primary); opacity: 0.4; }
+.logo-403 { color: var(--accent); }
+
+/* ── Buttons ── */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    font-family: var(--font-sans);
+    font-size: 0.8rem;
+    font-weight: 500;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text-secondary);
+    cursor: pointer;
+    border-radius: var(--radius-sm);
+    transition: border-color 0.15s, color 0.15s, background 0.15s, box-shadow 0.15s;
+    box-shadow: var(--shadow-sm);
+}
+.btn:hover {
+    border-color: var(--border-bright);
+    color: var(--text-primary);
+    background: var(--surface-hover);
+}
+.btn-primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--accent-text);
+    box-shadow: var(--shadow-sm);
+}
+.btn-primary:hover {
+    background: var(--accent-hover);
+    border-color: var(--accent-hover);
+    color: var(--accent-text);
+    box-shadow: var(--shadow-md);
+}
+.btn-ghost {
+    border-color: transparent;
+    background: transparent;
+    box-shadow: none;
+}
+.btn-ghost:hover {
+    background: var(--surface-hover);
+    border-color: var(--border);
+}
+.btn-sm { padding: 0.3rem 0.65rem; font-size: 0.75rem; }
+.btn-full { width: 100%; }
+
