@@ -322,6 +322,65 @@
                         </div>
                     </div>
                 </div>
+
+                <div class="settings-card">
+                    <div class="settings-card-header" style="display:flex;justify-content:space-between;align-items:center;">
+                        Service Catalog
+                        <button onclick="showAddCatalogItem()" class="btn btn-primary btn-sm">+ Add Service</button>
+                    </div>
+                    <p class="settings-hint" style="margin-bottom:0.75rem">Services employees can request from this queue</p>
+                    <div id="catalog-items-list"></div>
+
+                    <div id="catalog-add-form" style="display:none;" class="settings-field" style="margin-top:0.75rem;">
+                        <div class="settings-field">
+                            <label class="settings-label">Service Name</label>
+                            <input type="text" id="catalog-item-name" class="settings-input" placeholder="e.g. Request New Laptop">
+                        </div>
+                        <div class="settings-field">
+                            <label class="settings-label">Description</label>
+                            <input type="text" id="catalog-item-desc" class="settings-input" placeholder="What this service provides">
+                        </div>
+                        <div class="settings-invite-row">
+                            <div class="settings-field" style="flex:1;">
+                                <label class="settings-label">Category</label>
+                                <input type="text" id="catalog-item-category" class="settings-input" placeholder="e.g. Hardware">
+                            </div>
+                            <div class="settings-field" style="flex:1;">
+                                <label class="settings-label">Type</label>
+                                <select id="catalog-item-type" class="settings-input">
+                                    <option value="service_request">Service Request</option>
+                                    <option value="incident">Incident</option>
+                                    <option value="change">Change Request</option>
+                                    <option value="problem">Problem</option>
+                                    <option value="task">Task</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="settings-invite-row">
+                            <div class="settings-field" style="flex:1;">
+                                <label class="settings-label">Priority</label>
+                                <select id="catalog-item-priority" class="settings-input">
+                                    <option value="P3">P3 — Low</option>
+                                    <option value="P2" selected>P2 — Medium</option>
+                                    <option value="P1">P1 — High</option>
+                                    <option value="P0">P0 — Critical</option>
+                                </select>
+                            </div>
+                            <div class="settings-field" style="flex:1;">
+                                <label class="settings-label">SLA (hours)</label>
+                                <input type="number" id="catalog-item-sla" class="settings-input" placeholder="72">
+                            </div>
+                            <div class="settings-field" style="flex:1;">
+                                <label class="settings-label">Icon</label>
+                                <input type="text" id="catalog-item-icon" class="settings-input" placeholder="💻">
+                            </div>
+                        </div>
+                        <div class="settings-field">
+                            <button onclick="createCatalogItem()" class="btn btn-primary btn-sm">Create Service</button>
+                            <button onclick="hideCatalogForm()" class="btn btn-ghost btn-sm">Cancel</button>
+                        </div>
+                    </div>
+                </div>
             </div>
 
         </div><!-- /.workspace-main -->
@@ -1114,6 +1173,7 @@ async function loadQueueSettings() {
     document.getElementById('settings-queue-color').value = q.color || '';
     renderQueueMembers(data.members || []);
     loadOrgMembersForSelect();
+    loadCatalogItems();
 }
 
 async function saveQueueSettings() {
@@ -1315,6 +1375,109 @@ function bufferToBase64url(buffer) {
     let binary = '';
     for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
     return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+
+// ── Service Catalog ──────────────────────────────────────────────────────────
+function showAddCatalogItem() {
+    document.getElementById('catalog-add-form').style.display = 'block';
+}
+function hideCatalogForm() {
+    document.getElementById('catalog-add-form').style.display = 'none';
+}
+
+async function loadCatalogItems() {
+    if (!currentOrgID || !currentSettingsQueueID) return;
+    const res = await fetch('/api/orgs/' + currentOrgID + '/catalog?queue_id=' + currentSettingsQueueID);
+    if (!res.ok) return;
+    const data = await res.json();
+    renderCatalogItems(data.items || []);
+}
+
+function renderCatalogItems(items) {
+    const list = document.getElementById('catalog-items-list');
+    list.innerHTML = '';
+    if (items.length === 0) {
+        list.innerHTML = '<p class="empty">No services yet. Add your first service above.</p>';
+        return;
+    }
+
+    items.forEach(function(item) {
+        const row = document.createElement('div');
+        row.className = 'settings-member-row';
+        const typeMap = {service_request:'SR', incident:'INC', change:'CHG', problem:'PRB', task:'TSK'};
+        const typeCode = typeMap[item.ticket_type] || item.ticket_type;
+        row.innerHTML =
+            '<span style="margin-right:0.5rem">' + escapeHTML(item.icon || '📋') + '</span>' +
+            '<span class="settings-member-name" style="flex:1">' + escapeHTML(item.name) + '</span>' +
+            '<span class="settings-hint" style="margin-right:0.5rem">' + escapeHTML(item.category || '') + '</span>' +
+            '<span class="org-role">' + escapeHTML(typeCode) + '</span>' +
+            '<span class="org-role" style="margin-left:0.25rem">' + escapeHTML(item.default_priority) + '</span>' +
+            (item.sla_hours ? '<span class="settings-hint" style="margin-left:0.25rem">' + item.sla_hours + 'h SLA</span>' : '') +
+            '<button class="btn btn-ghost btn-sm" style="margin-left:0.5rem" onclick="deleteCatalogItem(\'' + item.id + '\')">✕</button>';
+        list.appendChild(row);
+    });
+}
+
+async function createCatalogItem() {
+    if (!currentOrgID || !currentSettingsQueueID) return;
+    const name = document.getElementById('catalog-item-name').value.trim();
+    const desc = document.getElementById('catalog-item-desc').value.trim();
+    const category = document.getElementById('catalog-item-category').value.trim();
+    const ticketType = document.getElementById('catalog-item-type').value;
+    const priority = document.getElementById('catalog-item-priority').value;
+    const slaStr = document.getElementById('catalog-item-sla').value.trim();
+    const icon = document.getElementById('catalog-item-icon').value.trim();
+
+    if (!name) { showToast('warn', 'Service name is required'); return; }
+
+    const body = {
+        queue_id: currentSettingsQueueID,
+        name: name,
+        ticket_type: ticketType,
+        default_priority: priority
+    };
+    if (desc) body.description = desc;
+    if (category) body.category = category;
+    if (slaStr) body.sla_hours = parseInt(slaStr);
+    if (icon) body.icon = icon;
+
+    const res = await fetch('/api/orgs/' + currentOrgID + '/catalog', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(body)
+    });
+
+    if (res.ok) {
+        hideCatalogForm();
+        document.getElementById('catalog-item-name').value = '';
+        document.getElementById('catalog-item-desc').value = '';
+        document.getElementById('catalog-item-category').value = '';
+        document.getElementById('catalog-item-sla').value = '';
+        document.getElementById('catalog-item-icon').value = '';
+        loadCatalogItems();
+        showToast('success', 'Service created');
+    } else {
+        const d = await res.json();
+        showToast('error', d.error || 'Failed to create service');
+    }
+}
+
+async function deleteCatalogItem(itemID) {
+    if (!currentOrgID) return;
+    if (!confirm('Remove this service from the catalog?')) return;
+
+    const res = await fetch('/api/orgs/' + currentOrgID + '/catalog/' + itemID, {
+        method: 'DELETE'
+    });
+
+    if (res.ok) {
+        loadCatalogItems();
+        showToast('success', 'Service removed');
+    } else {
+        const d = await res.json();
+        showToast('error', d.error || 'Failed to remove service');
+    }
 }
 
 init();
