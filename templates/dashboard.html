@@ -37,11 +37,11 @@
                     <span class="sidebar-item-name"><svg class="icon icon-sm"><use href="/static/icons/sprite.svg#icon-ticket"></use></svg> Assigned to Me</span>
                     <span id="count-total" class="sidebar-count"></span>
                 </div>
-                <div class="sidebar-item" onclick="selectUnassigned()">
+                <div id="sidebar-unassigned" class="sidebar-item" onclick="selectUnassigned()">
                     <span class="sidebar-item-name"><svg class="icon icon-sm"><use href="/static/icons/sprite.svg#icon-clipboard-list"></use></svg> Unassigned</span>
                     <span id="count-unassigned" class="sidebar-count sidebar-count-warn"></span>
                 </div>
-                <div class="sidebar-item" onclick="selectUrgent()">
+                <div id="sidebar-urgent" class="sidebar-item" onclick="selectUrgent()">
                     <span class="sidebar-item-name"><svg class="icon icon-sm" style="color:var(--priority-p0)"><use href="/static/icons/sprite.svg#icon-alert-triangle"></use></svg> Urgent (P0/P1)</span>
                     <span id="count-urgent" class="sidebar-count sidebar-count-crit"></span>
                 </div>
@@ -620,14 +620,14 @@ function selectUnassigned() {
     currentQueueID   = null;
     currentQueueName = 'Needs Owner';
     document.getElementById('queue-title').textContent = 'Needs Owner';
-    loadTicketsFiltered({assigned_to: 'null'}); showView('queue');
+    setSidebarActive('sidebar-unassigned'); loadTicketsFiltered({assigned_to: 'null'}); showView('queue');
 }
 
 function selectUrgent() {
     currentQueueID   = null;
     currentQueueName = 'Urgent';
     document.getElementById('queue-title').textContent = 'Urgent — P0 / P1';
-    loadTicketsFiltered({priority: 'P0'}); showView('queue');
+    setSidebarActive('sidebar-urgent'); loadTicketsFiltered({priority: 'P0'}); showView('queue');
 }
 
 function selectQueue(queueID, queueName) {
