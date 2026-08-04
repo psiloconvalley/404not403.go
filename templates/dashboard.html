@@ -1418,10 +1418,68 @@ async function loadAccountSettings() {
 }
 
 async function loadPasskeys() {
-    // Passkeys are loaded via registration begin (no separate list endpoint yet)
-    // For now show a placeholder
     const list = document.getElementById('passkey-list');
-    list.innerHTML = '<p class="settings-hint">Passkey management active — add your first passkey below.</p>';
+    list.innerHTML = '';
+
+    try {
+        const res = await fetch('/api/auth/passkeys');
+        if (!res.ok) {
+            list.innerHTML = '<p class="settings-hint">Failed to load passkeys.</p>';
+            return;
+        }
+        const data = await res.json();
+        const passkeys = data.passkeys || [];
+
+        if (passkeys.length === 0) {
+            list.innerHTML = '<p class="settings-hint">No passkeys registered yet. Add one below.</p>';
+            return;
+        }
+
+        passkeys.forEach(function(pk) {
+            const row = document.createElement('div');
+            row.className = 'settings-member-row';
+
+            const name = document.createElement('span');
+            name.className = 'settings-member-name';
+            name.textContent = pk.name || 'Passkey';
+
+            const meta = document.createElement('span');
+            meta.className = 'settings-hint';
+            meta.style.marginLeft = '0.5rem';
+            const created = timeAgo(pk.created_at);
+            const lastUsed = pk.last_used_at ? timeAgo(pk.last_used_at) : 'never';
+            meta.textContent = 'Added ' + created + ' · Last used: ' + lastUsed + ' · Sign count: ' + pk.sign_count;
+
+            const deleteBtn = document.createElement('button');
+            deleteBtn.className = 'btn btn-ghost btn-sm';
+            deleteBtn.innerHTML = icon('x', 'sm');
+            deleteBtn.onclick = function() { deletePasskey(pk.id, pk.name || 'Passkey'); };
+
+            row.appendChild(name);
+            row.appendChild(meta);
+            row.appendChild(deleteBtn);
+            list.appendChild(row);
+        });
+    } catch (err) {
+        list.innerHTML = '<p class="settings-hint">Failed to load passkeys.</p>';
+    }
+}
+
+async function deletePasskey(passkeyID, name) {
+    if (!confirm('Remove passkey "' + name + '"? You will no longer be able to sign in with it.')) return;
+
+    try {
+        const res = await fetch('/api/auth/passkeys/delete?id=' + passkeyID, {method: 'DELETE'});
+        if (res.ok) {
+            showToast('success', 'Passkey removed');
+            loadPasskeys();
+        } else {
+            const d = await res.json();
+            showToast('error', d.error || 'Failed to remove passkey');
+        }
+    } catch (err) {
+        showToast('error', 'Failed to remove passkey');
+    }
 }
 
 async function registerPasskey() {
@@ -1473,9 +1531,9 @@ async function registerPasskey() {
         });
 
         if (finishRes.ok) {
-            statusEl.textContent = '✓ Passkey registered';
-            statusEl.style.color = 'var(--status-resolved)';
+            statusEl.textContent = '';
             showToast('success', 'Passkey registered successfully');
+            loadPasskeys();
         } else {
             const d = await finishRes.json();
             statusEl.textContent = d.error || 'Registration failed';

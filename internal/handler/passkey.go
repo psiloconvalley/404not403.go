@@ -276,3 +276,82 @@ func PasskeyLoginFinish(a *app.App) http.HandlerFunc {
 		})
 	}
 }
+
+// PasskeyList handles GET /api/auth/passkeys
+func PasskeyList(a *app.App) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, `{"error":"use GET"}`, http.StatusMethodNotAllowed)
+			return
+		}
+
+		userID := middleware.GetUserID(r)
+		if userID == "" {
+			http.Error(w, `{"error":"not authenticated"}`, http.StatusUnauthorized)
+			return
+		}
+
+		passkeys, err := store.GetPasskeysForUser(a.DB, userID)
+		if err != nil {
+			log.Printf("passkey: list failed: %v", err)
+			http.Error(w, `{"error":"failed to load passkeys"}`, http.StatusInternalServerError)
+			return
+		}
+
+		type passkeyResponse struct {
+			ID         string     `json:"id"`
+			Name       string     `json:"name"`
+			SignCount  int64      `json:"sign_count"`
+			CreatedAt  string     `json:"created_at"`
+			LastUsedAt *string    `json:"last_used_at,omitempty"`
+		}
+
+		items := make([]passkeyResponse, len(passkeys))
+		for i, p := range passkeys {
+			items[i] = passkeyResponse{
+				ID:        p.ID,
+				Name:      p.Name,
+				SignCount: p.SignCount,
+				CreatedAt: p.CreatedAt.Format("2006-01-02T15:04:05Z"),
+			}
+			if p.LastUsedAt != nil {
+				s := p.LastUsedAt.Format("2006-01-02T15:04:05Z")
+				items[i].LastUsedAt = &s
+			}
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]any{"passkeys": items})
+	}
+}
+
+// PasskeyDelete handles DELETE /api/auth/passkeys?id=
+func PasskeyDelete(a *app.App) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodDelete {
+			http.Error(w, `{"error":"use DELETE"}`, http.StatusMethodNotAllowed)
+			return
+		}
+
+		userID := middleware.GetUserID(r)
+		if userID == "" {
+			http.Error(w, `{"error":"not authenticated"}`, http.StatusUnauthorized)
+			return
+		}
+
+		passkeyID := r.URL.Query().Get("id")
+		if passkeyID == "" {
+			http.Error(w, `{"error":"passkey id is required"}`, http.StatusBadRequest)
+			return
+		}
+
+		if err := store.DeletePasskey(a.DB, userID, passkeyID); err != nil {
+			log.Printf("passkey: delete failed: %v", err)
+			http.Error(w, `{"error":"failed to delete passkey"}`, http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]string{"status": "deleted"})
+	}
+}

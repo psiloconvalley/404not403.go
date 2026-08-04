@@ -125,6 +125,8 @@ func main() {
 	mux.HandleFunc("/api/auth/passkey/register/finish", middleware.RequireAuth(a, handler.PasskeyRegisterFinish(a)))
 	mux.HandleFunc("/api/auth/passkey/login/begin", handler.PasskeyLoginBegin(a))
 	mux.HandleFunc("/api/auth/passkey/login/finish", handler.PasskeyLoginFinish(a))
+	mux.HandleFunc("/api/auth/passkeys", middleware.RequireAuth(a, handler.PasskeyList(a)))
+	mux.HandleFunc("/api/auth/passkeys/delete", middleware.RequireAuth(a, handler.PasskeyDelete(a)))
 
 	// ── Org routes ────────────────────────────────────────────────────
 	mux.HandleFunc("/api/orgs", middleware.RequireAuth(a, orgs.Create))
