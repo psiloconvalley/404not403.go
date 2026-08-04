@@ -258,12 +258,12 @@ func PasskeyLoginFinish(a *app.App) http.HandlerFunc {
 		}
 
 		http.SetCookie(w, &http.Cookie{
-			Name:     "token",
+			Name:     "session",
 			Value:    token,
 			Path:     "/",
 			HttpOnly: true,
 			Secure:   true,
-			SameSite: http.SameSiteLaxMode,
+			SameSite: http.SameSiteStrictMode,
 			MaxAge:   86400,
 		})
 
