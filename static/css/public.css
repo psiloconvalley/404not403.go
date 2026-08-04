@@ -58,6 +58,10 @@
     padding: 1.5rem;
     box-shadow: var(--shadow-sm);
 }
+.feature-icon {
+    margin-bottom: 0.75rem;
+    color: var(--accent);
+}
 .feature h3 {
     color: var(--text-primary);
     font-size: 0.9rem;
