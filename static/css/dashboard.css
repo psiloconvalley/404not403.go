@@ -166,6 +166,12 @@
 .priority-p1 { color: var(--priority-p1); background: var(--priority-p1-bg); }
 .priority-p2 { color: var(--priority-p2); background: var(--priority-p2-bg); }
 .priority-p3 { color: var(--priority-p3); background: var(--priority-p3-bg); }
+.ticket-display-id {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    font-family: monospace;
+    white-space: nowrap;
+}
 .ticket-subject {
     flex: 1;
     color: var(--text-primary);

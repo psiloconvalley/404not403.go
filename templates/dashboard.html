@@ -817,6 +817,11 @@ function renderTicketList(tickets) {
         priority.textContent = t.priority;
         left.appendChild(priority);
 
+        const ticketId = document.createElement('span');
+        ticketId.className = 'ticket-display-id';
+        ticketId.textContent = t.display_id || t.id.substring(0, 8);
+        left.appendChild(ticketId);
+
         const subject = document.createElement('span');
         subject.className = 'ticket-subject';
         subject.textContent = t.subject;
@@ -983,7 +988,7 @@ async function openTicket(ticketID) {
     statusEl.className = 'ticket-status status-' + t.status;
     statusEl.textContent = t.status.replace(/_/g, ' ');
 
-    document.getElementById('detail-subject').textContent = t.subject;
+    document.getElementById('detail-subject').textContent = (t.display_id || t.id.substring(0, 8)) + '  ' + t.subject;
     document.getElementById('detail-created').textContent = 'Opened ' + timeAgo(t.created_at);
     document.getElementById('detail-source').textContent = 'via ' + t.source_type;
     document.getElementById('detail-body').textContent = t.body;

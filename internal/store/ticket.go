@@ -16,6 +16,9 @@ import (
 type Ticket struct {
 	ID           string     `json:"id"`
 	OrgID        string     `json:"org_id"`
+	DisplayID    string     `json:"display_id"`
+	TicketType   string     `json:"ticket_type"`
+	SequenceNum  int        `json:"sequence_num"`
 	CustomerID   *string    `json:"customer_id,omitempty"`
 	AssignedTo   *string    `json:"assigned_to,omitempty"`
 	Subject      string     `json:"subject"`
@@ -61,13 +64,42 @@ func CreateTicket(db *sql.DB, p CreateTicketParams) (*Ticket, error) {
 		p.TicketType = "service_request"
 	}
 
+	// Get next sequence number for this org
+	var seqNum int64
+	err = tx.QueryRow(`
+		INSERT INTO ticket_sequences (org_id, counter)
+		VALUES ($1, 1)
+		ON CONFLICT (org_id) DO UPDATE
+		SET counter = ticket_sequences.counter + 1
+		RETURNING counter`,
+		p.OrgID,
+	).Scan(&seqNum)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get sequence: %w", err)
+	}
+
+	// Build display ID: REQ-{type_code}-{sequence}
+	typeCode := map[string]string{
+		"service_request": "SR",
+		"incident":        "INC",
+		"change":          "CHG",
+		"problem":         "PRB",
+		"task":            "TSK",
+	}[p.TicketType]
+	if typeCode == "" {
+		typeCode = "SR"
+	}
+	displayID := fmt.Sprintf("REQ-%s-%04d", typeCode, seqNum)
+
 	var t Ticket
 	err = tx.QueryRow(`
 		INSERT INTO tickets (
 			org_id, customer_id, subject, body,
-			status, priority, source_type, thread_id, ticket_type
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-		RETURNING id, org_id, customer_id, assigned_to,
+			status, priority, source_type, thread_id, ticket_type,
+			sequence_num, display_id
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+		RETURNING id, org_id, display_id, ticket_type, sequence_num,
+		          customer_id, assigned_to,
 		          subject, body, status, priority, category,
 		          source_type, thread_id, incident_id,
 		          sla_due_at, sla_breached,
@@ -76,8 +108,10 @@ func CreateTicket(db *sql.DB, p CreateTicketParams) (*Ticket, error) {
 		string(domain.DefaultStatus()),
 		p.Priority,
 		p.SourceType, p.ThreadID, p.TicketType,
+		seqNum, displayID,
 	).Scan(
-		&t.ID, &t.OrgID, &t.CustomerID, &t.AssignedTo,
+		&t.ID, &t.OrgID, &t.DisplayID, &t.TicketType, &t.SequenceNum,
+		&t.CustomerID, &t.AssignedTo,
 		&t.Subject, &t.Body, &t.Status, &t.Priority, &t.Category,
 		&t.SourceType, &t.ThreadID, &t.IncidentID,
 		&t.SLADueAt, &t.SLABreached,
@@ -113,7 +147,8 @@ func CreateTicket(db *sql.DB, p CreateTicketParams) (*Ticket, error) {
 func GetTicketByID(db *sql.DB, orgID, ticketID string) (*Ticket, error) {
 	var t Ticket
 	err := db.QueryRow(`
-		SELECT id, org_id, customer_id, assigned_to,
+		SELECT id, org_id, display_id, ticket_type, sequence_num,
+		       customer_id, assigned_to,
 		       subject, body, status, priority, category,
 		       source_type, thread_id, incident_id,
 		       sla_due_at, sla_breached,
@@ -122,7 +157,8 @@ func GetTicketByID(db *sql.DB, orgID, ticketID string) (*Ticket, error) {
 		WHERE org_id = $1 AND id = $2`,
 		orgID, ticketID,
 	).Scan(
-		&t.ID, &t.OrgID, &t.CustomerID, &t.AssignedTo,
+		&t.ID, &t.OrgID, &t.DisplayID, &t.TicketType, &t.SequenceNum,
+		&t.CustomerID, &t.AssignedTo,
 		&t.Subject, &t.Body, &t.Status, &t.Priority, &t.Category,
 		&t.SourceType, &t.ThreadID, &t.IncidentID,
 		&t.SLADueAt, &t.SLABreached,
@@ -142,7 +178,8 @@ func GetTicketByID(db *sql.DB, orgID, ticketID string) (*Ticket, error) {
 func GetTicketByThreadID(db *sql.DB, threadID string) (*Ticket, error) {
 	var t Ticket
 	err := db.QueryRow(`
-		SELECT id, org_id, customer_id, assigned_to,
+		SELECT id, org_id, display_id, ticket_type, sequence_num,
+		       customer_id, assigned_to,
 		       subject, body, status, priority, category,
 		       source_type, thread_id, incident_id,
 		       sla_due_at, sla_breached,
@@ -151,7 +188,8 @@ func GetTicketByThreadID(db *sql.DB, threadID string) (*Ticket, error) {
 		WHERE thread_id = $1`,
 		threadID,
 	).Scan(
-		&t.ID, &t.OrgID, &t.CustomerID, &t.AssignedTo,
+		&t.ID, &t.OrgID, &t.DisplayID, &t.TicketType, &t.SequenceNum,
+		&t.CustomerID, &t.AssignedTo,
 		&t.Subject, &t.Body, &t.Status, &t.Priority, &t.Category,
 		&t.SourceType, &t.ThreadID, &t.IncidentID,
 		&t.SLADueAt, &t.SLABreached,
@@ -185,7 +223,8 @@ func ListTickets(db *sql.DB, p ListTicketsParams) ([]Ticket, error) {
 	}
 
 	query := `
-		SELECT id, org_id, customer_id, assigned_to,
+		SELECT id, org_id, display_id, ticket_type, sequence_num,
+		       customer_id, assigned_to,
 		       subject, body, status, priority, category,
 		       source_type, thread_id, incident_id,
 		       sla_due_at, sla_breached,
@@ -227,7 +266,8 @@ func ListTickets(db *sql.DB, p ListTicketsParams) ([]Ticket, error) {
 	for rows.Next() {
 		var t Ticket
 		if err := rows.Scan(
-			&t.ID, &t.OrgID, &t.CustomerID, &t.AssignedTo,
+			&t.ID, &t.OrgID, &t.DisplayID, &t.TicketType, &t.SequenceNum,
+			&t.CustomerID, &t.AssignedTo,
 			&t.Subject, &t.Body, &t.Status, &t.Priority, &t.Category,
 			&t.SourceType, &t.ThreadID, &t.IncidentID,
 			&t.SLADueAt, &t.SLABreached,
@@ -247,7 +287,8 @@ func SearchTickets(db *sql.DB, orgID, query string, limit int) ([]Ticket, error)
 	}
 
 	rows, err := db.Query(`
-		SELECT id, org_id, customer_id, assigned_to,
+		SELECT id, org_id, display_id, ticket_type, sequence_num,
+		       customer_id, assigned_to,
 		       subject, body, status, priority, category,
 		       source_type, thread_id, incident_id,
 		       sla_due_at, sla_breached,
@@ -268,7 +309,8 @@ func SearchTickets(db *sql.DB, orgID, query string, limit int) ([]Ticket, error)
 	for rows.Next() {
 		var t Ticket
 		if err := rows.Scan(
-			&t.ID, &t.OrgID, &t.CustomerID, &t.AssignedTo,
+			&t.ID, &t.OrgID, &t.DisplayID, &t.TicketType, &t.SequenceNum,
+			&t.CustomerID, &t.AssignedTo,
 			&t.Subject, &t.Body, &t.Status, &t.Priority, &t.Category,
 			&t.SourceType, &t.ThreadID, &t.IncidentID,
 			&t.SLADueAt, &t.SLABreached,
@@ -483,7 +525,8 @@ func ListTicketsForAgent(db *sql.DB, orgID, userID string, limit int) ([]Ticket,
 	}
 
 	rows, err := db.Query(`
-		SELECT DISTINCT t.id, t.org_id, t.customer_id, t.assigned_to,
+		SELECT DISTINCT t.id, t.org_id, t.display_id, t.ticket_type, t.sequence_num,
+		       t.customer_id, t.assigned_to,
 		       t.subject, t.body, t.status, t.priority, t.category,
 		       t.source_type, t.thread_id, t.incident_id,
 		       t.sla_due_at, t.sla_breached,
@@ -506,7 +549,8 @@ func ListTicketsForAgent(db *sql.DB, orgID, userID string, limit int) ([]Ticket,
 	for rows.Next() {
 		var t Ticket
 		if err := rows.Scan(
-			&t.ID, &t.OrgID, &t.CustomerID, &t.AssignedTo,
+			&t.ID, &t.OrgID, &t.DisplayID, &t.TicketType, &t.SequenceNum,
+			&t.CustomerID, &t.AssignedTo,
 			&t.Subject, &t.Body, &t.Status, &t.Priority, &t.Category,
 			&t.SourceType, &t.ThreadID, &t.IncidentID,
 			&t.SLADueAt, &t.SLABreached,
