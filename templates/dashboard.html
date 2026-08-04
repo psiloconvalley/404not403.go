@@ -140,7 +140,7 @@
         <!-- Main: Ticket Detail -->
         <main class="queue-main">
             <div class="detail-topbar">
-                <button onclick="showQueue()" class="btn btn-ghost btn-sm">← Back</button>
+                <button onclick="showQueue()" class="btn btn-ghost btn-sm"><svg class="icon icon-sm"><use href="/static/icons/sprite.svg#icon-chevron-left"></use></svg> Back</button>
                 <div class="detail-topbar-actions">
                     <select id="action-status" onchange="changeStatus(this.value)" class="detail-select">
                         <option value="open">Open</option>
@@ -1348,7 +1348,7 @@ function renderQueueMembers(members) {
         row.innerHTML =
             '<span class="settings-member-name">' + m.user_id.substring(0, 8) + '...</span>' +
             '<span class="org-role">' + escapeHTML(m.role) + '</span>' +
-            '<button class="btn btn-ghost btn-sm" onclick="removeQueueMember(\'' + m.user_id + '\')">✕</button>';
+            '<button class="btn btn-ghost btn-sm" onclick="removeQueueMember(\'' + m.user_id + '\')">' + icon('x', 'sm') + '</button>';
         list.appendChild(row);
     });
 }
@@ -1541,7 +1541,7 @@ function renderCatalogItems(items) {
             '<span class="org-role">' + escapeHTML(typeCode) + '</span>' +
             '<span class="org-role" style="margin-left:0.25rem">' + escapeHTML(item.default_priority) + '</span>' +
             (item.sla_hours ? '<span class="settings-hint" style="margin-left:0.25rem">' + item.sla_hours + 'h SLA</span>' : '') +
-            '<button class="btn btn-ghost btn-sm" style="margin-left:0.5rem" onclick="deleteCatalogItem(\'' + item.id + '\')">✕</button>';
+            '<button class="btn btn-ghost btn-sm" style="margin-left:0.5rem" onclick="deleteCatalogItem(\'' + item.id + '\')">' + icon('x', 'sm') + '</button>';
         list.appendChild(row);
     });
 }
