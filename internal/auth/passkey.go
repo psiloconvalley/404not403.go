@@ -34,6 +34,10 @@ func (u *PasskeyUser) WebAuthnCredentials() []webauthn.Credential {
 		creds[i] = webauthn.Credential{
 			ID:        p.CredentialID,
 			PublicKey: p.PublicKey,
+			Flags: webauthn.CredentialFlags{
+				BackupEligible: true,
+				BackupState:    true,
+			},
 			Authenticator: webauthn.Authenticator{
 				AAGUID:    p.AAGUID,
 				SignCount: uint32(p.SignCount),
