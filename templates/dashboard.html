@@ -120,6 +120,9 @@
                 <input type="text" id="ticket-subject" placeholder="Subject — what is broken?">
                 <textarea id="ticket-body" placeholder="Describe the issue in detail..." rows="3"></textarea>
                 <div class="form-row">
+                    <select id="ticket-queue">
+                        <option value="">No Queue</option>
+                    </select>
                     <select id="ticket-priority">
                         <option value="P3">P3 — Low</option>
                         <option value="P2" selected>P2 — Medium</option>
@@ -940,7 +943,30 @@ async function quickDelete(ticketID) {
     showToast('info', 'Delete not yet implemented');
 }
 
-function showCreateTicket() { document.getElementById('create-ticket-form').style.display = 'flex'; }
+function showCreateTicket() {
+    document.getElementById('create-ticket-form').style.display = 'flex';
+    populateQueueDropdown();
+}
+
+async function populateQueueDropdown() {
+    const select = document.getElementById('ticket-queue');
+    if (!select || !currentOrgID) return;
+
+    select.innerHTML = '<option value="">No Queue</option>';
+
+    try {
+        const res = await fetch('/api/orgs/' + currentOrgID + '/queues/sidebar');
+        if (!res.ok) return;
+        const data = await res.json();
+        (data.queues || []).forEach(function(q) {
+            const opt = document.createElement('option');
+            opt.value = q.id;
+            opt.textContent = q.name;
+            if (currentQueueID && currentQueueID === q.id) opt.selected = true;
+            select.appendChild(opt);
+        });
+    } catch (err) {}
+}
 function hideCreateTicket()  { document.getElementById('create-ticket-form').style.display = 'none'; }
 
 async function createTicket() {
@@ -949,12 +975,13 @@ async function createTicket() {
     const subject  = document.getElementById('ticket-subject').value.trim();
     const body     = document.getElementById('ticket-body').value.trim();
     const priority = document.getElementById('ticket-priority').value;
+    const queueID = document.getElementById('ticket-queue').value || null;
     if (!subject || !body) { showToast('warn', 'Subject and description are required'); return; }
 
     const res = await fetch('/api/orgs/' + currentOrgID + '/tickets', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({subject: subject, body: body, priority: priority, source_type: 'web', customer_email: customerEmail})
+        body: JSON.stringify({subject: subject, body: body, priority: priority, source_type: 'web', customer_email: customerEmail, queue_id: queueID})
     });
 
     if (res.ok) {

@@ -42,6 +42,7 @@ type Ticket struct {
 // Validated before reaching the store layer.
 type CreateTicketParams struct {
 	OrgID      string
+	QueueID    *string
 	CustomerID *string
 	Subject    string
 	Body       string
@@ -78,7 +79,17 @@ func CreateTicket(db *sql.DB, p CreateTicketParams) (*Ticket, error) {
 		return nil, fmt.Errorf("failed to get sequence: %w", err)
 	}
 
-	// Build display ID: REQ-{type_code}-{sequence}
+	// Resolve queue prefix for display ID
+	queuePrefix := "REQ"
+	if p.QueueID != nil && *p.QueueID != "" {
+		var prefix *string
+		_ = tx.QueryRow("SELECT prefix FROM queues WHERE id = $1 AND org_id = $2", *p.QueueID, p.OrgID).Scan(&prefix)
+		if prefix != nil && *prefix != "" {
+			queuePrefix = *prefix
+		}
+	}
+
+	// Build display ID: {prefix}-{type_code}-{sequence}
 	typeCode := map[string]string{
 		"service_request": "SR",
 		"incident":        "INC",
@@ -89,15 +100,15 @@ func CreateTicket(db *sql.DB, p CreateTicketParams) (*Ticket, error) {
 	if typeCode == "" {
 		typeCode = "SR"
 	}
-	displayID := fmt.Sprintf("REQ-%s-%04d", typeCode, seqNum)
+	displayID := fmt.Sprintf("%s-%s-%04d", queuePrefix, typeCode, seqNum)
 
 	var t Ticket
 	err = tx.QueryRow(`
 		INSERT INTO tickets (
 			org_id, customer_id, subject, body,
 			status, priority, source_type, thread_id, ticket_type,
-			sequence_num, display_id
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+			sequence_num, display_id, queue_id
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
 		RETURNING id, org_id, display_id, ticket_type, sequence_num,
 		          customer_id, assigned_to,
 		          subject, body, status, priority, category,
@@ -108,7 +119,7 @@ func CreateTicket(db *sql.DB, p CreateTicketParams) (*Ticket, error) {
 		string(domain.DefaultStatus()),
 		p.Priority,
 		p.SourceType, p.ThreadID, p.TicketType,
-		seqNum, displayID,
+		seqNum, displayID, p.QueueID,
 	).Scan(
 		&t.ID, &t.OrgID, &t.DisplayID, &t.TicketType, &t.SequenceNum,
 		&t.CustomerID, &t.AssignedTo,

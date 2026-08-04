@@ -38,14 +38,15 @@ func New(db *sql.DB) *Service {
 
 // CreateInput is the validated input for creating a ticket.
 type CreateInput struct {
-	OrgID      string
-	CustomerID *string
-	Subject    string
-	Body       string
-	Priority   string            // optional — defaults to P2
-	SourceType string            // required — domain.SourceType
-	ThreadID   *string           // optional — for idempotency
-	CustomerEmail *string    // optional — find or create customer on submit
+	OrgID         string
+	QueueID       *string
+	CustomerID    *string
+	Subject       string
+	Body          string
+	Priority      string  // optional — defaults to P2
+	SourceType    string  // required — domain.SourceType
+	ThreadID      *string // optional — for idempotency
+	CustomerEmail *string // optional — find or create customer on submit
 }
 
 // CreateResult is returned after a ticket is created.
@@ -100,6 +101,7 @@ func (s *Service) Create(ctx context.Context, input CreateInput) (*CreateResult,
 	// Create the ticket
 	ticket, err := store.CreateTicket(s.db, store.CreateTicketParams{
 		OrgID:      input.OrgID,
+		QueueID:    input.QueueID,
 		CustomerID: input.CustomerID,
 		Subject:    input.Subject,
 		Body:       input.Body,

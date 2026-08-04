@@ -36,6 +36,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		SourceType    string  `json:"source_type"`
 		ThreadID      *string `json:"thread_id"`
 		CustomerEmail string  `json:"customer_email"`
+		QueueID       *string `json:"queue_id"`
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
@@ -56,6 +57,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 
 	result, err := h.svc.Create(r.Context(), ticketsvc.CreateInput{
 		OrgID:         orgID,
+		QueueID:       input.QueueID,
 		Subject:       input.Subject,
 		Body:          input.Body,
 		Priority:      input.Priority,
