@@ -729,6 +729,65 @@ function filterTickets(filter, btn) {
     }
 }
 
+function statusDisplayName(status) {
+    const labels = {
+        open:             'Open',
+        assigned:         'Assigned',
+        in_progress:      'In Progress',
+        pending_customer: 'Pending Customer',
+        pending_vendor:   'Pending Vendor',
+        resolved:         'Resolved',
+        closed:           'Closed',
+        reopened:         'Reopened'
+    };
+    return labels[status] || status.replace(/_/g, ' ');
+}
+
+function validTransitions(status) {
+    const map = {
+        open:             ['assigned', 'closed'],
+        assigned:         ['open', 'in_progress', 'pending_customer', 'pending_vendor', 'resolved', 'closed'],
+        in_progress:      ['assigned', 'pending_customer', 'pending_vendor', 'resolved', 'closed'],
+        pending_customer: ['in_progress', 'resolved', 'closed'],
+        pending_vendor:   ['in_progress', 'resolved', 'closed'],
+        resolved:         ['reopened', 'closed'],
+        closed:           [],
+        reopened:         ['assigned', 'in_progress', 'resolved', 'closed']
+    };
+    return map[status] || [];
+}
+
+function statusActionLabel(currentStatus, nextStatus) {
+    if (nextStatus === 'open')     return 'Unassign';
+    if (nextStatus === 'assigned') return currentStatus === 'in_progress' ? 'Hand Off' : 'Assign';
+    const labels = {
+        in_progress:      'In Progress',
+        pending_customer: 'Pending Customer',
+        pending_vendor:   'Pending Vendor',
+        resolved:         'Resolve',
+        closed:           'Close',
+        reopened:         'Reopen'
+    };
+    return labels[nextStatus] || statusDisplayName(nextStatus);
+}
+
+function populateStatusSelect(currentStatus) {
+    const select = document.getElementById('action-status');
+    if (!select) return;
+    select.innerHTML = '';
+    const cur = document.createElement('option');
+    cur.value = currentStatus;
+    cur.textContent = statusDisplayName(currentStatus);
+    select.appendChild(cur);
+    validTransitions(currentStatus).forEach(function(next) {
+        const opt = document.createElement('option');
+        opt.value = next;
+        opt.textContent = statusDisplayName(next);
+        select.appendChild(opt);
+    });
+    select.value = currentStatus;
+}
+
 function renderTicketList(tickets) {
     const list = document.getElementById('ticket-list');
     list.innerHTML = '';
@@ -792,14 +851,30 @@ function renderTicketList(tickets) {
 
         const role = (sidebarData && sidebarData.role) || 'viewer';
 
-        menu.innerHTML =
-            '<div class="ticket-menu-item" onclick="quickAssignToMe(\'' + t.id + '\')">Assign to me</div>' +
-            '<div class="ticket-menu-item" onclick="quickStatus(\'' + t.id + '\', \'in_progress\')">→ In Progress</div>' +
-            '<div class="ticket-menu-item" onclick="quickStatus(\'' + t.id + '\', \'resolved\')">✓ Resolve</div>' +
-            '<div class="ticket-menu-item" onclick="quickStatus(\'' + t.id + '\', \'closed\')">✕ Close</div>' +
-            (role === 'owner' || role === 'admin'
-                ? '<div class="ticket-menu-divider"></div><div class="ticket-menu-item ticket-menu-danger" onclick="quickDelete(\'' + t.id + '\')">🗑 Delete</div>'
-                : '');
+        const assignItem = document.createElement('div');
+        assignItem.className = 'ticket-menu-item';
+        assignItem.textContent = 'Assign to me';
+        assignItem.onclick = function(e) { e.stopPropagation(); quickAssignToMe(t.id); };
+        menu.appendChild(assignItem);
+
+        validTransitions(t.status).forEach(function(nextStatus) {
+            const item = document.createElement('div');
+            item.className = 'ticket-menu-item';
+            item.textContent = statusActionLabel(t.status, nextStatus);
+            item.onclick = function(e) { e.stopPropagation(); quickStatus(t.id, nextStatus); };
+            menu.appendChild(item);
+        });
+
+        if (role === 'owner' || role === 'admin') {
+            const divider = document.createElement('div');
+            divider.className = 'ticket-menu-divider';
+            menu.appendChild(divider);
+            const deleteItem = document.createElement('div');
+            deleteItem.className = 'ticket-menu-item ticket-menu-danger';
+            deleteItem.textContent = 'Delete';
+            deleteItem.onclick = function(e) { e.stopPropagation(); quickDelete(t.id); };
+            menu.appendChild(deleteItem);
+        }
 
         actions.appendChild(menu);
 
@@ -836,8 +911,21 @@ async function quickStatus(ticketID, status) {
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({status: status})
     });
-    if (res.ok) { loadTickets(currentFilter); loadSidebar(); }
-    else { const d = await res.json(); showToast('error', d.error || 'Action failed'); }
+    if (res.ok) {
+        loadTickets(currentFilter);
+        loadSidebar();
+        return;
+    }
+    let message = 'Status change failed';
+    try {
+        const d = await res.json();
+        if (d.error) {
+            message = d.error.toLowerCase().includes('transition')
+                ? 'That status change is not allowed from the current state.'
+                : d.error;
+        }
+    } catch (_) {}
+    showToast('error', message);
 }
 
 async function quickDelete(ticketID) {
@@ -900,7 +988,7 @@ async function openTicket(ticketID) {
     document.getElementById('detail-source').textContent = 'via ' + t.source_type;
     document.getElementById('detail-body').textContent = t.body;
 
-    document.getElementById('action-status').value   = t.status;
+    populateStatusSelect(t.status);
     document.getElementById('action-priority').value = t.priority;
 
     renderComments(ctx.comments || []);
