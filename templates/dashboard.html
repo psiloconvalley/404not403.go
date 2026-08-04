@@ -1082,6 +1082,7 @@ async function changeStatus(newStatus) {
         const statusEl = document.getElementById('detail-status');
         statusEl.className = 'ticket-status status-' + newStatus;
         statusEl.textContent = newStatus.replace(/_/g, ' ');
+        populateStatusSelect(newStatus);
         loadSidebar();
     } else {
         const data = await res.json();
