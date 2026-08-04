@@ -247,7 +247,7 @@ func PasskeyLoginFinish(a *app.App) http.HandlerFunc {
 		}
 
 		// Update sign count
-		store.UpdatePasskeySignCount(a.DB, credential.ID, int64(credential.Authenticator.SignCount))
+		if err := store.UpdatePasskeySignCount(a.DB, credential.ID, int64(credential.Authenticator.SignCount)); err != nil { log.Printf("passkey: sign count update failed: %v", err) }
 		store.UpdateLastLogin(a.DB, user.ID)
 
 		// Issue JWT
