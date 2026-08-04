@@ -2,6 +2,7 @@ package store
 
 import (
 	"database/sql"
+	"fmt"
 	"time"
 )
 
@@ -68,13 +69,20 @@ func GetPasskeysForUser(db *sql.DB, userID string) ([]Passkey, error) {
 
 // UpdatePasskeySignCount increments the sign count and updates last_used_at.
 func UpdatePasskeySignCount(db *sql.DB, credentialID []byte, newCount int64) error {
-	_, err := db.Exec(`
+	result, err := db.Exec(`
 		UPDATE passkeys
 		SET sign_count = $1, last_used_at = now()
 		WHERE credential_id = $2`,
 		newCount, credentialID,
 	)
-	return err
+	if err != nil {
+		return err
+	}
+	rows, _ := result.RowsAffected()
+	if rows == 0 {
+		return fmt.Errorf("no passkey found with credential_id (len=%d)", len(credentialID))
+	}
+	return nil
 }
 
 // DeletePasskey removes a passkey by ID and user.
