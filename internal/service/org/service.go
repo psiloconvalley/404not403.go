@@ -96,8 +96,8 @@ func (s *Service) Create(ctx context.Context, input CreateInput) (*store.Organiz
 
 // OrgContext is an org with its members loaded.
 type OrgContext struct {
-	Org     *store.Organization
-	Members []store.OrgMemberDetail
+	Org     *store.Organization    `json:"org"`
+	Members []store.OrgMemberDetail `json:"members"`
 }
 
 // Get loads an org and its members.
