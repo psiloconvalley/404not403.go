@@ -181,6 +181,8 @@
                     <span id="detail-created" class="detail-time"></span>
                     <span class="detail-dot">·</span>
                     <span id="detail-source" class="detail-time"></span>
+                    <span class="detail-dot detail-sla-dot" style="display:none">·</span>
+                    <span id="detail-sla" class="detail-time" style="display:none"></span>
                 </div>
                 <div class="detail-body" id="detail-body"></div>
             </div>
@@ -855,6 +857,29 @@ function renderTicketList(tickets) {
         age.textContent = timeAgo(t.created_at);
         right.appendChild(age);
 
+        if (t.sla_due_at) {
+            const due = new Date(t.sla_due_at);
+            const now = new Date();
+            const breached = due < now;
+            const diffH = Math.round((due - now) / 36e5);
+            const sla = document.createElement('span');
+            sla.className = 'ticket-sla';
+            if (breached) {
+                sla.textContent = 'SLA breached';
+                sla.style.color = '#dc2626';
+            } else if (diffH < 4) {
+                sla.textContent = 'SLA ' + diffH + 'h';
+                sla.style.color = '#d97706';
+            } else if (diffH < 24) {
+                sla.textContent = 'SLA ' + diffH + 'h';
+                sla.style.color = '#57534e';
+            } else {
+                sla.textContent = 'SLA ' + Math.round(diffH / 24) + 'd';
+                sla.style.color = '#57534e';
+            }
+            right.appendChild(sla);
+        }
+
         // Action menu button
         const actions = document.createElement('div');
         actions.className = 'ticket-actions';
@@ -1031,6 +1056,36 @@ async function openTicket(ticketID) {
     document.getElementById('detail-created').textContent = 'Opened ' + timeAgo(t.created_at);
     document.getElementById('detail-source').textContent = 'via ' + t.source_type;
     document.getElementById('detail-body').textContent = t.body;
+
+    // SLA due date — show only if present
+    const slaEl = document.getElementById('detail-sla');
+    const slaDotEl = document.querySelector('.detail-sla-dot');
+    if (t.sla_due_at) {
+        const due = new Date(t.sla_due_at);
+        const now = new Date();
+        const breached = due < now;
+        const diffMs = due - now;
+        const diffH = Math.round(diffMs / 36e5);
+        let slaText;
+        if (breached) {
+            slaText = 'SLA breached';
+        } else if (diffH < 1) {
+            slaText = 'SLA due < 1h';
+        } else if (diffH < 24) {
+            slaText = 'SLA due in ' + diffH + 'h';
+        } else {
+            const diffD = Math.round(diffH / 24);
+            slaText = 'SLA due in ' + diffD + 'd';
+        }
+        slaEl.textContent = slaText;
+        slaEl.style.color = breached ? '#dc2626' : (diffH < 4 ? '#d97706' : '#57534e');
+        slaEl.style.display = '';
+        slaDotEl.style.display = '';
+    } else {
+        slaEl.textContent = '';
+        slaEl.style.display = 'none';
+        slaDotEl.style.display = 'none';
+    }
 
     populateStatusSelect(t.status);
     document.getElementById('action-priority').value = t.priority;

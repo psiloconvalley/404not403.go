@@ -307,6 +307,12 @@
     font-family: var(--font-mono);
     white-space: nowrap;
 }
+.ticket-sla {
+    font-size: 0.7rem;
+    font-family: var(--font-mono);
+    white-space: nowrap;
+    margin-left: 0.5rem;
+}
 .ticket-card-critical {
     border-left: 3px solid var(--priority-p0);
 }
