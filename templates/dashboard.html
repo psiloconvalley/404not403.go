@@ -142,6 +142,7 @@
             </div>
 
             <div id="ticket-list" class="ticket-list"></div>
+            <button id="load-more-btn" class="btn btn-secondary" style="display:none;width:100%;margin-top:1rem;" onclick="loadMoreTickets()">Load More</button>
         </main>
     </div>
 
@@ -418,6 +419,8 @@ let currentOrgName  = null;
 let currentTicketID = null;
 let currentFilter   = 'all';
 let currentQueueID  = null;
+let currentOffset   = 0;
+let hasMoreTickets  = false;
 let currentQueueName = null;
 let currentSettingsQueueID = null;
 let sidebarData     = null;
@@ -665,6 +668,8 @@ async function loadQueueTickets(queueID) {
     if (!res.ok) return;
     const data = await res.json();
     renderTicketList(data.tickets || []);
+    document.getElementById('load-more-btn').style.display = 'none';
+    hasMoreTickets = false;
 }
 
 async function loadTicketsFiltered(params) {
@@ -677,6 +682,8 @@ async function loadTicketsFiltered(params) {
     if (!res.ok) return;
     const data = await res.json();
     renderTicketList(data.tickets || []);
+    document.getElementById('load-more-btn').style.display = 'none';
+    hasMoreTickets = false;
 }
 
 // ── Queue CRUD ───────────────────────────────────────────────────────────────
@@ -721,16 +728,36 @@ async function createQueue() {
 async function loadTickets(filter) {
     if (!currentOrgID) return;
     currentFilter = filter || 'all';
+    currentOffset = 0;
 
-    let url = '/api/orgs/' + currentOrgID + '/tickets';
+    let url = '/api/orgs/' + currentOrgID + '/tickets?limit=50&offset=0';
     if (currentFilter !== 'all') {
-        url += '?status=' + currentFilter;
+        url += '&status=' + currentFilter;
     }
 
     const res = await fetch(url);
     if (!res.ok) return;
     const data = await res.json();
-    renderTicketList(data.tickets || []);
+    hasMoreTickets = data.has_more || false;
+    renderTicketList(data.tickets || [], false);
+    document.getElementById('load-more-btn').style.display = hasMoreTickets ? 'block' : 'none';
+}
+
+async function loadMoreTickets() {
+    if (!currentOrgID || !hasMoreTickets) return;
+    currentOffset += 50;
+
+    let url = '/api/orgs/' + currentOrgID + '/tickets?limit=50&offset=' + currentOffset;
+    if (currentFilter !== 'all') {
+        url += '&status=' + currentFilter;
+    }
+
+    const res = await fetch(url);
+    if (!res.ok) return;
+    const data = await res.json();
+    hasMoreTickets = data.has_more || false;
+    renderTicketList(data.tickets || [], true);
+    document.getElementById('load-more-btn').style.display = hasMoreTickets ? 'block' : 'none';
 }
 
 function filterTickets(filter, btn) {
@@ -805,12 +832,12 @@ function populateStatusSelect(currentStatus) {
     select.value = currentStatus;
 }
 
-function renderTicketList(tickets) {
+function renderTicketList(tickets, append) {
     const list = document.getElementById('ticket-list');
-    list.innerHTML = '';
+    if (!append) list.innerHTML = '';
 
     if (!tickets || tickets.length === 0) {
-        list.innerHTML = '<div class="empty">No tickets found. <button onclick="showCreateTicket()" class="btn-link">Create one?</button></div>';
+        if (!append) list.innerHTML = '<div class="empty">No tickets found. <button onclick="showCreateTicket()" class="btn-link">Create one?</button></div>';
         return;
     }
 

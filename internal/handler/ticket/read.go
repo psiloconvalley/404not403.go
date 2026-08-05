@@ -2,6 +2,7 @@ package ticket
 
 import (
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/psiloconvalley/404not403/internal/handler/shared"
@@ -78,12 +79,28 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 		assignedTo = &v
 	}
 
-	tickets, err := h.svc.List(r.Context(), ticketsvc.ListInput{RequestingUserID: userID,
-		OrgID:      orgID,
-		Status:     status,
-		Priority:   priority,
-		AssignedTo: assignedTo,
-		Limit:      50,
+	// Pagination
+	limit := 50
+	offset := 0
+	if v := q.Get("limit"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 && n <= 200 {
+			limit = n
+		}
+	}
+	if v := q.Get("offset"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n >= 0 {
+			offset = n
+		}
+	}
+
+	tickets, err := h.svc.List(r.Context(), ticketsvc.ListInput{
+		RequestingUserID: userID,
+		OrgID:            orgID,
+		Status:           status,
+		Priority:         priority,
+		AssignedTo:       assignedTo,
+		Limit:            limit + 1, // fetch one extra to detect has_more
+		Offset:           offset,
 	})
 	if err != nil {
 		writeError(w, shared.DomainErrStatus(err), err.Error())
@@ -94,9 +111,17 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 		tickets = []store.Ticket{}
 	}
 
+	hasMore := len(tickets) > limit
+	if hasMore {
+		tickets = tickets[:limit] // trim the extra
+	}
+
 	writeJSON(w, http.StatusOK, map[string]any{
-		"tickets": tickets,
-		"count":   len(tickets),
+		"tickets":  tickets,
+		"count":    len(tickets),
+		"has_more": hasMore,
+		"offset":   offset,
+		"limit":    limit,
 	})
 }
 
