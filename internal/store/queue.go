@@ -181,7 +181,8 @@ func ListQueuesWithCounts(db *sql.DB, orgID string) ([]QueueWithCounts, error) {
 	return queues, rows.Err()
 }
 
-// ListQueuesForUser returns queues that a specific user is a member of.
+// ListQueuesForUser returns queues visible to a specific user.
+// Normal queues are visible to all agents. Restricted queues only to members.
 func ListQueuesForUser(db *sql.DB, orgID, userID string) ([]QueueWithCounts, error) {
 	rows, err := db.Query(`
 		SELECT
@@ -196,9 +197,10 @@ func ListQueuesForUser(db *sql.DB, orgID, userID string) ([]QueueWithCounts, err
 				AND t.status NOT IN ('closed','resolved')
 			) AS urgent_count
 		FROM queues q
-		JOIN queue_members qm ON qm.queue_id = q.id AND qm.user_id = $2
+		LEFT JOIN queue_members qm ON qm.queue_id = q.id AND qm.user_id = $2
 		LEFT JOIN tickets t ON t.queue_id = q.id AND t.org_id = q.org_id
 		WHERE q.org_id = $1 AND q.active = true
+		  AND (q.visibility = 'normal' OR qm.user_id IS NOT NULL)
 		GROUP BY q.id
 		ORDER BY q.department ASC NULLS LAST, q.sort_order ASC, q.name ASC`,
 		orgID, userID,
