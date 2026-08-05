@@ -24,6 +24,7 @@ type Queue struct {
 	SLAConfig   json.RawMessage `json:"sla_config"`
 	Active      bool            `json:"active"`
 	SortOrder   int             `json:"sort_order"`
+	Visibility  string          `json:"visibility"`
 	CreatedBy   *string         `json:"created_by,omitempty"`
 	CreatedAt   time.Time       `json:"created_at"`
 	UpdatedAt   time.Time       `json:"updated_at"`
@@ -79,12 +80,12 @@ func CreateQueue(db *sql.DB, p CreateQueueParams) (*Queue, error) {
 		INSERT INTO queues (org_id, name, prefix, description, department, color, icon, created_by)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 		RETURNING id, org_id, name, prefix, description, department, color, icon,
-		          filters, sla_config, active, sort_order, created_by,
+		          filters, sla_config, active, sort_order, visibility, created_by,
 		          created_at, updated_at`,
 		p.OrgID, p.Name, p.Prefix, p.Description, p.Department, p.Color, p.Icon, p.CreatedBy,
 	).Scan(
 		&q.ID, &q.OrgID, &q.Name, &q.Prefix, &q.Description, &q.Department, &q.Color, &q.Icon,
-		&q.Filters, &q.SLAConfig, &q.Active, &q.SortOrder, &q.CreatedBy,
+		&q.Filters, &q.SLAConfig, &q.Active, &q.SortOrder, &q.Visibility, &q.CreatedBy,
 		&q.CreatedAt, &q.UpdatedAt,
 	)
 	if err != nil {
@@ -115,14 +116,14 @@ func GetQueueByID(db *sql.DB, orgID, queueID string) (*Queue, error) {
 	var q Queue
 	err := db.QueryRow(`
 		SELECT id, org_id, name, prefix, description, department, color, icon,
-		       filters, sla_config, active, sort_order, created_by,
+		       filters, sla_config, active, sort_order, visibility, created_by,
 		       created_at, updated_at
 		FROM queues
 		WHERE org_id = $1 AND id = $2`,
 		orgID, queueID,
 	).Scan(
 		&q.ID, &q.OrgID, &q.Name, &q.Prefix, &q.Description, &q.Department, &q.Color, &q.Icon,
-		&q.Filters, &q.SLAConfig, &q.Active, &q.SortOrder, &q.CreatedBy,
+		&q.Filters, &q.SLAConfig, &q.Active, &q.SortOrder, &q.Visibility, &q.CreatedBy,
 		&q.CreatedAt, &q.UpdatedAt,
 	)
 	if err == sql.ErrNoRows {
@@ -143,7 +144,7 @@ func ListQueuesWithCounts(db *sql.DB, orgID string) ([]QueueWithCounts, error) {
 		SELECT
 			q.id, q.org_id, q.name, q.prefix, q.description, q.department,
 			q.color, q.icon, q.filters, q.sla_config,
-			q.active, q.sort_order, q.created_by,
+			q.active, q.sort_order, q.visibility, q.created_by,
 			q.created_at, q.updated_at,
 			COUNT(t.id) FILTER (WHERE t.status NOT IN ('closed')) AS total,
 			COUNT(t.id) FILTER (WHERE t.status = 'open') AS open_count,
@@ -169,7 +170,7 @@ func ListQueuesWithCounts(db *sql.DB, orgID string) ([]QueueWithCounts, error) {
 		if err := rows.Scan(
 			&qc.ID, &qc.OrgID, &qc.Name, &qc.Prefix, &qc.Description, &qc.Department,
 			&qc.Color, &qc.Icon, &qc.Filters, &qc.SLAConfig,
-			&qc.Active, &qc.SortOrder, &qc.CreatedBy,
+			&qc.Active, &qc.SortOrder, &qc.Visibility, &qc.CreatedBy,
 			&qc.CreatedAt, &qc.UpdatedAt,
 			&qc.TotalCount, &qc.OpenCount, &qc.UrgentCount,
 		); err != nil {
@@ -186,7 +187,7 @@ func ListQueuesForUser(db *sql.DB, orgID, userID string) ([]QueueWithCounts, err
 		SELECT
 			q.id, q.org_id, q.name, q.prefix, q.description, q.department,
 			q.color, q.icon, q.filters, q.sla_config,
-			q.active, q.sort_order, q.created_by,
+			q.active, q.sort_order, q.visibility, q.created_by,
 			q.created_at, q.updated_at,
 			COUNT(t.id) FILTER (WHERE t.status NOT IN ('closed')) AS total,
 			COUNT(t.id) FILTER (WHERE t.status = 'open') AS open_count,
@@ -213,7 +214,7 @@ func ListQueuesForUser(db *sql.DB, orgID, userID string) ([]QueueWithCounts, err
 		if err := rows.Scan(
 			&qc.ID, &qc.OrgID, &qc.Name, &qc.Prefix, &qc.Description, &qc.Department,
 			&qc.Color, &qc.Icon, &qc.Filters, &qc.SLAConfig,
-			&qc.Active, &qc.SortOrder, &qc.CreatedBy,
+			&qc.Active, &qc.SortOrder, &qc.Visibility, &qc.CreatedBy,
 			&qc.CreatedAt, &qc.UpdatedAt,
 			&qc.TotalCount, &qc.OpenCount, &qc.UrgentCount,
 		); err != nil {

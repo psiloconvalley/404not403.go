@@ -561,6 +561,7 @@ func RunMigrations(db *sql.DB) {
 		)`},
 		{name: "idx_catalog_org", sql: `CREATE INDEX IF NOT EXISTS idx_catalog_org ON catalog_items(org_id)`},
 		{name: "idx_catalog_queue", sql: `CREATE INDEX IF NOT EXISTS idx_catalog_queue ON catalog_items(queue_id)`},
+		{name: "add_queue_visibility", sql: `ALTER TABLE queues ADD COLUMN IF NOT EXISTS visibility TEXT NOT NULL DEFAULT 'normal'`},
 	}
 
 	for _, m := range migrations {
