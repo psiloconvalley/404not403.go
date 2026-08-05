@@ -178,10 +178,12 @@ func (h *Handler) Submit(w http.ResponseWriter, r *http.Request) {
 		_ = emailDomain // non-blocking for now
 	}
 
+
 	// Resolve catalog item → queue, type, priority, SLA
 	var queueID *string
 	var ticketType string = "service_request"
 	priority := "P2"
+	var slaDueAt *time.Time
 
 	if input.CatalogItemID != "" {
 		catalogItem, err := store.GetCatalogItem(h.app.DB, org.ID, input.CatalogItemID)
@@ -189,7 +191,10 @@ func (h *Handler) Submit(w http.ResponseWriter, r *http.Request) {
 			queueID = catalogItem.QueueID
 			ticketType = catalogItem.TicketType
 			priority = catalogItem.DefaultPriority
-			// SLA will be wired when sla_due_at is implemented
+			if catalogItem.SLAHours != nil && *catalogItem.SLAHours > 0 {
+				due := time.Now().UTC().Add(time.Duration(*catalogItem.SLAHours) * time.Hour)
+				slaDueAt = &due
+			}
 		}
 	} else {
 		// Fallback: map urgency to priority for generic requests
@@ -249,12 +254,14 @@ func (h *Handler) Submit(w http.ResponseWriter, r *http.Request) {
 	// Create ticket with catalog-derived routing
 	createParams := store.CreateTicketParams{
 		OrgID:      org.ID,
+		QueueID:    queueID,
 		CustomerID: &customer.ID,
 		Subject:    input.Subject,
 		Body:       input.Body,
 		Priority:   priority,
 		SourceType: string(domain.SourceWeb),
 		TicketType: ticketType,
+		SLADueAt:   slaDueAt,
 	}
 
 	ticket, err := store.CreateTicket(h.app.DB, createParams)
@@ -262,12 +269,6 @@ func (h *Handler) Submit(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "failed to create request")
 		return
 	}
-
-	// Assign to queue if catalog item specified one
-	if queueID != nil {
-		store.AssignTicketToQueue(h.app.DB, org.ID, ticket.ID, *queueID)
-	}
-
 	// Enqueue AI classification job
 	idempotencyKey := fmt.Sprintf("ai.classify.%s", ticket.ID)
 	payload, _ := json.Marshal(map[string]string{

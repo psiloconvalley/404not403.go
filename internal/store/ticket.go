@@ -46,10 +46,11 @@ type CreateTicketParams struct {
 	CustomerID *string
 	Subject    string
 	Body       string
-	Priority   string // validated domain.Priority
-	SourceType string // validated domain.SourceType
+	Priority   string     // validated domain.Priority
+	SourceType string     // validated domain.SourceType
 	ThreadID   *string
-	TicketType string // service_request, incident, change, problem, task
+	TicketType string     // service_request, incident, change, problem, task
+	SLADueAt   *time.Time // calculated from catalog item sla_hours
 }
 
 // CreateTicket inserts a new ticket and records the creation event.
@@ -102,13 +103,14 @@ func CreateTicket(db *sql.DB, p CreateTicketParams) (*Ticket, error) {
 	}
 	displayID := fmt.Sprintf("%s-%s-%04d", queuePrefix, typeCode, seqNum)
 
+
 	var t Ticket
 	err = tx.QueryRow(`
 		INSERT INTO tickets (
 			org_id, customer_id, subject, body,
 			status, priority, source_type, thread_id, ticket_type,
-			sequence_num, display_id, queue_id
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+			sequence_num, display_id, queue_id, sla_due_at
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
 		RETURNING id, org_id, display_id, ticket_type, sequence_num,
 		          customer_id, assigned_to,
 		          subject, body, status, priority, category,
@@ -119,7 +121,7 @@ func CreateTicket(db *sql.DB, p CreateTicketParams) (*Ticket, error) {
 		string(domain.DefaultStatus()),
 		p.Priority,
 		p.SourceType, p.ThreadID, p.TicketType,
-		seqNum, displayID, p.QueueID,
+		seqNum, displayID, p.QueueID, p.SLADueAt,
 	).Scan(
 		&t.ID, &t.OrgID, &t.DisplayID, &t.TicketType, &t.SequenceNum,
 		&t.CustomerID, &t.AssignedTo,
