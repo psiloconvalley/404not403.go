@@ -58,8 +58,15 @@
             <!-- Create Queue Form -->
             <div id="create-queue-form" style="display:none;" class="sidebar-form">
                 <input type="text" id="queue-name" placeholder="Queue name">
+                <input type="text" id="queue-prefix" placeholder="Prefix (e.g. IT-OPS)">
                 <input type="text" id="queue-dept" placeholder="Department (optional)">
                 <input type="text" id="queue-color" placeholder="Color (#6366f1)">
+                <div class="form-row">
+                    <select id="queue-visibility">
+                        <option value="normal">Visible to all</option>
+                        <option value="restricted">Restricted — members only</option>
+                    </select>
+                </div>
                 <div class="form-row">
                     <button onclick="createQueue()" class="btn btn-primary btn-sm">Create</button>
                     <button onclick="hideCreateQueue()" class="btn btn-ghost btn-sm">Cancel</button>
@@ -681,9 +688,12 @@ async function createQueue() {
     const color = document.getElementById('queue-color').value.trim();
     if (!name) { showToast('warn', 'Queue name is required'); return; }
 
-    const body = {name: name};
-    if (dept)  body.department = dept;
-    if (color) body.color = color;
+    const prefix = document.getElementById('queue-prefix').value.trim();
+    const visibility = document.getElementById('queue-visibility').value;
+    const body = {name: name, visibility: visibility};
+    if (prefix) body.prefix = prefix;
+    if (dept)   body.department = dept;
+    if (color)  body.color = color;
 
     const res = await fetch('/api/orgs/' + currentOrgID + '/queues', {
         method: 'POST',
@@ -694,8 +704,10 @@ async function createQueue() {
     if (res.ok) {
         hideCreateQueue();
         document.getElementById('queue-name').value = '';
+        document.getElementById('queue-prefix').value = '';
         document.getElementById('queue-dept').value = '';
         document.getElementById('queue-color').value = '';
+        document.getElementById('queue-visibility').value = 'normal';
         loadSidebar();
     } else {
         const data = await res.json();

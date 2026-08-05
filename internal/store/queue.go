@@ -60,6 +60,7 @@ type CreateQueueParams struct {
 	Department  *string
 	Color       string
 	Icon        *string
+	Visibility  string
 	CreatedBy   string
 }
 
@@ -77,12 +78,12 @@ func CreateQueue(db *sql.DB, p CreateQueueParams) (*Queue, error) {
 
 	var q Queue
 	err = tx.QueryRow(`
-		INSERT INTO queues (org_id, name, prefix, description, department, color, icon, created_by)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		INSERT INTO queues (org_id, name, prefix, description, department, color, icon, visibility, created_by)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 		RETURNING id, org_id, name, prefix, description, department, color, icon,
 		          filters, sla_config, active, sort_order, visibility, created_by,
 		          created_at, updated_at`,
-		p.OrgID, p.Name, p.Prefix, p.Description, p.Department, p.Color, p.Icon, p.CreatedBy,
+		p.OrgID, p.Name, p.Prefix, p.Description, p.Department, p.Color, p.Icon, p.Visibility, p.CreatedBy,
 	).Scan(
 		&q.ID, &q.OrgID, &q.Name, &q.Prefix, &q.Description, &q.Department, &q.Color, &q.Icon,
 		&q.Filters, &q.SLAConfig, &q.Active, &q.SortOrder, &q.Visibility, &q.CreatedBy,

@@ -40,13 +40,15 @@ func New(db *sql.DB) *Service {
 // ── Create ────────────────────────────────────────────────────────────────────
 
 type CreateInput struct {
-	OrgID           string
+	OrgID            string
 	RequestingUserID string
-	Name            string
-	Description     *string
-	Department      *string
-	Color           string
-	Icon            *string
+	Name             string
+	Prefix           *string
+	Description      *string
+	Department       *string
+	Color            string
+	Icon             *string
+	Visibility       string
 }
 
 func (s *Service) Create(ctx context.Context, input CreateInput) (*store.Queue, error) {
@@ -67,13 +69,24 @@ func (s *Service) Create(ctx context.Context, input CreateInput) (*store.Queue, 
 		return nil, err
 	}
 
+	// Validate and default visibility
+	visibility := input.Visibility
+	if visibility == "" {
+		visibility = "normal"
+	}
+	if visibility != "normal" && visibility != "restricted" {
+		return nil, fmt.Errorf("visibility must be 'normal' or 'restricted'")
+	}
+
 	return store.CreateQueue(s.db, store.CreateQueueParams{
 		OrgID:       input.OrgID,
 		Name:        input.Name,
+		Prefix:      input.Prefix,
 		Description: input.Description,
 		Department:  input.Department,
 		Color:       input.Color,
 		Icon:        input.Icon,
+		Visibility:  visibility,
 		CreatedBy:   input.RequestingUserID,
 	})
 }

@@ -36,10 +36,12 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 
 	var input struct {
 		Name        string  `json:"name"`
+		Prefix      *string `json:"prefix"`
 		Description *string `json:"description"`
 		Department  *string `json:"department"`
 		Color       string  `json:"color"`
 		Icon        *string `json:"icon"`
+		Visibility  string  `json:"visibility"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid JSON")
@@ -50,10 +52,12 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		OrgID:            orgID,
 		RequestingUserID: userID,
 		Name:             input.Name,
+		Prefix:           input.Prefix,
 		Description:      input.Description,
 		Department:       input.Department,
 		Color:            input.Color,
 		Icon:             input.Icon,
+		Visibility:       input.Visibility,
 	})
 	if err != nil {
 		writeError(w, shared.DomainErrStatus(err), err.Error())
