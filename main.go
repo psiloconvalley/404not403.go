@@ -112,33 +112,33 @@ func main() {
 	// ── Auth routes ───────────────────────────────────────────────────
 	mux.HandleFunc("/api/auth/register", handler.Register(a))
 	mux.HandleFunc("/api/auth/login", handler.Login(a))
-	mux.HandleFunc("/api/auth/logout", handler.Logout)
+	mux.HandleFunc("/api/auth/logout", middleware.RequireCSRF(handler.Logout))
 	mux.HandleFunc("/api/auth/me", middleware.RequireAuth(a, handler.Me(a)))
 	mux.HandleFunc("/api/auth/check-handle", handler.CheckHandle(a))
 	mux.HandleFunc("/api/auth/forgot", handler.ForgotPassword(a))
 	mux.HandleFunc("/api/auth/reset", handler.ResetPassword(a))
 	mux.HandleFunc("/reset", handler.ResetPage(a))
-	mux.HandleFunc("/api/auth/mfa/setup", middleware.RequireAuth(a, handler.MFASetup(a)))
-	mux.HandleFunc("/api/auth/mfa/verify", middleware.RequireAuth(a, handler.MFAVerify(a)))
-	mux.HandleFunc("/api/auth/mfa/disable", middleware.RequireAuth(a, handler.MFADisable(a)))
-	mux.HandleFunc("/api/auth/passkey/register/begin", middleware.RequireAuth(a, handler.PasskeyRegisterBegin(a)))
-	mux.HandleFunc("/api/auth/passkey/register/finish", middleware.RequireAuth(a, handler.PasskeyRegisterFinish(a)))
+	mux.HandleFunc("/api/auth/mfa/setup", middleware.RequireCSRF(middleware.RequireAuth(a, handler.MFASetup(a))))
+	mux.HandleFunc("/api/auth/mfa/verify", middleware.RequireCSRF(middleware.RequireAuth(a, handler.MFAVerify(a))))
+	mux.HandleFunc("/api/auth/mfa/disable", middleware.RequireCSRF(middleware.RequireAuth(a, handler.MFADisable(a))))
+	mux.HandleFunc("/api/auth/passkey/register/begin", middleware.RequireCSRF(middleware.RequireAuth(a, handler.PasskeyRegisterBegin(a))))
+	mux.HandleFunc("/api/auth/passkey/register/finish", middleware.RequireCSRF(middleware.RequireAuth(a, handler.PasskeyRegisterFinish(a))))
 	mux.HandleFunc("/api/auth/passkey/login/begin", handler.PasskeyLoginBegin(a))
 	mux.HandleFunc("/api/auth/passkey/login/finish", handler.PasskeyLoginFinish(a))
-	mux.HandleFunc("/api/auth/passkeys", middleware.RequireAuth(a, handler.PasskeyList(a)))
-	mux.HandleFunc("/api/auth/passkeys/delete", middleware.RequireAuth(a, handler.PasskeyDelete(a)))
+	mux.HandleFunc("/api/auth/passkeys", middleware.RequireCSRF(middleware.RequireAuth(a, handler.PasskeyList(a))))
+	mux.HandleFunc("/api/auth/passkeys/delete", middleware.RequireCSRF(middleware.RequireAuth(a, handler.PasskeyDelete(a))))
 
 	// ── Org routes ────────────────────────────────────────────────────
-	mux.HandleFunc("/api/orgs", middleware.RequireAuth(a, orgs.Create))
+	mux.HandleFunc("/api/orgs", middleware.RequireCSRF(middleware.RequireAuth(a, orgs.Create)))
 	mux.HandleFunc("/api/orgs/me", middleware.RequireAuth(a, orgs.ListMine))
-	mux.HandleFunc("/api/orgs/", middleware.RequireAuth(a, orgRouter(orgs, tickets, queues, catalog)))
+	mux.HandleFunc("/api/orgs/", middleware.RequireCSRF(middleware.RequireAuth(a, orgRouter(orgs, tickets, queues, catalog))))
 
 	// ── Ticket routes ─────────────────────────────────────────────────
 	// All ticket routes go through /api/orgs/{orgID}/tickets/...
 	// The orgRouter delegates to the ticket handler for ticket paths.
 
 	// ── Billing ───────────────────────────────────────────────────────
-	mux.HandleFunc("/api/billing/checkout", middleware.RequireAuth(a, handler.CreateCheckoutSession(a)))
+	mux.HandleFunc("/api/billing/checkout", middleware.RequireCSRF(middleware.RequireAuth(a, handler.CreateCheckoutSession(a))))
 	mux.HandleFunc("/api/webhooks/stripe", handler.StripeWebhook(a))
 	mux.HandleFunc("/api/webhooks/inbound-email", inbound.ResendEmail)
 

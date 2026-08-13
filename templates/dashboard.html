@@ -425,6 +425,26 @@ let currentQueueName = null;
 let currentSettingsQueueID = null;
 let sidebarData     = null;
 
+
+// ── CSRF ───────────────────────────────────────────────────────────────────
+// Reads the csrf_token cookie set by the server on login.
+// Attached to every state-changing fetch request as X-CSRF-Token header.
+function getCSRFToken() {
+    const match = document.cookie.split(';')
+        .map(function(c) { return c.trim(); })
+        .find(function(c) { return c.startsWith('csrf_token='); });
+    return match ? match.split('=')[1] : '';
+}
+
+// csrfHeaders returns headers with CSRF token + Content-Type.
+// Use for every POST/DELETE fetch call.
+function csrfHeaders() {
+    return {
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': getCSRFToken()
+    };
+}
+
 // ── Init ───────────────────────────────────────────────────────────────────
 async function init() {
     const res = await fetch('/api/auth/me');
@@ -515,7 +535,7 @@ async function createOrg() {
 
     const res = await fetch('/api/orgs', {
         method: 'POST',
-        headers: {'Content-Type': 'application/json'},
+        headers: csrfHeaders(),
         body: JSON.stringify({name: name, slug: slug})
     });
 
@@ -706,7 +726,7 @@ async function createQueue() {
 
     const res = await fetch('/api/orgs/' + currentOrgID + '/queues', {
         method: 'POST',
-        headers: {'Content-Type': 'application/json'},
+        headers: csrfHeaders(),
         body: JSON.stringify(body)
     });
 
@@ -969,7 +989,7 @@ async function quickAssignToMe(ticketID) {
     const user = await res.json();
     const r = await fetch('/api/orgs/' + currentOrgID + '/tickets/' + ticketID + '/assign', {
         method: 'POST',
-        headers: {'Content-Type': 'application/json'},
+        headers: csrfHeaders(),
         body: JSON.stringify({assignee_user_id: user.id})
     });
     if (r.ok) { loadTickets(currentFilter); loadSidebar(); }
@@ -980,7 +1000,7 @@ async function quickStatus(ticketID, status) {
     closeAllMenus();
     const res = await fetch('/api/orgs/' + currentOrgID + '/tickets/' + ticketID + '/status', {
         method: 'POST',
-        headers: {'Content-Type': 'application/json'},
+        headers: csrfHeaders(),
         body: JSON.stringify({status: status})
     });
     if (res.ok) {
@@ -1044,7 +1064,7 @@ async function createTicket() {
 
     const res = await fetch('/api/orgs/' + currentOrgID + '/tickets', {
         method: 'POST',
-        headers: {'Content-Type': 'application/json'},
+        headers: csrfHeaders(),
         body: JSON.stringify({subject: subject, body: body, priority: priority, source_type: 'web', customer_email: customerEmail, queue_id: queueID})
     });
 
@@ -1200,7 +1220,7 @@ async function changeStatus(newStatus) {
 
     const res = await fetch(
         '/api/orgs/' + currentOrgID + '/tickets/' + currentTicketID + '/status',
-        {method: 'POST', headers: {'Content-Type': 'application/json'},
+        {method: 'POST', headers: csrfHeaders(),
          body: JSON.stringify({status: newStatus})}
     );
 
@@ -1222,7 +1242,7 @@ async function changePriority(newPriority) {
 
     const res = await fetch(
         '/api/orgs/' + currentOrgID + '/tickets/' + currentTicketID + '/priority',
-        {method: 'POST', headers: {'Content-Type': 'application/json'},
+        {method: 'POST', headers: csrfHeaders(),
          body: JSON.stringify({priority: newPriority})}
     );
 
@@ -1243,7 +1263,7 @@ async function addComment() {
 
     const res = await fetch(
         '/api/orgs/' + currentOrgID + '/tickets/' + currentTicketID + '/comments',
-        {method: 'POST', headers: {'Content-Type': 'application/json'},
+        {method: 'POST', headers: csrfHeaders(),
          body: JSON.stringify({body: body, is_internal: isInternal})}
     );
 
@@ -1259,7 +1279,7 @@ async function addComment() {
 
 // ── Logout ────────────────────────────────────────────────────────────────────
 async function handleLogout() {
-    await fetch('/api/auth/logout', {method: 'POST'});
+    await fetch('/api/auth/logout', {method: 'POST', headers: {'X-CSRF-Token': getCSRFToken()}});
     window.location.href = '/login';
 }
 
@@ -1348,7 +1368,7 @@ async function saveOrgSettings() {
 
     const res = await fetch('/api/orgs/' + currentOrgID + '/settings', {
         method: 'POST',
-        headers: {'Content-Type': 'application/json'},
+        headers: csrfHeaders(),
         body: JSON.stringify(body)
     });
 
@@ -1399,7 +1419,7 @@ async function inviteMember() {
 
     const res = await fetch('/api/orgs/' + currentOrgID + '/members', {
         method: 'POST',
-        headers: {'Content-Type': 'application/json'},
+        headers: csrfHeaders(),
         body: JSON.stringify({email: email, role: role})
     });
 
@@ -1446,7 +1466,7 @@ async function saveQueueSettings() {
 
     const res = await fetch('/api/orgs/' + currentOrgID + '/queues/' + currentSettingsQueueID + '/settings', {
         method: 'POST',
-        headers: {'Content-Type': 'application/json'},
+        headers: csrfHeaders(),
         body: JSON.stringify(body)
     });
 
@@ -1504,7 +1524,7 @@ async function addQueueMember() {
 
     const res = await fetch('/api/orgs/' + currentOrgID + '/queues/' + currentSettingsQueueID + '/members', {
         method: 'POST',
-        headers: {'Content-Type': 'application/json'},
+        headers: csrfHeaders(),
         body: JSON.stringify({user_id: userID, role: role})
     });
 
@@ -1521,7 +1541,8 @@ async function removeQueueMember(userID) {
     if (!confirm('Remove this member from the queue?')) return;
 
     const res = await fetch('/api/orgs/' + currentOrgID + '/queues/' + currentSettingsQueueID + '/members/' + userID, {
-        method: 'DELETE'
+        method: 'DELETE',
+        headers: {'X-CSRF-Token': getCSRFToken()}
     });
 
     if (res.ok) {
@@ -1596,7 +1617,7 @@ async function deletePasskey(passkeyID, name) {
     if (!confirm('Remove passkey "' + name + '"? You will no longer be able to sign in with it.')) return;
 
     try {
-        const res = await fetch('/api/auth/passkeys/delete?id=' + passkeyID, {method: 'DELETE'});
+        const res = await fetch('/api/auth/passkeys/delete?id=' + passkeyID, {method: 'DELETE', headers: {'X-CSRF-Token': getCSRFToken()}});
         if (res.ok) {
             showToast('success', 'Passkey removed');
             loadPasskeys();
@@ -1616,7 +1637,7 @@ async function registerPasskey() {
 
     try {
         // Step 1: Begin registration
-        const beginRes = await fetch('/api/auth/passkey/register/begin', {method: 'POST'});
+        const beginRes = await fetch('/api/auth/passkey/register/begin', {method: 'POST', headers: {'X-CSRF-Token': getCSRFToken()}});
         if (!beginRes.ok) {
             const d = await beginRes.json();
             statusEl.textContent = d.error || 'Failed to start';
@@ -1653,7 +1674,7 @@ async function registerPasskey() {
 
         const finishRes = await fetch('/api/auth/passkey/register/finish', {
             method: 'POST',
-            headers: {'Content-Type': 'application/json'},
+            headers: csrfHeaders(),
             body: JSON.stringify(attestation)
         });
 
@@ -1754,7 +1775,7 @@ async function createCatalogItem() {
 
     const res = await fetch('/api/orgs/' + currentOrgID + '/catalog', {
         method: 'POST',
-        headers: {'Content-Type': 'application/json'},
+        headers: csrfHeaders(),
         body: JSON.stringify(body)
     });
 
@@ -1777,7 +1798,8 @@ async function deleteCatalogItem(itemID) {
     if (!confirm('Remove this service from the catalog?')) return;
 
     const res = await fetch('/api/orgs/' + currentOrgID + '/catalog/' + itemID, {
-        method: 'DELETE'
+        method: 'DELETE',
+        headers: {'X-CSRF-Token': getCSRFToken()}
     });
 
     if (res.ok) {

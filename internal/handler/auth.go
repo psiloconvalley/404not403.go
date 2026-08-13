@@ -200,6 +200,17 @@ func Logout(w http.ResponseWriter, r *http.Request) {
 		SameSite: http.SameSiteStrictMode,
 	})
 
+	// Clear CSRF token cookie on logout
+	http.SetCookie(w, &http.Cookie{
+		Name:     "csrf_token",
+		Value:    "",
+		Path:     "/",
+		MaxAge:   -1,
+		HttpOnly: false,
+		Secure:   true,
+		SameSite: http.SameSiteStrictMode,
+	})
+
 	w.Header().Set("Content-Type", "application/json")
 	w.Write([]byte(`{"status":"logged out"}`))
 }
@@ -273,6 +284,13 @@ func setSessionCookie(w http.ResponseWriter, token string) {
 		Secure:   true,
 		SameSite: http.SameSiteStrictMode,
 	})
+
+	// Set CSRF token cookie alongside session.
+	// Non-HttpOnly so JS can read and attach to every state-changing request.
+	csrfToken, err := middleware.GenerateCSRFToken()
+	if err == nil {
+		middleware.SetCSRFCookie(w, csrfToken)
+	}
 }
 
 // ForgotPassword handles POST /api/auth/forgot

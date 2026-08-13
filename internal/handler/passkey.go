@@ -267,6 +267,11 @@ func PasskeyLoginFinish(a *app.App) http.HandlerFunc {
 			MaxAge:   86400,
 		})
 
+		// Set CSRF token alongside session — required for state-changing requests
+		if csrfToken, err := middleware.GenerateCSRFToken(); err == nil {
+			middleware.SetCSRFCookie(w, csrfToken)
+		}
+
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]any{
 			"id":     user.ID,
