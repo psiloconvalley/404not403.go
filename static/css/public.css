@@ -153,6 +153,15 @@
     color: var(--priority-p0);
     margin-bottom: 1rem;
 }
+.success-msg {
+    background: var(--status-resolved-bg);
+    border: 1px solid rgba(22, 163, 74, 0.15);
+    border-radius: var(--radius-sm);
+    padding: 0.6rem 0.75rem;
+    font-size: 0.8rem;
+    color: var(--status-resolved);
+    margin-bottom: 1rem;
+}
 
 
 /* ── Employee Portal ────────────────────────────────────────────────────────── */
