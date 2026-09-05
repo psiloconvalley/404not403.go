@@ -562,8 +562,54 @@ func RunMigrations(db *sql.DB) {
 		{name: "idx_catalog_org", sql: `CREATE INDEX IF NOT EXISTS idx_catalog_org ON catalog_items(org_id)`},
 		{name: "idx_catalog_queue", sql: `CREATE INDEX IF NOT EXISTS idx_catalog_queue ON catalog_items(queue_id)`},
 		{name: "add_queue_visibility", sql: `ALTER TABLE queues ADD COLUMN IF NOT EXISTS visibility TEXT NOT NULL DEFAULT 'normal'`},
-	}
+		// ── Sensors & Telemetry (Beacon/Sensor Framework) ──────────────────────
+		{
+			name: "create_sensors_table",
+			sql: `CREATE TABLE IF NOT EXISTS sensors (
+				id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+				org_id           UUID NOT NULL REFERENCES organizations(id),
+				config_item_id   UUID REFERENCES config_items(id) ON DELETE SET NULL,
+				public_key       TEXT NOT NULL UNIQUE,
+				status           TEXT NOT NULL DEFAULT 'active',
+				sensor_version   TEXT NOT NULL,
+				hostname         TEXT NOT NULL,
+				platform         TEXT NOT NULL,
+				last_seen_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
+				last_baseline_at TIMESTAMPTZ,
+				created_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
+				updated_at       TIMESTAMPTZ NOT NULL DEFAULT now()
+			)`,
+		},
+		{name: "idx_sensors_org", sql: `CREATE INDEX IF NOT EXISTS idx_sensors_org ON sensors(org_id)`},
+		{name: "idx_sensors_pubkey", sql: `CREATE INDEX IF NOT EXISTS idx_sensors_pubkey ON sensors(public_key)`},
+		{name: "idx_sensors_ci", sql: `CREATE INDEX IF NOT EXISTS idx_sensors_ci ON sensors(config_item_id)`},
+		{
+			name: "create_sensor_events_table",
+			sql: `CREATE TABLE IF NOT EXISTS sensor_events (
+				id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+				sensor_id         UUID NOT NULL REFERENCES sensors(id) ON DELETE CASCADE,
+				org_id            UUID NOT NULL REFERENCES organizations(id),
+				kind              TEXT NOT NULL,
+				field             TEXT NOT NULL,
+				old_value         TEXT,
+				new_value         TEXT NOT NULL,
+				threshold_crossed TEXT,
+				observed_at       TIMESTAMPTZ NOT NULL,
+				created_at        TIMESTAMPTZ NOT NULL DEFAULT now()
+			)`,
+		},
+		{name: "idx_sensor_events_sensor", sql: `CREATE INDEX IF NOT EXISTS idx_sensor_events_sensor ON sensor_events(sensor_id)`},
+		{name: "idx_sensor_events_org", sql: `CREATE INDEX IF NOT EXISTS idx_sensor_events_org ON sensor_events(org_id)`},
+		{
+			name: "create_sensor_nonce_cache_table",
+			sql: `CREATE TABLE IF NOT EXISTS sensor_nonce_cache (
+				nonce     TEXT PRIMARY KEY,
+				sensor_id UUID NOT NULL REFERENCES sensors(id) ON DELETE CASCADE,
+				seen_at   TIMESTAMPTZ NOT NULL DEFAULT now()
+			)`,
+		},
 
+	}
 	for _, m := range migrations {
 		if _, err := db.Exec(m.sql); err != nil {
 			log.Fatalf("❌ Migration failed [%s]: %v", m.name, err)

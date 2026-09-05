@@ -21,6 +21,7 @@ import (
 	tickethandler "github.com/psiloconvalley/404not403/internal/handler/ticket"
 	inboundhandler "github.com/psiloconvalley/404not403/internal/handler/inbound"
 	cataloghandler "github.com/psiloconvalley/404not403/internal/handler/catalog"
+	sensorhandler "github.com/psiloconvalley/404not403/internal/handler/sensor"
 	"github.com/psiloconvalley/404not403/internal/middleware"
 	"github.com/psiloconvalley/404not403/internal/provider/ai"
 	"github.com/psiloconvalley/404not403/internal/provider/email"
@@ -142,6 +143,10 @@ func main() {
 	mux.HandleFunc("/api/webhooks/stripe", handler.StripeWebhook(a))
 	mux.HandleFunc("/api/webhooks/inbound-email", inbound.ResendEmail)
 
+
+	// ── Sensor & Telemetry (Beacon/Sensor Ingest) ─────────────────────
+	mux.HandleFunc("/api/sensor/enroll", sensorhandler.Enroll(a))
+	mux.HandleFunc("/api/sensor/checkin", sensorhandler.Checkin(a))
 	// 9. Middleware chain
 	wrapped := middleware.RateLimiter(a)(mux)
 	wrapped = middleware.Logger(wrapped)

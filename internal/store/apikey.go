@@ -68,6 +68,27 @@ func GetUserByAPIKey(db *sql.DB, keyHash string) (*User, error) {
 	return &u, nil
 }
 
+func GetOrgIDByAPIKey(db *sql.DB, keyHash string) (string, error) {
+	var orgID string
+	err := db.QueryRow(`
+		SELECT om.org_id
+		FROM api_keys k
+		JOIN org_members om ON om.user_id = k.user_id
+		WHERE k.key_hash = $1
+		  AND k.active = true
+		  AND (k.expires_at IS NULL OR k.expires_at > now())
+		LIMIT 1`,
+		keyHash,
+	).Scan(&orgID)
+	if err == sql.ErrNoRows {
+		return "", nil
+	}
+	if err != nil {
+		return "", err
+	}
+	return orgID, nil
+}
+
 func ListAPIKeys(db *sql.DB, userID string) ([]APIKey, error) {
 	rows, err := db.Query(`
 		SELECT id, user_id, name, key_hash,
