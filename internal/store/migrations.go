@@ -662,6 +662,61 @@ func RunMigrations(db *sql.DB) {
 		},
 		{name: "idx_routing_rules_org_active", sql: `CREATE INDEX IF NOT EXISTS idx_routing_rules_org_active ON routing_rules(org_id, priority) WHERE active = true`},
 
+		// ── Ticket Extensions: Work Item Types & Ownership ────────────────────
+		{
+			name: "alter_tickets_work_items_and_ownership",
+			sql: `ALTER TABLE tickets
+				ADD COLUMN IF NOT EXISTS type TEXT NOT NULL DEFAULT 'request' CHECK (type IN ('request', 'incident', 'task', 'change')),
+				ADD COLUMN IF NOT EXISTS parent_ticket_id UUID REFERENCES tickets(id) ON DELETE SET NULL,
+				ADD COLUMN IF NOT EXISTS is_parent BOOLEAN NOT NULL DEFAULT false,
+				ADD COLUMN IF NOT EXISTS child_count INT NOT NULL DEFAULT 0,
+				ADD COLUMN IF NOT EXISTS child_resolved_count INT NOT NULL DEFAULT 0,
+				ADD COLUMN IF NOT EXISTS submitted_by_customer_id UUID REFERENCES customers(id) ON DELETE SET NULL,
+				ADD COLUMN IF NOT EXISTS submitted_by_user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+				ADD COLUMN IF NOT EXISTS requester_customer_id UUID REFERENCES customers(id) ON DELETE SET NULL`,
+		},
+		{name: "idx_tickets_type", sql: `CREATE INDEX IF NOT EXISTS idx_tickets_type ON tickets(type)`},
+		{name: "idx_tickets_parent", sql: `CREATE INDEX IF NOT EXISTS idx_tickets_parent ON tickets(parent_ticket_id) WHERE parent_ticket_id IS NOT NULL`},
+		{name: "idx_tickets_requester", sql: `CREATE INDEX IF NOT EXISTS idx_tickets_requester ON tickets(requester_customer_id) WHERE requester_customer_id IS NOT NULL`},
+
+		// ── Ticket Watchers ───────────────────────────────────────────────────
+		{
+			name: "create_ticket_watchers_table",
+			sql: `CREATE TABLE IF NOT EXISTS ticket_watchers (
+				id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+				ticket_id   UUID NOT NULL REFERENCES tickets(id) ON DELETE CASCADE,
+				user_id     UUID REFERENCES users(id) ON DELETE CASCADE,
+				customer_id UUID REFERENCES customers(id) ON DELETE CASCADE,
+				reason      TEXT NOT NULL DEFAULT 'stakeholder' CHECK (reason IN ('requester', 'manager', 'stakeholder', 'auto_added')),
+				created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+				CONSTRAINT chk_watcher_target CHECK (
+					(user_id IS NOT NULL AND customer_id IS NULL) OR
+					(user_id IS NULL AND customer_id IS NOT NULL)
+				)
+			)`,
+		},
+		{name: "idx_watchers_ticket", sql: `CREATE INDEX IF NOT EXISTS idx_watchers_ticket ON ticket_watchers(ticket_id)`},
+
+		// ── Comment Scoping / Department Privacy ──────────────────────────────
+		{
+			name: "alter_comments_visibility",
+			sql: `ALTER TABLE comments
+				ADD COLUMN IF NOT EXISTS visibility_scope TEXT NOT NULL DEFAULT 'internal' CHECK (visibility_scope IN ('public', 'internal', 'department_only')),
+				ADD COLUMN IF NOT EXISTS visible_to_dept_id UUID REFERENCES departments(id) ON DELETE SET NULL`,
+		},
+
+		// ── Ticket Type Prefixes ──────────────────────────────────────────────
+		{
+			name: "create_ticket_type_prefixes_table",
+			sql: `CREATE TABLE IF NOT EXISTS ticket_type_prefixes (
+				org_id     UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+				type       TEXT NOT NULL CHECK (type IN ('request', 'incident', 'task', 'change')),
+				prefix     TEXT NOT NULL,
+				created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+				PRIMARY KEY (org_id, type)
+			)`,
+		},
+
 	}
 	for _, m := range migrations {
 		if _, err := db.Exec(m.sql); err != nil {

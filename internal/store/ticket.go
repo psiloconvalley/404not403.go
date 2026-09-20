@@ -34,6 +34,13 @@ type Ticket struct {
 	CreatedAt    time.Time  `json:"created_at"`
 	UpdatedAt    time.Time  `json:"updated_at"`
 	ResolvedAt   *time.Time `json:"resolved_at,omitempty"`
+	ParentTicketID        *string    `json:"parent_ticket_id,omitempty"`
+	IsParent              bool       `json:"is_parent"`
+	ChildCount            int        `json:"child_count"`
+	ChildResolvedCount    int        `json:"child_resolved_count"`
+	SubmittedByCustomerID *string    `json:"submitted_by_customer_id,omitempty"`
+	SubmittedByUserID     *string    `json:"submitted_by_user_id,omitempty"`
+	RequesterCustomerID   *string    `json:"requester_customer_id,omitempty"`
 }
 
 // ── Create ────────────────────────────────────────────────────────────────────
