@@ -639,6 +639,29 @@ func RunMigrations(db *sql.DB) {
 		},
 		{name: "idx_dq_queue", sql: `CREATE INDEX IF NOT EXISTS idx_dq_queue ON department_queues(queue_id)`},
 
+		// ── Routing Rules ─────────────────────────────────────────────────────
+		{
+			name: "create_routing_rules_table",
+			sql: `CREATE TABLE IF NOT EXISTS routing_rules (
+				id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+				org_id          UUID NOT NULL REFERENCES organizations(id),
+				queue_id        UUID NOT NULL REFERENCES queues(id) ON DELETE CASCADE,
+				name            TEXT NOT NULL,
+				priority        INT NOT NULL DEFAULT 100,
+				match_type      TEXT NOT NULL CHECK (match_type IN ('keyword', 'regex', 'domain')),
+				match_field     TEXT NOT NULL CHECK (match_field IN ('subject', 'body', 'subject_or_body', 'sender_domain')),
+				match_value     TEXT NOT NULL,
+				case_sensitive  BOOLEAN NOT NULL DEFAULT false,
+				active          BOOLEAN NOT NULL DEFAULT true,
+				hit_count       INT NOT NULL DEFAULT 0,
+				last_matched_at TIMESTAMPTZ,
+				created_by      UUID REFERENCES users(id) ON DELETE SET NULL,
+				created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+				updated_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+			)`,
+		},
+		{name: "idx_routing_rules_org_active", sql: `CREATE INDEX IF NOT EXISTS idx_routing_rules_org_active ON routing_rules(org_id, priority) WHERE active = true`},
+
 	}
 	for _, m := range migrations {
 		if _, err := db.Exec(m.sql); err != nil {
