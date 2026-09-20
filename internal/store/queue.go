@@ -427,3 +427,38 @@ func GetOrgTicketCounts(db *sql.DB, orgID string) (*OrgTicketCounts, error) {
 	}
 	return &c, nil
 }
+
+// EnsureTriageQueue checks if a queue named "Triage" exists for an organization.
+// If it exists, returns its ID. If not, creates it on-the-fly and returns the ID.
+// This guarantees that tickets falling through our routing layers always have a landing zone.
+func EnsureTriageQueue(db *sql.DB, orgID string) (string, error) {
+	var queueID string
+	err := db.QueryRow(`
+		SELECT id 
+		FROM queues 
+		WHERE org_id = $1 AND LOWER(name) = 'triage' AND active = true 
+		LIMIT 1`,
+		orgID,
+	).Scan(&queueID)
+	if err == nil {
+		return queueID, nil
+	}
+	if err != sql.ErrNoRows {
+		return "", err
+	}
+
+	// Create on-the-fly with a default slate gray color and "TRG" prefix
+	prefix := "TRG"
+	desc := "Default landing zone for unclassified incoming requests"
+	err = db.QueryRow(`
+		INSERT INTO queues (org_id, name, prefix, description, color, visibility)
+		VALUES ($1, 'Triage', $2, $3, '#64748b', 'internal')
+		RETURNING id`,
+		orgID, &prefix, &desc,
+	).Scan(&queueID)
+	if err != nil {
+		return "", err
+	}
+
+	return queueID, nil
+}

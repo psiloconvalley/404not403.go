@@ -216,14 +216,40 @@ func (h *Handler) ResendEmail(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// ── New Ticket Creation Path ──────────────────────────────────────────────
-	result, err := h.svc.Create(r.Context(), ticketsvc.CreateInput{
-		OrgID:      org.ID,
-		CustomerID: &customer.ID,
-		Subject:    subject,
-		Body:       ticketBody,
-		SourceType: string(domain.SourceEmail),
-		ThreadID:   &messageID,
-	})
+		// 1. Evaluate deterministic routing rules (Layer 1 of Routing Waterfall)
+		targetQueueID, matchedRuleID, err := store.MatchTicketToQueue(h.app.DB, org.ID, subject, ticketBody)
+		if err != nil {
+			log.Printf("inbound: error matching routing rules: %v", err)
+		}
+
+		if matchedRuleID != "" {
+			_ = store.IncrementRuleHitCount(h.app.DB, matchedRuleID)
+			log.Printf("inbound: ticket matched routing rule %s -> queue %s", matchedRuleID, targetQueueID)
+		} else {
+			// Fallback: Ensure ticket always lands in the Triage queue (Layer 3 fallback)
+			triageID, err := store.EnsureTriageQueue(h.app.DB, org.ID)
+			if err != nil {
+				log.Printf("inbound: failed to resolve triage queue: %v", err)
+			} else {
+				targetQueueID = triageID
+				log.Printf("inbound: ticket routed to default triage queue %s", targetQueueID)
+			}
+		}
+
+		var queueIDPtr *string
+		if targetQueueID != "" {
+			queueIDPtr = &targetQueueID
+		}
+
+		result, err := h.svc.Create(r.Context(), ticketsvc.CreateInput{
+			OrgID:      org.ID,
+			QueueID:    queueIDPtr,
+			CustomerID: &customer.ID,
+			Subject:    subject,
+			Body:       ticketBody,
+			SourceType: string(domain.SourceEmail),
+			ThreadID:   &messageID,
+		})
 	if err != nil {
 		log.Printf("inbound: failed to create ticket: %v", err)
 		http.Error(w, "failed to create ticket", http.StatusInternalServerError)
