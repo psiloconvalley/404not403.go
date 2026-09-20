@@ -609,6 +609,36 @@ func RunMigrations(db *sql.DB) {
 			)`,
 		},
 
+		// ── Departments ───────────────────────────────────────────────────────
+		{
+			name: "create_departments_table",
+			sql: `CREATE TABLE IF NOT EXISTS departments (
+				id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+				org_id       UUID NOT NULL REFERENCES organizations(id),
+				name         TEXT NOT NULL,
+				description  TEXT,
+				head_user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+				active       BOOLEAN NOT NULL DEFAULT true,
+				created_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+				updated_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+				UNIQUE(org_id, name)
+			)`,
+		},
+		{name: "idx_departments_org", sql: `CREATE INDEX IF NOT EXISTS idx_departments_org ON departments(org_id) WHERE active = true`},
+
+		// ── Department Queues (Junction) ──────────────────────────────────────
+		{
+			name: "create_department_queues_table",
+			sql: `CREATE TABLE IF NOT EXISTS department_queues (
+				department_id UUID NOT NULL REFERENCES departments(id) ON DELETE RESTRICT,
+				queue_id      UUID NOT NULL REFERENCES queues(id) ON DELETE CASCADE,
+				relationship  TEXT NOT NULL DEFAULT 'owner' CHECK (relationship IN ('owner', 'consumer', 'observer')),
+				created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+				PRIMARY KEY (department_id, queue_id)
+			)`,
+		},
+		{name: "idx_dq_queue", sql: `CREATE INDEX IF NOT EXISTS idx_dq_queue ON department_queues(queue_id)`},
+
 	}
 	for _, m := range migrations {
 		if _, err := db.Exec(m.sql); err != nil {
