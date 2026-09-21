@@ -3,9 +3,217 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>404NOT403 — Intelligent IT Operations</title>
+    <title>404NOT403 — Context-Enriched IT Operations</title>
     <link rel="stylesheet" href="/static/css/base.css">
     <link rel="stylesheet" href="/static/css/public.css">
+    <style>
+        /* Modernized Landing Layout */
+        .landing {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 1.5rem;
+        }
+        .landing-nav {
+            border-bottom: 1px solid var(--border);
+            padding: 1.5rem 0;
+            margin-bottom: 4rem;
+        }
+        .landing-hero {
+            padding: 2rem 0 5rem;
+            max-width: 800px;
+            margin: 0 auto;
+            text-align: center;
+        }
+        .landing-hero h1 {
+            font-size: 3.2rem;
+            letter-spacing: -1.5px;
+            line-height: 1.1;
+            margin-bottom: 1.5rem;
+            font-weight: 800;
+        }
+        .hero-sub {
+            font-size: 1.25rem;
+            line-height: 1.6;
+            color: var(--text-secondary);
+            max-width: 620px;
+            margin: 0 auto 2.5rem;
+        }
+        
+        /* Interactive Enrichment Live Card Mockup */
+        .preview-container {
+            max-width: 720px;
+            margin: 0 auto 6rem;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.25);
+            text-align: left;
+        }
+        .preview-header {
+            background: var(--bg-subtle);
+            padding: 0.75rem 1.25rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-family: monospace;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+        .preview-dots {
+            display: flex;
+            gap: 6px;
+        }
+        .dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--border);
+        }
+        .dot-green { background: #10b981; }
+        .dot-amber { background: #f59e0b; }
+        .dot-red { background: #ef4444; }
+        
+        .preview-body {
+            display: grid;
+            grid-template-columns: 1fr 280px;
+            min-height: 380px;
+        }
+        @media (max-width: 700px) {
+            .preview-body { grid-template-columns: 1fr; }
+            .preview-sidebar { border-left: none !important; border-top: 1px solid var(--border); }
+        }
+        .preview-content {
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        .preview-badge {
+            display: inline-block;
+            background: rgba(100, 116, 139, 0.15);
+            color: var(--text-secondary);
+            font-family: monospace;
+            font-size: 0.75rem;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            align-self: flex-start;
+        }
+        .preview-title {
+            font-size: 1.35rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+        .preview-message {
+            font-size: 0.9rem;
+            line-height: 1.6;
+            color: var(--text-secondary);
+            background: var(--bg-subtle);
+            padding: 1rem;
+            border-radius: var(--radius-md);
+            border-left: 3px solid var(--accent);
+        }
+        
+        /* The Superpower Context Sidebar Card */
+        .preview-sidebar {
+            background: var(--bg-subtle);
+            border-left: 1px solid var(--border);
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+        }
+        .sidebar-title {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-muted);
+            font-weight: 700;
+        }
+        .directory-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+        .directory-item {
+            display: flex;
+            flex-direction: column;
+            gap: 0.15rem;
+        }
+        .dir-label {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+        }
+        .dir-val {
+            font-size: 0.85rem;
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+        .dir-val-code {
+            font-family: monospace;
+            color: var(--accent);
+        }
+
+        /* Value Pillars Section */
+        .value-section {
+            padding: 4rem 0 6rem;
+            border-top: 1px solid var(--border);
+        }
+        .section-header {
+            text-align: center;
+            margin-bottom: 4rem;
+        }
+        .section-header h2 {
+            font-size: 2.2rem;
+            letter-spacing: -1px;
+            margin-bottom: 0.75rem;
+        }
+        .section-header p {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+        }
+        .grid-3 {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 2rem;
+        }
+        .value-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        .value-card-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            background: rgba(100, 116, 139, 0.1);
+            color: var(--accent);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+        }
+        .value-card h3 {
+            font-size: 1.15rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        .value-card p {
+            font-size: 0.9rem;
+            line-height: 1.6;
+            color: var(--text-muted);
+        }
+    </style>
 </head>
 <body>
     <div class="landing">
@@ -15,68 +223,103 @@
             </div>
             <div class="nav-actions">
                 <a href="/login" class="btn btn-ghost">Log In</a>
+                <a href="/register" class="btn btn-primary">Get Started</a>
             </div>
         </nav>
 
         <main class="landing-hero">
-            <h1>IT service management that doesn't require a 6-month implementation.</h1>
+            <h1>Every ticket enters pre-enriched with instant context.</h1>
             <p class="hero-sub">
-                Built for companies that outgrew email and Slack
-                but shouldn't need a six-figure contract to manage IT requests.
+                Intelligent IT service management built for high-growth enterprises. Employees interact strictly via email or Slack. Agents receive tickets loaded with directory identity, reporting hierarchy, and asset profiles.
             </p>
             <div class="hero-actions">
-                <a href="#" class="btn btn-primary">Request a Demo</a>
-                <a href="/login" class="btn btn-ghost">Log In</a>
+                <a href="/register" class="btn btn-primary">Create Your Workspace</a>
+                <a href="/login" class="btn btn-ghost">Sign In</a>
             </div>
         </main>
 
-        <section class="landing-features">
-            <div class="feature">
-                <div class="feature-icon">
-                    <svg class="icon icon-lg"><use href="/static/icons/sprite.svg#icon-clipboard-list"></use></svg>
+        <!-- Dynamic Live Enrichment Preview Card -->
+        <section class="preview-container">
+            <div class="preview-header">
+                <div class="preview-dots">
+                    <div class="dot dot-red"></div>
+                    <div class="dot dot-amber"></div>
+                    <div class="dot dot-green"></div>
                 </div>
-                <h3>Service Catalog</h3>
-                <p>Employees pick from a menu of services. Tickets auto-route to the right team with the right priority.</p>
+                <span>TICKET VESSEL #ACME-SR-0144</span>
+                <span class="preview-badge" style="background: rgba(16, 185, 129, 0.15); color: #10b981;">Triage Active</span>
             </div>
-            <div class="feature">
-                <div class="feature-icon">
-                    <svg class="icon icon-lg"><use href="/static/icons/sprite.svg#icon-cpu"></use></svg>
+            <div class="preview-body">
+                <div class="preview-content">
+                    <span class="preview-badge">Source: Inbound Email</span>
+                    <h2 class="preview-title">Need assistance with laptop display flicker</h2>
+                    <p class="preview-message">
+                        Hey team, my laptop screen keeps flickering whenever I join video calls. I've restarted a couple of times but it still acts up. Let me know if I need a replacement or a quick driver fix. Thanks!
+                    </p>
+                    <div style="margin-top: auto; font-family: monospace; font-size: 0.75rem; color: var(--text-muted);">
+                        Routed to <strong style="color: var(--text-primary);">Hardware Triage Queue</strong> via Deterministic Keyword Routing Rule: <span style="color: var(--accent);">"laptop"</span>
+                    </div>
                 </div>
-                <h3>AI-Powered Triage</h3>
-                <p>Every ticket classified, prioritized, and routed — before an agent touches it.</p>
-            </div>
-            <div class="feature">
-                <div class="feature-icon">
-                    <svg class="icon icon-lg"><use href="/static/icons/sprite.svg#icon-shield"></use></svg>
+                <div class="preview-sidebar">
+                    <span class="sidebar-title">Okta Directory Link</span>
+                    <div class="directory-card">
+                        <div class="directory-item">
+                            <span class="dir-label">Requester</span>
+                            <span class="dir-val">Sarah Chen</span>
+                        </div>
+                        <div class="directory-item">
+                            <span class="dir-label">Position</span>
+                            <span class="dir-val">Senior Financial Analyst</span>
+                        </div>
+                        <div class="directory-item">
+                            <span class="dir-label">Home Department</span>
+                            <span class="dir-val">Finance Operations</span>
+                        </div>
+                        <div class="directory-item">
+                            <span class="dir-label">Cost Center</span>
+                            <span class="dir-val dir-val-code">CC-401</span>
+                        </div>
+                        <div class="directory-item">
+                            <span class="dir-label">Manager (Approver)</span>
+                            <span class="dir-val">Bob Vance (VP Finance)</span>
+                        </div>
+                        <div class="directory-item">
+                            <span class="dir-label">Asset Tag</span>
+                            <span class="dir-val dir-val-code">MacBook Pro 16" (M3 Max)</span>
+                        </div>
+                    </div>
                 </div>
-                <h3>Passwordless Auth</h3>
-                <p>Passkeys and MFA built in. No password resets clogging your own help desk.</p>
-            </div>
-            <div class="feature">
-                <div class="feature-icon">
-                    <svg class="icon icon-lg"><use href="/static/icons/sprite.svg#icon-package"></use></svg>
-                </div>
-                <h3>CMDB-Aware</h3>
-                <p>Tickets linked to devices, services, and people. Full context on every issue.</p>
-            </div>
-            <div class="feature">
-                <div class="feature-icon">
-                    <svg class="icon icon-lg"><use href="/static/icons/sprite.svg#icon-search"></use></svg>
-                </div>
-                <h3>Full Audit Trail</h3>
-                <p>Every action logged. Every state change recorded. Compliance-ready from day one.</p>
-            </div>
-            <div class="feature">
-                <div class="feature-icon">
-                    <svg class="icon icon-lg"><use href="/static/icons/sprite.svg#icon-mail"></use></svg>
-                </div>
-                <h3>Multi-Channel Intake</h3>
-                <p>Email, Slack, and self-service portal flow into one source of truth.</p>
             </div>
         </section>
 
-        <footer class="landing-footer">
-            <p>404NOT403 — What did the server actually say?</p>
+        <!-- Value Pillars -->
+        <section class="value-section">
+            <div class="section-header">
+                <h2>ITSM built to eliminate friction.</h2>
+                <p>Designed for organizations that outgrew basic mailboxes but reject legacy enterprise bloat.</p>
+            </div>
+            
+            <div class="grid-3">
+                <div class="value-card">
+                    <div class="value-card-icon">⚡</div>
+                    <h3>Zero-Inbox Friction</h3>
+                    <p>Employees file requests exactly where they work — entirely via email or Slack. No clunky portals, no separate logins, no training required.</p>
+                </div>
+                <div class="value-card">
+                    <div class="value-card-icon">⚙️</div>
+                    <h3>Cascading H-RBAC</h3>
+                    <p>Google Workspace style role hierarchy. Global Admins manage settings, Department Admins govern their local workflows, and Queue Leads triage requests.</p>
+                </div>
+                <div class="value-card">
+                    <div class="value-card-icon">🧠</div>
+                    <h3>Context-Aware Triage</h3>
+                    <p>Keyword routing matched with AI classifiers to automatically assign tickets to proper owners, priority levels, and SLAs before agents read them.</p>
+                </div>
+            </div>
+        </section>
+
+        <footer class="landing-footer" style="margin-top: 4rem;">
+            <p>&copy; 404NOT403. Context-enriched IT Service Management.</p>
         </footer>
     </div>
 </body>
