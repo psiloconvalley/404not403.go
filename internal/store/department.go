@@ -222,3 +222,130 @@ func GetDepartmentsForQueue(db *sql.DB, queueID string) ([]*Department, error) {
 	}
 	return depts, nil
 }
+
+// ── Department Membership & H-RBAC ───────────────────────────────────────────
+
+// DepartmentMember represents a user who is assigned to a department.
+type DepartmentMember struct {
+	DepartmentID string    `json:"department_id"`
+	UserID       string    `json:"user_id"`
+	Role         string    `json:"role"` // 'admin', 'member'
+	CreatedAt    time.Time `json:"created_at"`
+}
+
+// AddMemberToDepartment assigns a user to a department with a specific role.
+func AddMemberToDepartment(db *sql.DB, departmentID, userID, role string) error {
+	if role != "admin" && role != "member" {
+		role = "member"
+	}
+	_, err := db.Exec(`
+		INSERT INTO department_members (department_id, user_id, role)
+		VALUES ($1, $2, $3)
+		ON CONFLICT (department_id, user_id) 
+		DO UPDATE SET role = EXCLUDED.role`,
+		departmentID, userID, role,
+	)
+	return err
+}
+
+// RemoveMemberFromDepartment removes a user from a department.
+func RemoveMemberFromDepartment(db *sql.DB, departmentID, userID string) error {
+	_, err := db.Exec(`
+		DELETE FROM department_members 
+		WHERE department_id = $1 AND user_id = $2`,
+		departmentID, userID,
+	)
+	return err
+}
+
+// GetDepartmentMembers lists all users assigned to a specific department.
+func GetDepartmentMembers(db *sql.DB, departmentID string) ([]DepartmentMember, error) {
+	rows, err := db.Query(`
+		SELECT department_id, user_id, role, created_at
+		FROM department_members
+		WHERE department_id = $1
+		ORDER BY created_at ASC`,
+		departmentID,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var members []DepartmentMember
+	for rows.Next() {
+		var m DepartmentMember
+		if err := rows.Scan(&m.DepartmentID, &m.UserID, &m.Role, &m.CreatedAt); err != nil {
+			return nil, err
+		}
+		members = append(members, m)
+	}
+	return members, rows.Err()
+}
+
+// GetAuthorizedQueuesForUser resolves all queue IDs a user has access to see/manage based on H-RBAC:
+// 1. If Org Owner/Admin -> ALL queues in the organization.
+// 2. Else -> Queues linked to departments where they are members + queues where they are direct members.
+func GetAuthorizedQueuesForUser(db *sql.DB, orgID, userID string) ([]string, error) {
+	// First, check global Org level membership & role
+	var globalRole string
+	err := db.QueryRow(`
+		SELECT role FROM org_members 
+		WHERE org_id = $1 AND user_id = $2`,
+		orgID, userID,
+	).Scan(&globalRole)
+	if err != nil && err != sql.ErrNoRows {
+		return nil, err
+	}
+
+	// If Org Owner or Admin, they get unrestricted access to all queues in the org
+	if globalRole == "owner" || globalRole == "admin" {
+		rows, err := db.Query(`SELECT id FROM queues WHERE org_id = $1 AND active = true`, orgID)
+		if err != nil {
+			return nil, err
+		}
+		defer rows.Close()
+
+		var queueIDs []string
+		for rows.Next() {
+			var qid string
+			if err := rows.Scan(&qid); err != nil {
+				return nil, err
+			}
+			queueIDs = append(queueIDs, qid)
+		}
+		return queueIDs, rows.Err()
+	}
+
+	// Otherwise, combine (UNION) queue memberships via Departments and Direct Queue memberships
+	rows, err := db.Query(`
+		-- Tier 2 & 3: Queues belonging to departments where the user is a member
+		SELECT dq.queue_id
+		FROM department_queues dq
+		JOIN department_members dm ON dq.department_id = dm.department_id
+		JOIN queues q ON dq.queue_id = q.id
+		WHERE dm.user_id = $1 AND q.org_id = $2 AND q.active = true
+
+		UNION
+
+		-- Tier 4: Direct queue membership (queue_members table)
+		SELECT qm.queue_id
+		FROM queue_members qm
+		JOIN queues q ON qm.queue_id = q.id
+		WHERE qm.user_id = $1 AND q.org_id = $2 AND q.active = true
+	`, userID, orgID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var queueIDs []string
+	for rows.Next() {
+		var qid string
+		if err := rows.Scan(&qid); err != nil {
+			return nil, err
+		}
+		queueIDs = append(queueIDs, qid)
+	}
+	return queueIDs, rows.Err()
+}

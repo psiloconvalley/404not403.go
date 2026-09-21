@@ -736,6 +736,19 @@ func RunMigrations(db *sql.DB) {
 		{name: "idx_customers_department_id", sql: `CREATE INDEX IF NOT EXISTS idx_customers_department_id ON customers(department_id)`},
 		{name: "idx_customers_manager_id", sql: `CREATE INDEX IF NOT EXISTS idx_customers_manager_id ON customers(manager_customer_id)`},
 		{name: "idx_customers_external_id", sql: `CREATE INDEX IF NOT EXISTS idx_customers_external_id ON customers(org_id, external_id)`},
+
+		// ── Department Members (H-RBAC Tier 2) ──────────────────────────────
+		{
+			name: "create_department_members_table",
+			sql: `CREATE TABLE IF NOT EXISTS department_members (
+				department_id UUID NOT NULL REFERENCES departments(id) ON DELETE CASCADE,
+				user_id       UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+				role          TEXT NOT NULL DEFAULT 'member' CHECK (role IN ('admin', 'member')),
+				created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+				PRIMARY KEY (department_id, user_id)
+			)`,
+		},
+		{name: "idx_dept_members_user", sql: `CREATE INDEX IF NOT EXISTS idx_dept_members_user ON department_members(user_id)`},
 	}
 	for _, m := range migrations {
 		if _, err := db.Exec(m.sql); err != nil {
