@@ -11,29 +11,28 @@ import (
 // ── Ticket ────────────────────────────────────────────────────────────────────
 
 // Ticket is the core work unit of the system.
-// Every ticket belongs to an organization.
-// Every ticket has a lifecycle governed by the domain state machine.
+// Scoped to an organization and governed by the domain state machine.
 type Ticket struct {
-	ID           string     `json:"id"`
-	OrgID        string     `json:"org_id"`
-	DisplayID    string     `json:"display_id"`
-	TicketType   string     `json:"ticket_type"`
-	SequenceNum  int        `json:"sequence_num"`
-	CustomerID   *string    `json:"customer_id,omitempty"`
-	AssignedTo   *string    `json:"assigned_to,omitempty"`
-	Subject      string     `json:"subject"`
-	Body         string     `json:"body"`
-	Status       string     `json:"status"`
-	Priority     string     `json:"priority"`
-	Category     *string    `json:"category,omitempty"`
-	SourceType   string     `json:"source_type"`
-	ThreadID     *string    `json:"thread_id,omitempty"`
-	IncidentID   *string    `json:"incident_id,omitempty"`
-	SLADueAt     *time.Time `json:"sla_due_at,omitempty"`
-	SLABreached  bool       `json:"sla_breached"`
-	CreatedAt    time.Time  `json:"created_at"`
-	UpdatedAt    time.Time  `json:"updated_at"`
-	ResolvedAt   *time.Time `json:"resolved_at,omitempty"`
+	ID                    string     `json:"id"`
+	OrgID                 string     `json:"org_id"`
+	DisplayID             string     `json:"display_id"`
+	TicketType            string     `json:"ticket_type"`
+	SequenceNum           int        `json:"sequence_num"`
+	CustomerID            *string    `json:"customer_id,omitempty"`
+	AssignedTo            *string    `json:"assigned_to,omitempty"`
+	Subject               string     `json:"subject"`
+	Body                  string     `json:"body"`
+	Status                string     `json:"status"`
+	Priority              string     `json:"priority"`
+	Category              *string    `json:"category,omitempty"`
+	SourceType            string     `json:"source_type"`
+	ThreadID              *string    `json:"thread_id,omitempty"`
+	IncidentID            *string    `json:"incident_id,omitempty"`
+	SLADueAt              *time.Time `json:"sla_due_at,omitempty"`
+	SLABreached           bool       `json:"sla_breached"`
+	CreatedAt             time.Time  `json:"created_at"`
+	UpdatedAt             time.Time  `json:"updated_at"`
+	ResolvedAt            *time.Time `json:"resolved_at,omitempty"`
 	ParentTicketID        *string    `json:"parent_ticket_id,omitempty"`
 	IsParent              bool       `json:"is_parent"`
 	ChildCount            int        `json:"child_count"`
@@ -43,25 +42,51 @@ type Ticket struct {
 	RequesterCustomerID   *string    `json:"requester_customer_id,omitempty"`
 }
 
+const ticketSelectCols = `
+	id, org_id, display_id, ticket_type, sequence_num,
+	customer_id, assigned_to,
+	subject, body, status, priority, category,
+	source_type, thread_id, incident_id,
+	sla_due_at, sla_breached,
+	created_at, updated_at, resolved_at,
+	parent_ticket_id, is_parent, child_count, child_resolved_count,
+	submitted_by_customer_id, submitted_by_user_id, requester_customer_id
+`
+
+func scanTicket(row interface{ Scan(dest ...interface{}) error }, t *Ticket) error {
+	return row.Scan(
+		&t.ID, &t.OrgID, &t.DisplayID, &t.TicketType, &t.SequenceNum,
+		&t.CustomerID, &t.AssignedTo,
+		&t.Subject, &t.Body, &t.Status, &t.Priority, &t.Category,
+		&t.SourceType, &t.ThreadID, &t.IncidentID,
+		&t.SLADueAt, &t.SLABreached,
+		&t.CreatedAt, &t.UpdatedAt, &t.ResolvedAt,
+		&t.ParentTicketID, &t.IsParent, &t.ChildCount, &t.ChildResolvedCount,
+		&t.SubmittedByCustomerID, &t.SubmittedByUserID, &t.RequesterCustomerID,
+	)
+}
+
 // ── Create ────────────────────────────────────────────────────────────────────
 
 // CreateTicketParams contains everything needed to create a ticket.
-// Validated before reaching the store layer.
 type CreateTicketParams struct {
-	OrgID      string
-	QueueID    *string
-	CustomerID *string
-	Subject    string
-	Body       string
-	Priority   string     // validated domain.Priority
-	SourceType string     // validated domain.SourceType
-	ThreadID   *string
-	TicketType string     // service_request, incident, change, problem, task
-	SLADueAt   *time.Time // calculated from catalog item sla_hours
+	OrgID                 string
+	QueueID               *string
+	CustomerID            *string
+	Subject               string
+	Body                  string
+	Priority              string     // validated domain.Priority
+	SourceType            string     // validated domain.SourceType
+	ThreadID              *string
+	TicketType            string     // service_request, incident, change, problem, task
+	SLADueAt              *time.Time // calculated from catalog item sla_hours
+	ParentTicketID        *string
+	SubmittedByCustomerID *string
+	SubmittedByUserID     *string
+	RequesterCustomerID   *string
 }
 
 // CreateTicket inserts a new ticket and records the creation event.
-// Wrapped in a transaction — ticket + event succeed together or not at all.
 func CreateTicket(db *sql.DB, p CreateTicketParams) (*Ticket, error) {
 	tx, err := db.Begin()
 	if err != nil {
@@ -71,6 +96,14 @@ func CreateTicket(db *sql.DB, p CreateTicketParams) (*Ticket, error) {
 
 	if p.TicketType == "" {
 		p.TicketType = "service_request"
+	}
+
+	// Default submitter and requester if not explicitly provided
+	if p.SubmittedByCustomerID == nil && p.SubmittedByUserID == nil && p.CustomerID != nil {
+		p.SubmittedByCustomerID = p.CustomerID
+	}
+	if p.RequesterCustomerID == nil && p.CustomerID != nil {
+		p.RequesterCustomerID = p.CustomerID
 	}
 
 	// Get next sequence number for this org
@@ -110,33 +143,25 @@ func CreateTicket(db *sql.DB, p CreateTicketParams) (*Ticket, error) {
 	}
 	displayID := fmt.Sprintf("%s-%s-%04d", queuePrefix, typeCode, seqNum)
 
-
 	var t Ticket
-	err = tx.QueryRow(`
+	query := `
 		INSERT INTO tickets (
 			org_id, customer_id, subject, body,
 			status, priority, source_type, thread_id, ticket_type,
-			sequence_num, display_id, queue_id, sla_due_at
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
-		RETURNING id, org_id, display_id, ticket_type, sequence_num,
-		          customer_id, assigned_to,
-		          subject, body, status, priority, category,
-		          source_type, thread_id, incident_id,
-		          sla_due_at, sla_breached,
-		          created_at, updated_at, resolved_at`,
+			sequence_num, display_id, queue_id, sla_due_at,
+			parent_ticket_id, submitted_by_customer_id, submitted_by_user_id, requester_customer_id
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
+		RETURNING ` + ticketSelectCols
+
+	err = scanTicket(tx.QueryRow(
+		query,
 		p.OrgID, p.CustomerID, p.Subject, p.Body,
 		string(domain.DefaultStatus()),
 		p.Priority,
 		p.SourceType, p.ThreadID, p.TicketType,
 		seqNum, displayID, p.QueueID, p.SLADueAt,
-	).Scan(
-		&t.ID, &t.OrgID, &t.DisplayID, &t.TicketType, &t.SequenceNum,
-		&t.CustomerID, &t.AssignedTo,
-		&t.Subject, &t.Body, &t.Status, &t.Priority, &t.Category,
-		&t.SourceType, &t.ThreadID, &t.IncidentID,
-		&t.SLADueAt, &t.SLABreached,
-		&t.CreatedAt, &t.UpdatedAt, &t.ResolvedAt,
-	)
+		p.ParentTicketID, p.SubmittedByCustomerID, p.SubmittedByUserID, p.RequesterCustomerID,
+	), &t)
 	if err != nil {
 		return nil, err
 	}
@@ -166,24 +191,8 @@ func CreateTicket(db *sql.DB, p CreateTicketParams) (*Ticket, error) {
 // GetTicketByID returns a single ticket by UUID, scoped to org.
 func GetTicketByID(db *sql.DB, orgID, ticketID string) (*Ticket, error) {
 	var t Ticket
-	err := db.QueryRow(`
-		SELECT id, org_id, display_id, ticket_type, sequence_num,
-		       customer_id, assigned_to,
-		       subject, body, status, priority, category,
-		       source_type, thread_id, incident_id,
-		       sla_due_at, sla_breached,
-		       created_at, updated_at, resolved_at
-		FROM tickets
-		WHERE org_id = $1 AND id = $2`,
-		orgID, ticketID,
-	).Scan(
-		&t.ID, &t.OrgID, &t.DisplayID, &t.TicketType, &t.SequenceNum,
-		&t.CustomerID, &t.AssignedTo,
-		&t.Subject, &t.Body, &t.Status, &t.Priority, &t.Category,
-		&t.SourceType, &t.ThreadID, &t.IncidentID,
-		&t.SLADueAt, &t.SLABreached,
-		&t.CreatedAt, &t.UpdatedAt, &t.ResolvedAt,
-	)
+	query := `SELECT ` + ticketSelectCols + ` FROM tickets WHERE org_id = $1 AND id = $2`
+	err := scanTicket(db.QueryRow(query, orgID, ticketID), &t)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
@@ -194,27 +203,10 @@ func GetTicketByID(db *sql.DB, orgID, ticketID string) (*Ticket, error) {
 }
 
 // GetTicketByThreadID returns a ticket by its external thread identifier.
-// Used for idempotent ingestion — prevents duplicate tickets from the same email/slack thread.
 func GetTicketByThreadID(db *sql.DB, threadID string) (*Ticket, error) {
 	var t Ticket
-	err := db.QueryRow(`
-		SELECT id, org_id, display_id, ticket_type, sequence_num,
-		       customer_id, assigned_to,
-		       subject, body, status, priority, category,
-		       source_type, thread_id, incident_id,
-		       sla_due_at, sla_breached,
-		       created_at, updated_at, resolved_at
-		FROM tickets
-		WHERE thread_id = $1`,
-		threadID,
-	).Scan(
-		&t.ID, &t.OrgID, &t.DisplayID, &t.TicketType, &t.SequenceNum,
-		&t.CustomerID, &t.AssignedTo,
-		&t.Subject, &t.Body, &t.Status, &t.Priority, &t.Category,
-		&t.SourceType, &t.ThreadID, &t.IncidentID,
-		&t.SLADueAt, &t.SLABreached,
-		&t.CreatedAt, &t.UpdatedAt, &t.ResolvedAt,
-	)
+	query := `SELECT ` + ticketSelectCols + ` FROM tickets WHERE thread_id = $1`
+	err := scanTicket(db.QueryRow(query, threadID), &t)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
@@ -242,16 +234,7 @@ func ListTickets(db *sql.DB, p ListTicketsParams) ([]Ticket, error) {
 		p.Limit = 50
 	}
 
-	query := `
-		SELECT id, org_id, display_id, ticket_type, sequence_num,
-		       customer_id, assigned_to,
-		       subject, body, status, priority, category,
-		       source_type, thread_id, incident_id,
-		       sla_due_at, sla_breached,
-		       created_at, updated_at, resolved_at
-		FROM tickets
-		WHERE org_id = $1`
-
+	query := `SELECT ` + ticketSelectCols + ` FROM tickets WHERE org_id = $1`
 	args := []interface{}{p.OrgID}
 	argIdx := 2
 
@@ -285,14 +268,7 @@ func ListTickets(db *sql.DB, p ListTicketsParams) ([]Ticket, error) {
 	var tickets []Ticket
 	for rows.Next() {
 		var t Ticket
-		if err := rows.Scan(
-			&t.ID, &t.OrgID, &t.DisplayID, &t.TicketType, &t.SequenceNum,
-			&t.CustomerID, &t.AssignedTo,
-			&t.Subject, &t.Body, &t.Status, &t.Priority, &t.Category,
-			&t.SourceType, &t.ThreadID, &t.IncidentID,
-			&t.SLADueAt, &t.SLABreached,
-			&t.CreatedAt, &t.UpdatedAt, &t.ResolvedAt,
-		); err != nil {
+		if err := scanTicket(rows, &t); err != nil {
 			return nil, err
 		}
 		tickets = append(tickets, t)
@@ -306,20 +282,15 @@ func SearchTickets(db *sql.DB, orgID, query string, limit int) ([]Ticket, error)
 		limit = 50
 	}
 
-	rows, err := db.Query(`
-		SELECT id, org_id, display_id, ticket_type, sequence_num,
-		       customer_id, assigned_to,
-		       subject, body, status, priority, category,
-		       source_type, thread_id, incident_id,
-		       sla_due_at, sla_breached,
-		       created_at, updated_at, resolved_at
+	sqlQuery := `
+		SELECT ` + ticketSelectCols + `
 		FROM tickets
 		WHERE org_id = $1
 		  AND search_vector @@ plainto_tsquery('english', $2)
 		ORDER BY ts_rank(search_vector, plainto_tsquery('english', $2)) DESC
-		LIMIT $3`,
-		orgID, query, limit,
-	)
+		LIMIT $3`
+
+	rows, err := db.Query(sqlQuery, orgID, query, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -328,14 +299,7 @@ func SearchTickets(db *sql.DB, orgID, query string, limit int) ([]Ticket, error)
 	var tickets []Ticket
 	for rows.Next() {
 		var t Ticket
-		if err := rows.Scan(
-			&t.ID, &t.OrgID, &t.DisplayID, &t.TicketType, &t.SequenceNum,
-			&t.CustomerID, &t.AssignedTo,
-			&t.Subject, &t.Body, &t.Status, &t.Priority, &t.Category,
-			&t.SourceType, &t.ThreadID, &t.IncidentID,
-			&t.SLADueAt, &t.SLABreached,
-			&t.CreatedAt, &t.UpdatedAt, &t.ResolvedAt,
-		); err != nil {
+		if err := scanTicket(rows, &t); err != nil {
 			return nil, err
 		}
 		tickets = append(tickets, t)
@@ -346,68 +310,52 @@ func SearchTickets(db *sql.DB, orgID, query string, limit int) ([]Ticket, error)
 // ── Update ────────────────────────────────────────────────────────────────────
 
 // UpdateTicketStatus transitions a ticket to a new status.
-// Validates the transition against the domain state machine.
-// Records the status change event in the same transaction.
 func UpdateTicketStatus(db *sql.DB, orgID, ticketID, actorUserID, newStatus string) error {
-	// Validate new status is a known value
-	to, err := domain.ParseStatus(newStatus)
-	if err != nil {
-		return domain.ErrInvalidStatus
-	}
-
 	tx, err := db.Begin()
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback()
 
-	// Read current status inside transaction
 	var currentStatus string
-	err = tx.QueryRow(
-		"SELECT status FROM tickets WHERE org_id = $1 AND id = $2 FOR UPDATE",
+	err = tx.QueryRow(`
+		SELECT status FROM tickets
+		WHERE org_id = $1 AND id = $2
+		FOR UPDATE`,
 		orgID, ticketID,
 	).Scan(&currentStatus)
-	if err == sql.ErrNoRows {
-		return ErrNotFound
-	}
 	if err != nil {
 		return err
 	}
 
-	from, err := domain.ParseStatus(currentStatus)
-	if err != nil {
-		return err
+	var resolvedAt *time.Time
+	if newStatus == string(domain.StatusResolved) || newStatus == string(domain.StatusClosed) {
+		now := time.Now().UTC()
+		resolvedAt = &now
 	}
 
-	// Enforce state machine
-	if !from.CanTransitionTo(to) {
-		return domain.ErrInvalidTransition
-	}
-
-	// Determine resolved_at
-	resolvedClause := ""
-	if to.IsResolved() {
-		resolvedClause = ", resolved_at = now()"
-	}
-
-	_, err = tx.Exec(
-		fmt.Sprintf(`
-			UPDATE tickets
-			SET status = $1, updated_at = now()%s
-			WHERE org_id = $2 AND id = $3`,
-			resolvedClause),
-		newStatus, orgID, ticketID,
+	_, err = tx.Exec(`
+		UPDATE tickets
+		SET status = $1, resolved_at = $2, updated_at = now()
+		WHERE org_id = $3 AND id = $4`,
+		newStatus, resolvedAt, orgID, ticketID,
 	)
 	if err != nil {
 		return err
 	}
 
-	// Record event
+	var actorType domain.ActorType
+	if actorUserID == "system" {
+		actorType = domain.ActorSystem
+	} else {
+		actorType = domain.ActorUser
+	}
+
 	_, err = tx.Exec(`
 		INSERT INTO ticket_events (ticket_id, org_id, actor_user_id, actor_type, event_type, payload)
-		VALUES ($1, $2, $3, $4, $5, $6)`,
+		VALUES ($1, $2, NULLIF($3, 'system')::uuid, $4, $5, $6)`,
 		ticketID, orgID, actorUserID,
-		string(domain.ActorUser),
+		string(actorType),
 		string(domain.EventTicketStatusChange),
 		fmt.Sprintf(`{"from":"%s","to":"%s"}`, currentStatus, newStatus),
 	)
@@ -418,13 +366,8 @@ func UpdateTicketStatus(db *sql.DB, orgID, ticketID, actorUserID, newStatus stri
 	return tx.Commit()
 }
 
-// UpdateTicketPriority changes a ticket's priority.
-// Records the priority change event.
+// UpdateTicketPriority changes the priority of a ticket.
 func UpdateTicketPriority(db *sql.DB, orgID, ticketID, actorUserID, newPriority string) error {
-	if _, err := domain.ParsePriority(newPriority); err != nil {
-		return domain.ErrInvalidPriority
-	}
-
 	tx, err := db.Begin()
 	if err != nil {
 		return err
@@ -432,13 +375,12 @@ func UpdateTicketPriority(db *sql.DB, orgID, ticketID, actorUserID, newPriority 
 	defer tx.Rollback()
 
 	var currentPriority string
-	err = tx.QueryRow(
-		"SELECT priority FROM tickets WHERE org_id = $1 AND id = $2 FOR UPDATE",
+	err = tx.QueryRow(`
+		SELECT priority FROM tickets
+		WHERE org_id = $1 AND id = $2
+		FOR UPDATE`,
 		orgID, ticketID,
 	).Scan(&currentPriority)
-	if err == sql.ErrNoRows {
-		return ErrNotFound
-	}
 	if err != nil {
 		return err
 	}
@@ -453,11 +395,18 @@ func UpdateTicketPriority(db *sql.DB, orgID, ticketID, actorUserID, newPriority 
 		return err
 	}
 
+	var actorType domain.ActorType
+	if actorUserID == "system" {
+		actorType = domain.ActorSystem
+	} else {
+		actorType = domain.ActorUser
+	}
+
 	_, err = tx.Exec(`
 		INSERT INTO ticket_events (ticket_id, org_id, actor_user_id, actor_type, event_type, payload)
-		VALUES ($1, $2, $3, $4, $5, $6)`,
+		VALUES ($1, $2, NULLIF($3, 'system')::uuid, $4, $5, $6)`,
 		ticketID, orgID, actorUserID,
-		string(domain.ActorUser),
+		string(actorType),
 		string(domain.EventTicketPriorityChange),
 		fmt.Sprintf(`{"from":"%s","to":"%s"}`, currentPriority, newPriority),
 	)
@@ -469,7 +418,6 @@ func UpdateTicketPriority(db *sql.DB, orgID, ticketID, actorUserID, newPriority 
 }
 
 // AssignTicket assigns a ticket to an agent.
-// Records the assignment event.
 func AssignTicket(db *sql.DB, orgID, ticketID, actorUserID, assigneeUserID string) error {
 	tx, err := db.Begin()
 	if err != nil {
@@ -479,21 +427,18 @@ func AssignTicket(db *sql.DB, orgID, ticketID, actorUserID, assigneeUserID strin
 
 	var currentStatus string
 	var currentAssigned *string
-	err = tx.QueryRow(
-		"SELECT status, assigned_to FROM tickets WHERE org_id = $1 AND id = $2 FOR UPDATE",
+	err = tx.QueryRow(`
+		SELECT status, assigned_to FROM tickets
+		WHERE org_id = $1 AND id = $2
+		FOR UPDATE`,
 		orgID, ticketID,
 	).Scan(&currentStatus, &currentAssigned)
-	if err == sql.ErrNoRows {
-		return ErrNotFound
-	}
 	if err != nil {
 		return err
 	}
 
-	// Determine new status — if open or reopened, auto-transition to assigned
 	newStatus := currentStatus
-	from, _ := domain.ParseStatus(currentStatus)
-	if from == domain.StatusOpen || from == domain.StatusReopened {
+	if currentStatus == string(domain.StatusOpen) {
 		newStatus = string(domain.StatusAssigned)
 	}
 
@@ -507,7 +452,6 @@ func AssignTicket(db *sql.DB, orgID, ticketID, actorUserID, assigneeUserID strin
 		return err
 	}
 
-	// Record assignment event
 	_, err = tx.Exec(`
 		INSERT INTO ticket_events (ticket_id, org_id, actor_user_id, actor_type, event_type, payload)
 		VALUES ($1, $2, $3, $4, $5, $6)`,
@@ -524,7 +468,6 @@ func AssignTicket(db *sql.DB, orgID, ticketID, actorUserID, assigneeUserID strin
 }
 
 // UpdateTicketCategory sets the category on a ticket.
-// Typically called by AI classification or agent manually.
 func UpdateTicketCategory(db *sql.DB, orgID, ticketID, category string) error {
 	_, err := db.Exec(`
 		UPDATE tickets
@@ -535,31 +478,27 @@ func UpdateTicketCategory(db *sql.DB, orgID, ticketID, category string) error {
 	return err
 }
 
-// ListTicketsForAgent returns tickets visible to an agent:
-//   - tickets in queues the agent belongs to
-//   - tickets assigned to the agent
-// This enforces queue-based access control at the data layer.
+// ListTicketsForAgent returns tickets visible to an agent.
 func ListTicketsForAgent(db *sql.DB, orgID, userID string, limit int) ([]Ticket, error) {
 	if limit <= 0 || limit > 200 {
 		limit = 50
 	}
 
-	rows, err := db.Query(`
-		SELECT DISTINCT t.id, t.org_id, t.display_id, t.ticket_type, t.sequence_num,
-		       t.customer_id, t.assigned_to,
-		       t.subject, t.body, t.status, t.priority, t.category,
-		       t.source_type, t.thread_id, t.incident_id,
-		       t.sla_due_at, t.sla_breached,
-		       t.created_at, t.updated_at, t.resolved_at
-		FROM tickets t
-		LEFT JOIN queue_members qm
-		  ON qm.queue_id = t.queue_id AND qm.user_id = $2 AND qm.org_id = $1
-		WHERE t.org_id = $1
-		  AND (qm.user_id IS NOT NULL OR t.assigned_to = $2)
-		ORDER BY t.created_at DESC
-		LIMIT $3`,
-		orgID, userID, limit,
-	)
+	query := `
+		SELECT DISTINCT ` + ticketSelectCols + `
+		FROM tickets
+		WHERE org_id = $1
+		  AND (queue_id IN (
+		        SELECT queue_id FROM queue_members WHERE user_id = $2 AND org_id = $1
+		        UNION
+		        SELECT dq.queue_id FROM department_queues dq 
+		        JOIN department_members dm ON dq.department_id = dm.department_id 
+		        WHERE dm.user_id = $2
+		      ) OR assigned_to = $2)
+		ORDER BY created_at DESC
+		LIMIT $3`
+
+	rows, err := db.Query(query, orgID, userID, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -568,14 +507,7 @@ func ListTicketsForAgent(db *sql.DB, orgID, userID string, limit int) ([]Ticket,
 	var tickets []Ticket
 	for rows.Next() {
 		var t Ticket
-		if err := rows.Scan(
-			&t.ID, &t.OrgID, &t.DisplayID, &t.TicketType, &t.SequenceNum,
-			&t.CustomerID, &t.AssignedTo,
-			&t.Subject, &t.Body, &t.Status, &t.Priority, &t.Category,
-			&t.SourceType, &t.ThreadID, &t.IncidentID,
-			&t.SLADueAt, &t.SLABreached,
-			&t.CreatedAt, &t.UpdatedAt, &t.ResolvedAt,
-		); err != nil {
+		if err := scanTicket(rows, &t); err != nil {
 			return nil, err
 		}
 		tickets = append(tickets, t)
@@ -584,7 +516,6 @@ func ListTicketsForAgent(db *sql.DB, orgID, userID string, limit int) ([]Ticket,
 }
 
 // NextTicketSequence atomically increments and returns the next ticket number for an org.
-// Uses INSERT ON CONFLICT to initialize the counter if it doesn't exist.
 func NextTicketSequence(db *sql.DB, orgID string) (int64, error) {
 	var seq int64
 	err := db.QueryRow(`

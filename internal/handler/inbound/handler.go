@@ -249,6 +249,8 @@ func (h *Handler) ResendEmail(w http.ResponseWriter, r *http.Request) {
 			Body:       ticketBody,
 			SourceType: string(domain.SourceEmail),
 			ThreadID:   &messageID,
+			SubmittedByCustomerID: &customer.ID,
+			RequesterCustomerID:   &customer.ID,
 		})
 	if err != nil {
 		log.Printf("inbound: failed to create ticket: %v", err)

@@ -48,6 +48,9 @@ type CreateInput struct {
 	ThreadID      *string  // optional — for idempotency
 	CustomerEmail *string  // optional — find or create customer on submit
 	CatalogItemID *string  // optional — drives TicketType, Priority, SLADueAt
+	SubmittedByCustomerID *string  // optional — identity of submitter
+	SubmittedByUserID     *string  // optional — internal agent creator
+	RequesterCustomerID   *string  // optional — beneficiary customer
 }
 
 // CreateResult is returned after a ticket is created.
@@ -135,6 +138,9 @@ func (s *Service) Create(ctx context.Context, input CreateInput) (*CreateResult,
 		ThreadID:   input.ThreadID,
 		TicketType: ticketType,
 		SLADueAt:   sladue,
+		SubmittedByCustomerID: input.SubmittedByCustomerID,
+		SubmittedByUserID:     input.SubmittedByUserID,
+		RequesterCustomerID:   input.RequesterCustomerID,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("create ticket: %w", err)
