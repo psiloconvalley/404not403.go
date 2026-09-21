@@ -717,6 +717,25 @@ func RunMigrations(db *sql.DB) {
 			)`,
 		},
 
+		// ── Employee / Customer Directory & Hierarchy Enrichment ─────────────
+		{
+			name: "alter_customers_directory_fields",
+			sql: `ALTER TABLE customers
+				ADD COLUMN IF NOT EXISTS first_name TEXT,
+				ADD COLUMN IF NOT EXISTS last_name TEXT,
+				ADD COLUMN IF NOT EXISTS position TEXT,
+				ADD COLUMN IF NOT EXISTS department_id UUID REFERENCES departments(id) ON DELETE SET NULL,
+				ADD COLUMN IF NOT EXISTS cost_center TEXT,
+				ADD COLUMN IF NOT EXISTS manager_customer_id UUID REFERENCES customers(id) ON DELETE SET NULL,
+				ADD COLUMN IF NOT EXISTS manager_email TEXT,
+				ADD COLUMN IF NOT EXISTS location TEXT,
+				ADD COLUMN IF NOT EXISTS phone TEXT,
+				ADD COLUMN IF NOT EXISTS external_id TEXT,
+				ADD COLUMN IF NOT EXISTS source TEXT NOT NULL DEFAULT 'email'`,
+		},
+		{name: "idx_customers_department_id", sql: `CREATE INDEX IF NOT EXISTS idx_customers_department_id ON customers(department_id)`},
+		{name: "idx_customers_manager_id", sql: `CREATE INDEX IF NOT EXISTS idx_customers_manager_id ON customers(manager_customer_id)`},
+		{name: "idx_customers_external_id", sql: `CREATE INDEX IF NOT EXISTS idx_customers_external_id ON customers(org_id, external_id)`},
 	}
 	for _, m := range migrations {
 		if _, err := db.Exec(m.sql); err != nil {
