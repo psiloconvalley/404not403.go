@@ -1,55 +1,55 @@
-/* ── 404NOT403 · ITSM Design System — Tech Obsidian & Electric Violet ──────────── */
+/* ── 404NOT403 · Mycelial Design System — Rich Soil & Bioluminescent Spore ──────────── */
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 
 :root {
-    /* Obsidian Vibe Canvas */
-    --bg:             #09090b; /* Pure dark absolute zinc */
-    --bg-subtle:      #0c0c0e; /* Extremely dark canvas */
-    --surface:        #18181b; /* High-end dark zinc-900 surface */
-    --surface-hover:  #27272a; /* Zinc-800 hover state */
-    --border:         #27272a; /* Surgical graphite border */
-    --border-bright:  #3f3f46; /* Focused highlighted border */
+    /* Rich Loam Organic Soil Canvas */
+    --bg:             #0a0908; /* Deep fertile loam black */
+    --bg-subtle:      #110f0d; /* Soil undertone */
+    --surface:        #181512; /* Rhizome core node dark */
+    --surface-hover:  #24201c; /* Warm active earth-node */
+    --border:         #2a2420; /* Thin mycelial silk thread */
+    --border-bright:  #453b35; /* Lit connection point */
 
-    /* Text — Ultra High Contrast White & Silver */
-    --text-primary:   #f4f4f5; /* Pure crisp off-white */
-    --text-secondary: #a1a1aa; /* High-quality silver */
-    --text-muted:     #52525b; /* Muted graphite gray */
+    /* Spore Silks — Warm High Contrast */
+    --text-primary:   #f5f5f4; /* Spore white silk */
+    --text-secondary: #d6d3d1; /* Faded mycelial silk */
+    --text-muted:     #78716c; /* Earth gray */
 
-    /* Electric Violet & Indigo Glow */
-    --accent:         #6366f1; /* High-voltage electric indigo */
-    --accent-hover:   #818cf8; /* Vibrant light indigo hover */
-    --accent-subtle:  rgba(99, 102, 241, 0.12); /* Ambient glow */
-    --accent-text:    #ffffff;
+    /* Bioluminescent Spore Glow (Ghost-Moss Chartreuse) */
+    --accent:         #a3e635; /* Bioluminescent spore-moss green */
+    --accent-hover:   #bef264; /* Radiant Spore Flare */
+    --accent-subtle:  rgba(163, 230, 53, 0.09); /* Ambient fungal glow */
+    --accent-text:    #0a0908; /* Loam dark text for contrast on accent */
 
-    /* Priority — High Contrast Red / Amber / Teal */
-    --priority-p0:    #f43f5e; /* Cyberpunk rose-red */
-    --priority-p0-bg: rgba(244, 63, 94, 0.1);
-    --priority-p1:    #f59e0b; /* Bright amber */
-    --priority-p1-bg: rgba(245, 158, 11, 0.1);
-    --priority-p2:    #10b981; /* Surgical emerald green */
-    --priority-p2-bg: rgba(16, 185, 129, 0.1);
-    --priority-p3:    #71717a; /* Medium zinc gray */
-    --priority-p3-bg: rgba(113, 113, 122, 0.1);
+    /* Priority Levels — Earth Tones to Radioactive Alerts */
+    --priority-p0:    #ef4444; /* Spore red warning */
+    --priority-p0-bg: rgba(239, 68, 68, 0.08);
+    --priority-p1:    #f97316; /* Fired clay orange */
+    --priority-p1-bg: rgba(249, 115, 22, 0.08);
+    --priority-p2:    #a3e635; /* Spore green */
+    --priority-p2-bg: rgba(163, 230, 53, 0.08);
+    --priority-p3:    #78716c; /* Silent earth */
+    --priority-p3-bg: rgba(120, 113, 108, 0.08);
 
-    /* Status — Digital Glows */
-    --status-open:        #3b82f6; /* Digital blue */
-    --status-open-bg:     rgba(59, 130, 246, 0.1);
-    --status-assigned:    #8b5cf6; /* Cyber purple */
-    --status-assigned-bg: rgba(139, 92, 246, 0.1);
-    --status-progress:    #06b6d4; /* Neon cyan */
-    --status-progress-bg: rgba(6, 182, 212, 0.1);
-    --status-pending:     #f59e0b; /* Amber */
-    --status-pending-bg:  rgba(245, 158, 11, 0.1);
-    --status-resolved:    #10b981; /* Emerald */
-    --status-resolved-bg: rgba(16, 185, 129, 0.1);
-    --status-closed:      #52525b; /* Zinc */
-    --status-closed-bg:   rgba(82, 82, 91, 0.15);
+    /* Status — Ambient Network States */
+    --status-open:        #3b82f6; /* Node active */
+    --status-open-bg:     rgba(59, 130, 246, 0.08);
+    --status-assigned:    #a3e635; /* Node connected */
+    --status-assigned-bg: rgba(163, 230, 53, 0.08);
+    --status-progress:    #06b6d4; /* Pulse running */
+    --status-progress-bg: rgba(6, 182, 212, 0.08);
+    --status-pending:     #f59e0b; /* Spore delayed */
+    --status-pending-bg:  rgba(245, 158, 11, 0.08);
+    --status-resolved:    #10b981; /* Thread stable */
+    --status-resolved-bg: rgba(16, 183, 129, 0.08);
+    --status-closed:      #57534e; /* Thread dormant */
+    --status-closed-bg:   rgba(87, 83, 78, 0.12);
 
-    /* Shadows — Pure Dark Diffusion */
-    --shadow-sm:  0 1px 2px rgba(0,0,0,0.5);
-    --shadow-md:  0 4px 12px rgba(0,0,0,0.6);
-    --shadow-lg:  0 12px 24px rgba(0,0,0,0.8);
+    /* Shadows — Warm Loam Diffusion */
+    --shadow-sm:  0 1px 2px rgba(10,9,8,0.5);
+    --shadow-md:  0 4px 12px rgba(10,9,8,0.6);
+    --shadow-lg:  0 12px 24px rgba(10,9,8,0.8);
 
     /* Typography */
     --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
