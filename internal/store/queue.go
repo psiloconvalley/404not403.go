@@ -199,9 +199,11 @@ func ListQueuesForUser(db *sql.DB, orgID, userID string) ([]QueueWithCounts, err
 			) AS urgent_count
 		FROM queues q
 		LEFT JOIN queue_members qm ON qm.queue_id = q.id AND qm.user_id = $2
+		LEFT JOIN department_queues dq ON dq.queue_id = q.id
+		LEFT JOIN department_members dm ON dm.department_id = dq.department_id AND dm.user_id = $2
 		LEFT JOIN tickets t ON t.queue_id = q.id AND t.org_id = q.org_id
 		WHERE q.org_id = $1 AND q.active = true
-		  AND (q.visibility = 'normal' OR qm.user_id IS NOT NULL)
+		  AND (q.visibility = 'normal' OR qm.user_id IS NOT NULL OR dm.user_id IS NOT NULL)
 		GROUP BY q.id
 		ORDER BY q.department ASC NULLS LAST, q.sort_order ASC, q.name ASC`,
 		orgID, userID,
