@@ -179,11 +179,14 @@ func (s *Service) Create(ctx context.Context, input CreateInput) (*CreateResult,
 // TicketContext is a ticket with all related data loaded.
 // This is what an agent sees when they open a ticket.
 type TicketContext struct {
-	Ticket      *store.Ticket       `json:"ticket"`
-	Comments    []store.Comment     `json:"comments"`
-	Events      []store.TicketEvent `json:"events"`
-	ConfigItems []store.ConfigItem  `json:"config_items"`
-	Analysis    *store.AIAnalysis   `json:"analysis"`
+	Ticket       *store.Ticket       `json:"ticket"`
+	Requester    *store.Customer     `json:"requester,omitempty"`
+	Submitter    *store.Customer     `json:"submitter,omitempty"`
+	ManagerChain []store.Customer    `json:"manager_chain,omitempty"`
+	Comments     []store.Comment     `json:"comments"`
+	Events       []store.TicketEvent `json:"events"`
+	ConfigItems  []store.ConfigItem  `json:"config_items"`
+	Analysis     *store.AIAnalysis   `json:"analysis"`
 }
 
 // Get loads a ticket with full context.
@@ -218,12 +221,37 @@ func (s *Service) Get(ctx context.Context, orgID, ticketID string) (*TicketConte
 		return nil, fmt.Errorf("load analysis: %w", err)
 	}
 
+	var requester *store.Customer
+	var managerChain []store.Customer
+	reqID := ticket.RequesterCustomerID
+	if reqID == nil || *reqID == "" {
+		reqID = ticket.CustomerID
+	}
+	if reqID != nil && *reqID != "" {
+		if r, err := store.GetCustomerByID(s.db, orgID, *reqID); err == nil && r != nil {
+			requester = r
+			if chain, err := store.GetManagerChain(s.db, orgID, r.ID, 5); err == nil {
+				managerChain = chain
+			}
+		}
+	}
+
+	var submitter *store.Customer
+	if ticket.SubmittedByCustomerID != nil && *ticket.SubmittedByCustomerID != "" {
+		if s, err := store.GetCustomerByID(s.db, orgID, *ticket.SubmittedByCustomerID); err == nil && s != nil {
+			submitter = s
+		}
+	}
+
 	return &TicketContext{
-		Ticket:      ticket,
-		Comments:    comments,
-		Events:      events,
-		ConfigItems: configItems,
-		Analysis:    analysis,
+		Ticket:       ticket,
+		Requester:    requester,
+		Submitter:    submitter,
+		ManagerChain: managerChain,
+		Comments:     comments,
+		Events:       events,
+		ConfigItems:  configItems,
+		Analysis:     analysis,
 	}, nil
 }
 
