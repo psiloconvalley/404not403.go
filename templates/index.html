@@ -213,6 +213,30 @@
             line-height: 1.6;
             color: var(--text-muted);
         }
+        /* T-1000 Liquid Metal Chrome spec */
+        .liquid-metal {
+            background: linear-gradient(
+                90deg,
+                #94a3b8 0%,
+                #f8fafc 25%,
+                #ffffff 50%,
+                #cbd5e1 75%,
+                #94a3b8 100%
+            );
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-fill-color: transparent;
+            animation: mercuryFlow 4s linear infinite;
+            filter: drop-shadow(0 1px 2px rgba(0,0,0,0.4)) brightness(1.1) contrast(1.25);
+            display: inline-block;
+        }
+
+        @keyframes mercuryFlow {
+            0% { background-position: 0% center; }
+            100% { background-position: -200% center; }
+        }
     </style>
 </head>
 <body>
@@ -228,7 +252,7 @@
         </nav>
 
         <main class="landing-hero">
-            <h1>The invisible IT helpdesk that already knows who is emailing.</h1>
+            <h1><span class="liquid-metal">The invisible IT helpdesk</span> that already knows who is emailing.</h1>
             <p class="hero-sub">
                 Your employees write a simple email. Your agents get their Okta profile, manager approval chain, and hardware assets automatically attached. Zero clunky portals. Zero back-and-forth.
             </p>
@@ -319,7 +343,7 @@
         </section>
 
         <footer class="landing-footer" style="margin-top: 6rem; text-align: center; border-top: 1px solid var(--border); padding-top: 3rem; padding-bottom: 4rem;">
-            <p style="font-weight: 600; color: var(--accent); margin-bottom: 0.5rem; letter-spacing: -0.25px;">404NOT403 — The invisible IT helpdesk.</p>
+            <p style="font-weight: 600; color: var(--accent); margin-bottom: 0.5rem; letter-spacing: -0.25px;">404NOT403 — <span class="liquid-metal">The invisible IT helpdesk</span>.</p>
             <p style="font-size: 0.8rem; color: var(--text-muted); font-family: var(--font-mono);">
                 Engineered with <strong style="color: var(--accent);">Go</strong> and transaction-safe <strong style="color: var(--accent);">PostgreSQL</strong>.
             </p>
