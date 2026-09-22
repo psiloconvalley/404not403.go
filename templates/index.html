@@ -216,26 +216,56 @@
         /* T-1000 Liquid Metal Chrome spec */
         .liquid-metal {
             background: linear-gradient(
-                90deg,
-                #94a3b8 0%,
-                #f8fafc 25%,
-                #ffffff 50%,
-                #cbd5e1 75%,
-                #94a3b8 100%
+                110deg,
+                #334155 0%,
+                #94a3b8 12%,
+                #ffffff 22%,
+                #f1f5f9 28%,
+                #1e293b 38%,
+                #475569 46%,
+                #f8fafc 58%,
+                #ffffff 64%,
+                #0f172a 74%,
+                #cbd5e1 84%,
+                #ffffff 92%,
+                #334155 100%
             );
-            background-size: 200% auto;
+            background-size: 280% 100%;
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
             text-fill-color: transparent;
-            animation: mercuryFlow 4s linear infinite;
-            filter: drop-shadow(0 1px 2px rgba(0,0,0,0.4)) brightness(1.1) contrast(1.25);
+            animation: chromeHorizon 5s cubic-bezier(0.4, 0, 0.2, 1) infinite alternate;
+            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.8)) 
+                    drop-shadow(0 0 20px rgba(255, 255, 255, 0.65))
+                    brightness(1.45)
+                    contrast(1.7);
+            font-weight: 800;
             display: inline-block;
+            letter-spacing: -0.02em;
         }
 
-        @keyframes mercuryFlow {
-            0% { background-position: 0% center; }
-            100% { background-position: -200% center; }
+        @keyframes chromeHorizon {
+            0% {
+                background-position: 0% 50%;
+                filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.8)) 
+                        drop-shadow(0 0 10px rgba(255, 255, 255, 0.3))
+                        brightness(1.2)
+                        contrast(1.35);
+            }
+            50% {
+                filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.9)) 
+                        drop-shadow(0 0 20px rgba(255, 255, 255, 0.6))
+                        brightness(1.35)
+                        contrast(1.45);
+            }
+            100% {
+                background-position: 100% 50%;
+                filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.8)) 
+                        drop-shadow(0 0 12px rgba(255, 255, 255, 0.35))
+                        brightness(1.2)
+                        contrast(1.35);
+            }
         }
     </style>
 </head>
