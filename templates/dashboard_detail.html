@@ -1,0 +1,65 @@
+{{define "dashboard_detail"}}
+<!-- ── View: Ticket Detail ── -->
+            <div id="view-detail" class="view" style="display:none;">
+        <!-- Main: Ticket Detail -->
+        <main class="queue-main">
+            <div class="detail-topbar">
+                <button onclick="showQueue()" class="btn btn-ghost btn-sm"><svg class="icon icon-sm"><use href="/static/icons/sprite.svg#icon-chevron-left"></use></svg> Back</button>
+                <div class="detail-topbar-actions">
+                    <select id="action-status" onchange="changeStatus(this.value)" class="detail-select">
+                        <option value="open">Open</option>
+                        <option value="assigned">Assigned</option>
+                        <option value="in_progress">In Progress</option>
+                        <option value="pending_customer">Pending Customer</option>
+                        <option value="pending_vendor">Pending Vendor</option>
+                        <option value="resolved">Resolved</option>
+                        <option value="closed">Closed</option>
+                    </select>
+                    <select id="action-priority" onchange="changePriority(this.value)" class="detail-select">
+                        <option value="P0">P0 — Critical</option>
+                        <option value="P1">P1 — High</option>
+                        <option value="P2">P2 — Medium</option>
+                        <option value="P3">P3 — Low</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="detail-card">
+                <div class="detail-title-row">
+                    <span id="detail-priority" class="ticket-priority"></span>
+                    <h2 id="detail-subject"></h2>
+                </div>
+                <div class="detail-info-row">
+                    <span id="detail-status" class="ticket-status"></span>
+                    <span class="detail-dot">·</span>
+                    <span id="detail-created" class="detail-time"></span>
+                    <span class="detail-dot">·</span>
+                    <span id="detail-source" class="detail-time"></span>
+                    <span class="detail-dot detail-sla-dot" style="display:none">·</span>
+                    <span id="detail-sla" class="detail-time" style="display:none"></span>
+                </div>
+                <div class="detail-body" id="detail-body"></div>
+            </div>
+
+            <div class="detail-card">
+                <div class="detail-card-header">Conversation</div>
+                <div id="comment-thread" class="comment-thread"></div>
+                <div class="comment-form">
+                    <textarea id="comment-body" placeholder="Write a reply..." rows="2"></textarea>
+                    <div class="comment-form-footer">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="comment-internal">
+                            Internal note
+                        </label>
+                        <button onclick="addComment()" class="btn btn-primary btn-sm">Reply</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="detail-card detail-card-muted">
+                <div class="detail-card-header">Activity</div>
+                <div id="event-trail" class="event-trail"></div>
+            </div>
+        </main>
+    </div>
+{{end}}

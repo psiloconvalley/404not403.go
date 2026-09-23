@@ -1,0 +1,35 @@
+{{define "dashboard_settings_account"}}
+<!-- ── View: Account Settings ── -->
+            <div id="view-settings-account" class="view" style="display:none;">
+                <div class="view-header">
+                    <h1>Account Settings</h1>
+                </div>
+                <div class="settings-card">
+                    <div class="settings-card-header">Profile</div>
+                    <div class="settings-field">
+                        <label class="settings-label">Handle</label>
+                        <input type="text" id="settings-handle" class="settings-input" disabled>
+                    </div>
+                    <div class="settings-field">
+                        <label class="settings-label">Email</label>
+                        <input type="email" id="settings-email" class="settings-input" disabled>
+                    </div>
+                </div>
+                <div class="settings-card">
+                    <div class="settings-card-header">Passkeys</div>
+                    <p class="settings-hint" style="margin-bottom:0.75rem">Sign in with biometrics — Face ID, Touch ID, or security key</p>
+                    <div id="passkey-list"></div>
+                    <div class="settings-field" style="margin-top: 0.75rem;">
+                        <button onclick="registerPasskey()" class="btn btn-primary btn-sm">+ Add Passkey</button>
+                        <span id="passkey-status" class="settings-status"></span>
+                    </div>
+                </div>
+                <div class="settings-card">
+                    <div class="settings-card-header">Security</div>
+                    <div class="settings-field">
+                        <label class="settings-label">MFA Status</label>
+                        <span id="settings-mfa-status" class="settings-hint">Loading...</span>
+                    </div>
+                </div>
+            </div>
+{{end}}

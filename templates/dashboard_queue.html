@@ -1,0 +1,43 @@
+{{define "dashboard_queue"}}
+<!-- ── View: Queue ── -->
+            <div id="view-queue" class="view" style="display:none;">
+                <!-- Main: Ticket List -->
+                <main class="queue-main">
+            <div class="queue-main-header">
+                <div class="queue-title-row">
+                    <h2 id="queue-title">My Requests</h2>
+                    <button onclick="showCreateTicket()" class="btn btn-primary btn-sm">New Ticket</button>
+                </div>
+                <div class="queue-filters">
+                    <button class="filter-tab active" onclick="filterTickets('all', this)">All</button>
+                    <button class="filter-tab" onclick="filterTickets('open', this)">Open</button>
+                    <button class="filter-tab" onclick="filterTickets('in_progress', this)">In Progress</button>
+                    <button class="filter-tab" onclick="filterTickets('pending_customer', this)">Pending</button>
+                    <button class="filter-tab" onclick="filterTickets('resolved', this)">Resolved</button>
+                </div>
+            </div>
+
+            <div id="create-ticket-form" style="display:none;" class="inline-form">
+                <input type="email" id="ticket-customer-email" placeholder="Requester email (e.g. jane@company.com)">
+                <input type="text" id="ticket-subject" placeholder="Subject — what is broken?">
+                <textarea id="ticket-body" placeholder="Describe the issue in detail..." rows="3"></textarea>
+                <div class="form-row">
+                    <select id="ticket-queue">
+                        <option value="">No Queue</option>
+                    </select>
+                    <select id="ticket-priority">
+                        <option value="P3">P3 — Low</option>
+                        <option value="P2" selected>P2 — Medium</option>
+                        <option value="P1">P1 — High</option>
+                        <option value="P0">P0 — Critical</option>
+                    </select>
+                    <button onclick="createTicket()" class="btn btn-primary btn-sm">Submit</button>
+                    <button onclick="hideCreateTicket()" class="btn btn-ghost btn-sm">Cancel</button>
+                </div>
+            </div>
+
+            <div id="ticket-list" class="ticket-list"></div>
+            <button id="load-more-btn" class="btn btn-secondary" style="display:none;width:100%;margin-top:1rem;" onclick="loadMoreTickets()">Load More</button>
+        </main>
+    </div>
+{{end}}

@@ -1,0 +1,45 @@
+{{define "dashboard_settings_org"}}
+<!-- ── View: Org Settings ── -->
+            <div id="view-settings-org" class="view" style="display:none;">
+                <div class="view-header">
+                    <h1>Org Settings</h1>
+                </div>
+                <div class="settings-card">
+                    <div class="settings-field">
+                        <label class="settings-label">Organization Name</label>
+                        <input type="text" id="settings-org-name" class="settings-input" placeholder="Acme Corp">
+                    </div>
+                    <div class="settings-field">
+                        <label class="settings-label">Domain</label>
+                        <input type="text" id="settings-org-domain" class="settings-input" placeholder="acme.com">
+                        <span class="settings-hint">Used to verify employee email addresses</span>
+                    </div>
+                    <div class="settings-field">
+                        <label class="settings-label">Inbound Email</label>
+                        <input type="email" id="settings-org-inbound" class="settings-input" placeholder="support@acme.com">
+                        <span class="settings-hint">Emails sent here become tickets automatically</span>
+                    </div>
+                    <div class="settings-field">
+                        <button onclick="saveOrgSettings()" class="btn btn-primary">Save Changes</button>
+                        <span id="settings-org-status" class="settings-status"></span>
+                    </div>
+                </div>
+
+                <div class="settings-card">
+                    <div class="settings-card-header">Organization Members</div><p class="settings-hint" style="margin-bottom:0.75rem">Everyone who can access this workspace</p>
+                    <div id="settings-members-list"></div>
+                    <div class="settings-field" style="margin-top: 0.75rem;">
+                        <label class="settings-label">Invite Member</label>
+                        <div class="settings-invite-row">
+                            <input type="email" id="settings-invite-email" class="settings-input" placeholder="jane@acme.com">
+                            <select id="settings-invite-role" class="settings-input" style="max-width: 120px;">
+                                <option value="agent">Agent</option>
+                                <option value="admin">Admin</option>
+                                <option value="viewer">Viewer</option>
+                            </select>
+                            <button onclick="inviteMember()" class="btn btn-primary btn-sm">Invite</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+{{end}}

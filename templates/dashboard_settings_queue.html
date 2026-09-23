@@ -1,0 +1,121 @@
+{{define "dashboard_settings_queue"}}
+<!-- ── View: Queue Settings ── -->
+            <div id="view-settings-queue" class="view" style="display:none;">
+                <div class="view-header">
+                    <h1 id="queue-settings-title">Queue Settings</h1>
+                </div>
+                <div class="settings-card">
+                    <div class="settings-field">
+                        <label class="settings-label">Queue Name</label>
+                        <input type="text" id="settings-queue-name" class="settings-input">
+                    </div>
+                    <div class="settings-field">
+                        <label class="settings-label">Prefix</label>
+                        <input type="text" id="settings-queue-prefix" class="settings-input" placeholder="e.g. IT-OPS, HR, FAC">
+                        <span class="settings-hint">Short unique label used in ticket IDs</span>
+                    </div>
+                    <div class="settings-field">
+                        <label class="settings-label">Department</label>
+                        <input type="text" id="settings-queue-dept" class="settings-input" placeholder="e.g. Information Technology">
+                    </div>
+                    <div class="settings-field">
+                        <label class="settings-label">Color</label>
+                        <input type="text" id="settings-queue-color" class="settings-input" placeholder="#6366f1">
+                    </div>
+                    <div class="settings-field">
+                        <button onclick="saveQueueSettings()" class="btn btn-primary">Save Changes</button>
+                        <span id="settings-queue-status" class="settings-status"></span>
+                    </div>
+                </div>
+
+                <div class="settings-card">
+                    <div class="settings-card-header">Team Members</div>
+                    <p class="settings-hint" style="margin-bottom:0.75rem">Agents assigned to work tickets in this queue</p>
+                    <div id="queue-members-list"></div>
+                    <div class="settings-field" style="margin-top: 0.75rem;">
+                        <label class="settings-label">Add Team Member</label>
+                        <div class="settings-invite-row">
+                            <select id="queue-member-select" class="settings-input">
+                                <option value="">Select agent...</option>
+                            </select>
+                            <select id="queue-member-role" class="settings-input" style="max-width: 120px;">
+                                <option value="member">Member</option>
+                                <option value="lead">Lead</option>
+                            </select>
+                            <button onclick="addQueueMember()" class="btn btn-primary btn-sm">Add</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="settings-card">
+                    <div class="settings-card-header" style="display:flex;justify-content:space-between;align-items:center;">
+                        Service Catalog
+                        <button onclick="showAddCatalogItem()" class="btn btn-primary btn-sm">+ Add Service</button>
+                    </div>
+                    <p class="settings-hint" style="margin-bottom:0.75rem">Services employees can request from this queue</p>
+                    <div id="catalog-items-list"></div>
+
+                    <div id="catalog-add-form" style="display:none;" class="settings-field" style="margin-top:0.75rem;">
+                        <div class="settings-field">
+                            <label class="settings-label">Service Name</label>
+                            <input type="text" id="catalog-item-name" class="settings-input" placeholder="e.g. Request New Laptop">
+                        </div>
+                        <div class="settings-field">
+                            <label class="settings-label">Description</label>
+                            <input type="text" id="catalog-item-desc" class="settings-input" placeholder="What this service provides">
+                        </div>
+                        <div class="settings-invite-row">
+                            <div class="settings-field" style="flex:1;">
+                                <label class="settings-label">Category</label>
+                                <select id="catalog-item-category" class="settings-input">
+                                    <option value="General">General</option>
+                                    <option value="Hardware">Hardware</option>
+                                    <option value="Software">Software</option>
+                                    <option value="Access">Access & Permissions</option>
+                                    <option value="Network">Network</option>
+                                    <option value="Security">Security</option>
+                                    <option value="People">People / HR</option>
+                                    <option value="Facilities">Facilities</option>
+                                    <option value="Email">Email & Communication</option>
+                                    <option value="Bug">Bug Report</option>
+                                    <option value="Maintenance">Maintenance</option>
+                                    <option value="Training">Training</option>
+                                    <option value="Infrastructure">Infrastructure</option>
+                                    <option value="Printing">Printing</option>
+                                    <option value="Telecom">Telecom</option>
+                                </select>
+                            </div>
+                            <div class="settings-field" style="flex:1;">
+                                <label class="settings-label">Type</label>
+                                <select id="catalog-item-type" class="settings-input">
+                                    <option value="service_request">Service Request</option>
+                                    <option value="incident">Incident</option>
+                                    <option value="change">Change Request</option>
+                                    <option value="problem">Problem</option>
+                                    <option value="task">Task</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="settings-invite-row">
+                            <div class="settings-field" style="flex:1;">
+                                <label class="settings-label">Priority</label>
+                                <select id="catalog-item-priority" class="settings-input">
+                                    <option value="P3">P3 — Low</option>
+                                    <option value="P2" selected>P2 — Medium</option>
+                                    <option value="P1">P1 — High</option>
+                                    <option value="P0">P0 — Critical</option>
+                                </select>
+                            </div>
+                            <div class="settings-field" style="flex:1;">
+                                <label class="settings-label">SLA (hours)</label>
+                                <input type="number" id="catalog-item-sla" class="settings-input" placeholder="72">
+                            </div>
+                        </div>
+                        <div class="settings-field">
+                            <button onclick="createCatalogItem()" class="btn btn-primary btn-sm">Create Service</button>
+                            <button onclick="hideCatalogForm()" class="btn btn-ghost btn-sm">Cancel</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+{{end}}
