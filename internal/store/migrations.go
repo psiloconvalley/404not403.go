@@ -761,6 +761,51 @@ func RunMigrations(db *sql.DB) {
 			name: "idx_events_hash",
 			sql: `CREATE INDEX IF NOT EXISTS idx_events_hash ON ticket_events(hash)`,
 		},
+
+		// ── Pillar 1: Chat Ingestion (Slack, Teams, Discord, IRC, ...) ───────
+		{
+			name: "create_chat_workspaces_table",
+			sql: `CREATE TABLE IF NOT EXISTS chat_workspaces (
+				id                   UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+				org_id               UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+				provider             TEXT NOT NULL,
+				workspace_id         TEXT NOT NULL,
+				workspace_name       TEXT,
+				bot_token            TEXT NOT NULL,
+				bot_user_id          TEXT,
+				installed_by_user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+				installed_at         TIMESTAMPTZ NOT NULL DEFAULT now(),
+				revoked_at           TIMESTAMPTZ,
+				UNIQUE (provider, workspace_id)
+			)`,
+		},
+		{
+			name: "idx_chat_workspaces_org",
+			sql: `CREATE INDEX IF NOT EXISTS idx_chat_workspaces_org ON chat_workspaces(org_id)`,
+		},
+
+		{
+			name: "create_ticket_channel_context_table",
+			sql: `CREATE TABLE IF NOT EXISTS ticket_channel_context (
+				ticket_id        UUID PRIMARY KEY REFERENCES tickets(id) ON DELETE CASCADE,
+				org_id           UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+				provider         TEXT NOT NULL,
+				workspace_id     TEXT NOT NULL,
+				channel_id       TEXT NOT NULL,
+				thread_id        TEXT NOT NULL,
+				provider_user_id TEXT NOT NULL,
+				raw_context      JSONB NOT NULL DEFAULT '{}',
+				created_at       TIMESTAMPTZ NOT NULL DEFAULT now()
+			)`,
+		},
+		{
+			name: "ux_channel_context_thread",
+			sql: `CREATE UNIQUE INDEX IF NOT EXISTS ux_channel_context_thread ON ticket_channel_context (provider, workspace_id, channel_id, thread_id)`,
+		},
+		{
+			name: "ix_channel_context_org_provider",
+			sql: `CREATE INDEX IF NOT EXISTS ix_channel_context_org_provider ON ticket_channel_context (org_id, provider)`,
+		},
 	}
 	for _, m := range migrations {
 		if _, err := db.Exec(m.sql); err != nil {

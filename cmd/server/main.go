@@ -26,6 +26,10 @@ import (
 	"github.com/psiloconvalley/404not403/internal/provider/ai"
 	"github.com/psiloconvalley/404not403/internal/provider/email"
 	"github.com/psiloconvalley/404not403/internal/store"
+	chatprovider "github.com/psiloconvalley/404not403/internal/provider/chat"
+	intakesvc "github.com/psiloconvalley/404not403/internal/service/intake"
+	ticketsvc "github.com/psiloconvalley/404not403/internal/service/ticket"
+	chathandler "github.com/psiloconvalley/404not403/internal/handler/chat"
 	"github.com/psiloconvalley/404not403/internal/worker"
 )
 
@@ -79,6 +83,12 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
+	// Initialize chat ingestion stack
+	slackProv := chatprovider.NewSlackProvider(a.HTTPClient)
+	ticketSvc := ticketsvc.New(a.DB)
+	intakeSvc := intakesvc.New(a.DB, ticketSvc, slackProv)
+	chatHandler := chathandler.New(intakeSvc, slackProv)
+
 	// 6. Initialize handlers
 	tickets := tickethandler.New(a)
 	orgs := orghandler.New(a)
@@ -103,6 +113,9 @@ func main() {
 	mux.HandleFunc("/login", handler.LoginPage(a))
 	mux.HandleFunc("/register", handler.RegisterPage(a))
 	mux.HandleFunc("/dashboard", handler.Dashboard(a))
+
+	// ── Chat Ingestion Webhooks ──────────────────────────────────────
+	mux.HandleFunc("/webhooks/slack/events", chatHandler.HandleSlackEvents)
 
 	// ── Employee Portal (public — no auth) ────────────────────────────
 	mux.HandleFunc("/help/track/comment", helpPortal.AddComment)
