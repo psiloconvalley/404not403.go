@@ -1,66 +1,126 @@
 package store
 
 import (
+	"crypto/sha256"
 	"database/sql"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"time"
 )
 
+// GenesisHash is the root anchor for the first event of any ticket.
+const GenesisHash = "0000000000000000000000000000000000000000000000000000000000000000"
+
 // ── TicketEvent ───────────────────────────────────────────────────────────────
 
-// TicketEvent is an immutable record of something that happened to a ticket.
-// This table is append-only. No UPDATE. No DELETE. Ever.
-// You can reconstruct the complete state of any ticket at any point in time
-// by replaying its events in order.
+// TicketEvent is an immutable, cryptographically-chained record of a ticket state change.
+// Every event contains the hash of its preceding event, creating a tamper-evident audit ledger.
 type TicketEvent struct {
-	ID          string          `json:"id"`
-	TicketID    string          `json:"ticket_id"`
-	OrgID       string          `json:"org_id"`
-	ActorUserID *string         `json:"actor_user_id,omitempty"`
-	ActorType   string          `json:"actor_type"`
-	EventType   string          `json:"event_type"`
-	Payload     json.RawMessage `json:"payload"`
-	CreatedAt   time.Time       `json:"created_at"`
+	ID           string          `json:"id"`
+	TicketID     string          `json:"ticket_id"`
+	OrgID        string          `json:"org_id"`
+	ActorUserID  *string         `json:"actor_user_id,omitempty"`
+	ActorType    string          `json:"actor_type"`
+	EventType    string          `json:"event_type"`
+	Payload      json.RawMessage `json:"payload"`
+	PreviousHash *string         `json:"previous_hash,omitempty"`
+	Hash         *string         `json:"hash,omitempty"`
+	CreatedAt    time.Time       `json:"created_at"`
+}
+
+// ChainBrokenReport contains details on any detected ledger tampering.
+type ChainBrokenReport struct {
+	EventID      string    `json:"event_id"`
+	Sequence     int       `json:"sequence"`
+	ExpectedHash string    `json:"expected_hash"`
+	ActualHash   string    `json:"actual_hash"`
+	PreviousHash string    `json:"previous_hash"`
+	CreatedAt    time.Time `json:"created_at"`
+	Reason       string    `json:"reason"`
+}
+
+// ComputeEventHash generates the SHA-256 hash over an event node.
+func ComputeEventHash(prevHash, ticketID, orgID string, actorUserID *string, actorType, eventType string, payload json.RawMessage, createdAt time.Time) string {
+	actorIDStr := ""
+	if actorUserID != nil {
+		actorIDStr = *actorUserID
+	}
+	canonicalPayload := string(payload)
+	if len(payload) == 0 {
+		canonicalPayload = "{}"
+	}
+	data := fmt.Sprintf("%s|%s|%s|%s|%s|%s|%s|%s",
+		prevHash,
+		ticketID,
+		orgID,
+		actorIDStr,
+		actorType,
+		eventType,
+		canonicalPayload,
+		createdAt.UTC().Format(time.RFC3339Nano),
+	)
+	h := sha256.Sum256([]byte(data))
+	return hex.EncodeToString(h[:])
 }
 
 // ── Queries ───────────────────────────────────────────────────────────────────
 
-// RecordEvent inserts a single event into the audit log.
-// Use this for standalone events outside of a transaction.
-// For events that must be atomic with a ticket change, use RecordEventTx.
+// RecordEvent inserts a single event with cryptographic chaining.
 func RecordEvent(db *sql.DB, orgID, ticketID string, actorUserID *string, actorType, eventType string, payload json.RawMessage) error {
-	if payload == nil {
-		payload = json.RawMessage(`{}`)
+	tx, err := db.Begin()
+	if err != nil {
+		return err
 	}
-	_, err := db.Exec(`
-		INSERT INTO ticket_events (ticket_id, org_id, actor_user_id, actor_type, event_type, payload)
-		VALUES ($1, $2, $3, $4, $5, $6)`,
-		ticketID, orgID, actorUserID, actorType, eventType, payload,
-	)
-	return err
+	defer tx.Rollback()
+
+	if err := RecordEventTx(tx, orgID, ticketID, actorUserID, actorType, eventType, payload); err != nil {
+		return err
+	}
+	return tx.Commit()
 }
 
-// RecordEventTx inserts an event within an existing transaction.
-// Used when an event must be atomic with a ticket or comment change.
+// RecordEventTx inserts a cryptographically chained event within an existing transaction.
 func RecordEventTx(tx *sql.Tx, orgID, ticketID string, actorUserID *string, actorType, eventType string, payload json.RawMessage) error {
-	if payload == nil {
-		payload = json.RawMessage(`{}`)
+	if len(payload) == 0 {
+		payload = json.RawMessage("{}")
 	}
-	_, err := tx.Exec(`
-		INSERT INTO ticket_events (ticket_id, org_id, actor_user_id, actor_type, event_type, payload)
-		VALUES ($1, $2, $3, $4, $5, $6)`,
-		ticketID, orgID, actorUserID, actorType, eventType, payload,
+
+	// 1. Fetch latest hash in chain for this ticket
+	var prevHash sql.NullString
+	err := tx.QueryRow(`
+		SELECT hash
+		FROM ticket_events
+		WHERE org_id = $1 AND ticket_id = $2
+		ORDER BY created_at DESC, id DESC
+		LIMIT 1`,
+		orgID, ticketID,
+	).Scan(&prevHash)
+
+	pHash := GenesisHash
+	if err == nil && prevHash.Valid && prevHash.String != "" {
+		pHash = prevHash.String
+	}
+
+	now := time.Now().UTC()
+	hash := ComputeEventHash(pHash, ticketID, orgID, actorUserID, actorType, eventType, payload, now)
+
+	_, err = tx.Exec(`
+		INSERT INTO ticket_events (
+			ticket_id, org_id, actor_user_id, actor_type,
+			event_type, payload, previous_hash, hash, created_at
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+		ticketID, orgID, actorUserID, actorType,
+		eventType, payload, pHash, hash, now,
 	)
 	return err
 }
 
 // ListEventsByTicket returns all events for a ticket in chronological order.
-// This is the complete audit trail for a single ticket.
 func ListEventsByTicket(db *sql.DB, orgID, ticketID string) ([]TicketEvent, error) {
 	rows, err := db.Query(`
 		SELECT id, ticket_id, org_id, actor_user_id, actor_type,
-		       event_type, payload, created_at
+		       event_type, payload, previous_hash, hash, created_at
 		FROM ticket_events
 		WHERE org_id = $1 AND ticket_id = $2
 		ORDER BY created_at ASC`,
@@ -76,7 +136,8 @@ func ListEventsByTicket(db *sql.DB, orgID, ticketID string) ([]TicketEvent, erro
 		var e TicketEvent
 		if err := rows.Scan(
 			&e.ID, &e.TicketID, &e.OrgID, &e.ActorUserID,
-			&e.ActorType, &e.EventType, &e.Payload, &e.CreatedAt,
+			&e.ActorType, &e.EventType, &e.Payload,
+			&e.PreviousHash, &e.Hash, &e.CreatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -86,7 +147,6 @@ func ListEventsByTicket(db *sql.DB, orgID, ticketID string) ([]TicketEvent, erro
 }
 
 // ListEventsByOrg returns recent events across all tickets in an org.
-// Used for the activity feed / dashboard.
 func ListEventsByOrg(db *sql.DB, orgID string, limit int) ([]TicketEvent, error) {
 	if limit <= 0 || limit > 500 {
 		limit = 100
@@ -94,7 +154,7 @@ func ListEventsByOrg(db *sql.DB, orgID string, limit int) ([]TicketEvent, error)
 
 	rows, err := db.Query(`
 		SELECT id, ticket_id, org_id, actor_user_id, actor_type,
-		       event_type, payload, created_at
+		       event_type, payload, previous_hash, hash, created_at
 		FROM ticket_events
 		WHERE org_id = $1
 		ORDER BY created_at DESC
@@ -111,7 +171,8 @@ func ListEventsByOrg(db *sql.DB, orgID string, limit int) ([]TicketEvent, error)
 		var e TicketEvent
 		if err := rows.Scan(
 			&e.ID, &e.TicketID, &e.OrgID, &e.ActorUserID,
-			&e.ActorType, &e.EventType, &e.Payload, &e.CreatedAt,
+			&e.ActorType, &e.EventType, &e.Payload,
+			&e.PreviousHash, &e.Hash, &e.CreatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -120,8 +181,61 @@ func ListEventsByOrg(db *sql.DB, orgID string, limit int) ([]TicketEvent, error)
 	return events, rows.Err()
 }
 
+// VerifyTicketChain verifies the complete cryptographic hash chain for a ticket.
+// It returns isValid=true if untouched, or false with the exact broken link report.
+func VerifyTicketChain(db *sql.DB, orgID, ticketID string) (bool, *ChainBrokenReport, error) {
+	events, err := ListEventsByTicket(db, orgID, ticketID)
+	if err != nil {
+		return false, nil, err
+	}
+	if len(events) == 0 {
+		return true, nil, nil
+	}
+
+	expectedPrev := GenesisHash
+	for i, ev := range events {
+		// 1. Check previous_hash continuity
+		actualPrev := ""
+		if ev.PreviousHash != nil {
+			actualPrev = *ev.PreviousHash
+		}
+		if actualPrev != expectedPrev {
+			return false, &ChainBrokenReport{
+				EventID:      ev.ID,
+				Sequence:     i + 1,
+				ExpectedHash: expectedPrev,
+				ActualHash:   actualPrev,
+				PreviousHash: actualPrev,
+				CreatedAt:    ev.CreatedAt,
+				Reason:       "Previous hash does not match prior block hash in chain",
+			}, nil
+		}
+
+		// 2. Recompute and verify node hash
+		expectedHash := ComputeEventHash(expectedPrev, ev.TicketID, ev.OrgID, ev.ActorUserID, ev.ActorType, ev.EventType, ev.Payload, ev.CreatedAt)
+		actualHash := ""
+		if ev.Hash != nil {
+			actualHash = *ev.Hash
+		}
+		if actualHash != expectedHash {
+			return false, &ChainBrokenReport{
+				EventID:      ev.ID,
+				Sequence:     i + 1,
+				ExpectedHash: expectedHash,
+				ActualHash:   actualHash,
+				PreviousHash: actualPrev,
+				CreatedAt:    ev.CreatedAt,
+				Reason:       "Event payload, actor, or timestamp altered — signature invalid",
+			}, nil
+		}
+
+		expectedPrev = expectedHash
+	}
+
+	return true, nil, nil
+}
+
 // CountEventsByType returns the count of a specific event type for a ticket.
-// Useful for metrics like "how many times was this ticket reassigned?"
 func CountEventsByType(db *sql.DB, orgID, ticketID, eventType string) (int, error) {
 	var count int
 	err := db.QueryRow(`
@@ -136,10 +250,9 @@ func CountEventsByType(db *sql.DB, orgID, ticketID, eventType string) (int, erro
 // ── Payload Helpers ───────────────────────────────────────────────────────────
 
 // EventPayload builds a JSON payload from key-value pairs.
-// Usage: EventPayload("from", "open", "to", "assigned")
 func EventPayload(pairs ...string) json.RawMessage {
 	if len(pairs)%2 != 0 {
-		return json.RawMessage(`{}`)
+		return json.RawMessage("{}")
 	}
 	m := make(map[string]string, len(pairs)/2)
 	for i := 0; i < len(pairs); i += 2 {
@@ -147,141 +260,7 @@ func EventPayload(pairs ...string) json.RawMessage {
 	}
 	data, err := json.Marshal(m)
 	if err != nil {
-		return json.RawMessage(`{}`)
+		return json.RawMessage("{}")
 	}
 	return data
-}
-
-// ── Comment ───────────────────────────────────────────────────────────────────
-
-// Comment is a message in a ticket's conversation thread.
-type Comment struct {
-	ID         string    `json:"id"`
-	TicketID   string    `json:"ticket_id"`
-	AuthorID   *string   `json:"author_id,omitempty"`   // agent, if internal
-	CustomerID *string   `json:"customer_id,omitempty"` // customer, if external
-	Body       string    `json:"body"`
-	IsInternal bool      `json:"is_internal"`
-	SourceType string    `json:"source_type"`
-	ExternalID *string   `json:"external_id,omitempty"`
-	AIDrafted  bool      `json:"ai_drafted"`
-	AIAccepted *bool     `json:"ai_accepted,omitempty"`
-	CreatedAt  time.Time `json:"created_at"`
-}
-
-// CreateCommentParams contains everything needed to add a comment.
-type CreateCommentParams struct {
-	OrgID      string
-	TicketID   string
-	AuthorID   *string // agent user ID
-	CustomerID *string // customer ID
-	Body       string
-	IsInternal bool
-	SourceType string
-	ExternalID *string
-	AIDrafted  bool
-}
-
-// CreateComment adds a comment to a ticket and records the event.
-// Wrapped in a transaction.
-func CreateComment(db *sql.DB, p CreateCommentParams) (*Comment, error) {
-	tx, err := db.Begin()
-	if err != nil {
-		return nil, err
-	}
-	defer tx.Rollback()
-
-	var c Comment
-	err = tx.QueryRow(`
-		INSERT INTO comments (
-			ticket_id, author_id, customer_id,
-			body, is_internal, source_type, external_id, ai_drafted
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-		RETURNING id, ticket_id, author_id, customer_id,
-		          body, is_internal, source_type, external_id,
-		          ai_drafted, ai_accepted, created_at`,
-		p.TicketID, p.AuthorID, p.CustomerID,
-		p.Body, p.IsInternal, p.SourceType, p.ExternalID, p.AIDrafted,
-	).Scan(
-		&c.ID, &c.TicketID, &c.AuthorID, &c.CustomerID,
-		&c.Body, &c.IsInternal, &c.SourceType, &c.ExternalID,
-		&c.AIDrafted, &c.AIAccepted, &c.CreatedAt,
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	// Determine event type
-	eventType := "comment.added"
-	if p.IsInternal {
-		eventType = "comment.internal"
-	}
-
-	// Determine actor
-	actorType := "user"
-	var actorID *string
-	if p.AuthorID != nil {
-		actorID = p.AuthorID
-	} else {
-		actorType = "webhook" // customer comments come via external channels
-	}
-
-	err = RecordEventTx(tx, p.OrgID, p.TicketID, actorID, actorType, eventType,
-		EventPayload("comment_id", c.ID, "internal", fmt.Sprintf("%t", p.IsInternal)),
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	// Update ticket's updated_at
-	_, err = tx.Exec(
-		"UPDATE tickets SET updated_at = now() WHERE id = $1",
-		p.TicketID,
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	if err := tx.Commit(); err != nil {
-		return nil, err
-	}
-
-	return &c, nil
-}
-
-// ListCommentsByTicket returns all comments for a ticket in chronological order.
-// If includeInternal is false, internal notes are excluded (for customer-facing views).
-func ListCommentsByTicket(db *sql.DB, ticketID string, includeInternal bool) ([]Comment, error) {
-	query := `
-		SELECT id, ticket_id, author_id, customer_id,
-		       body, is_internal, source_type, external_id,
-		       ai_drafted, ai_accepted, created_at
-		FROM comments
-		WHERE ticket_id = $1`
-
-	if !includeInternal {
-		query += " AND is_internal = false"
-	}
-
-	query += " ORDER BY created_at ASC"
-
-	rows, err := db.Query(query, ticketID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var comments []Comment
-	for rows.Next() {
-		var c Comment
-		if err := rows.Scan(
-			&c.ID, &c.TicketID, &c.AuthorID, &c.CustomerID,
-			&c.Body, &c.IsInternal, &c.SourceType, &c.ExternalID,
-			&c.AIDrafted, &c.AIAccepted, &c.CreatedAt,
-		); err != nil {
-			return nil, err
-		}
-		comments = append(comments, c)
-	}
-	return comments, rows.Err()
 }

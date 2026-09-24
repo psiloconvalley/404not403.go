@@ -167,14 +167,8 @@ func CreateTicket(db *sql.DB, p CreateTicketParams) (*Ticket, error) {
 	}
 
 	// Record creation event in the same transaction
-	_, err = tx.Exec(`
-		INSERT INTO ticket_events (ticket_id, org_id, actor_type, event_type, payload)
-		VALUES ($1, $2, $3, $4, $5)`,
-		t.ID, t.OrgID,
-		string(domain.ActorSystem),
-		string(domain.EventTicketCreated),
-		fmt.Sprintf(`{"source":"%s","priority":"%s"}`, p.SourceType, p.Priority),
-	)
+	payloadBytes := []byte(fmt.Sprintf(`{"source":"%s","priority":"%s"}`, p.SourceType, p.Priority))
+	err = RecordEventTx(tx, t.OrgID, t.ID, nil, string(domain.ActorSystem), string(domain.EventTicketCreated), payloadBytes)
 	if err != nil {
 		return nil, err
 	}
@@ -351,14 +345,12 @@ func UpdateTicketStatus(db *sql.DB, orgID, ticketID, actorUserID, newStatus stri
 		actorType = domain.ActorUser
 	}
 
-	_, err = tx.Exec(`
-		INSERT INTO ticket_events (ticket_id, org_id, actor_user_id, actor_type, event_type, payload)
-		VALUES ($1, $2, NULLIF($3, 'system')::uuid, $4, $5, $6)`,
-		ticketID, orgID, actorUserID,
-		string(actorType),
-		string(domain.EventTicketStatusChange),
-		fmt.Sprintf(`{"from":"%s","to":"%s"}`, currentStatus, newStatus),
-	)
+	var actorIDPtr *string
+	if actorUserID != "system" && actorUserID != "" {
+		actorIDPtr = &actorUserID
+	}
+	payloadBytes := []byte(fmt.Sprintf(`{"from":"%s","to":"%s"}`, currentStatus, newStatus))
+	err = RecordEventTx(tx, orgID, ticketID, actorIDPtr, string(actorType), string(domain.EventTicketStatusChange), payloadBytes)
 	if err != nil {
 		return err
 	}
@@ -402,14 +394,12 @@ func UpdateTicketPriority(db *sql.DB, orgID, ticketID, actorUserID, newPriority 
 		actorType = domain.ActorUser
 	}
 
-	_, err = tx.Exec(`
-		INSERT INTO ticket_events (ticket_id, org_id, actor_user_id, actor_type, event_type, payload)
-		VALUES ($1, $2, NULLIF($3, 'system')::uuid, $4, $5, $6)`,
-		ticketID, orgID, actorUserID,
-		string(actorType),
-		string(domain.EventTicketPriorityChange),
-		fmt.Sprintf(`{"from":"%s","to":"%s"}`, currentPriority, newPriority),
-	)
+	var actorIDPtr *string
+	if actorUserID != "system" && actorUserID != "" {
+		actorIDPtr = &actorUserID
+	}
+	payloadBytes := []byte(fmt.Sprintf(`{"from":"%s","to":"%s"}`, currentPriority, newPriority))
+	err = RecordEventTx(tx, orgID, ticketID, actorIDPtr, string(actorType), string(domain.EventTicketPriorityChange), payloadBytes)
 	if err != nil {
 		return err
 	}
@@ -452,14 +442,12 @@ func AssignTicket(db *sql.DB, orgID, ticketID, actorUserID, assigneeUserID strin
 		return err
 	}
 
-	_, err = tx.Exec(`
-		INSERT INTO ticket_events (ticket_id, org_id, actor_user_id, actor_type, event_type, payload)
-		VALUES ($1, $2, $3, $4, $5, $6)`,
-		ticketID, orgID, actorUserID,
-		string(domain.ActorUser),
-		string(domain.EventTicketAssigned),
-		fmt.Sprintf(`{"assigned_to":"%s","status":"%s"}`, assigneeUserID, newStatus),
-	)
+	var actorIDPtr *string
+	if actorUserID != "system" && actorUserID != "" {
+		actorIDPtr = &actorUserID
+	}
+	payloadBytes := []byte(fmt.Sprintf(`{"assigned_to":"%s","status":"%s"}`, assigneeUserID, newStatus))
+	err = RecordEventTx(tx, orgID, ticketID, actorIDPtr, string(domain.ActorUser), string(domain.EventTicketAssigned), payloadBytes)
 	if err != nil {
 		return err
 	}

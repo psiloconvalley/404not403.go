@@ -254,3 +254,9 @@ func (s *Service) Get(ctx context.Context, orgID, ticketID string) (*TicketConte
 }
 
 // ── List ──────────────────────────────────────────────────────────────────────
+
+
+// VerifyTicketLedger verifies the complete cryptographic hash chain for a ticket.
+func (s *Service) VerifyTicketLedger(ctx context.Context, orgID, ticketID string) (bool, *store.ChainBrokenReport, error) {
+	return store.VerifyTicketChain(s.db, orgID, ticketID)
+}

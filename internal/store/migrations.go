@@ -749,6 +749,18 @@ func RunMigrations(db *sql.DB) {
 			)`,
 		},
 		{name: "idx_dept_members_user", sql: `CREATE INDEX IF NOT EXISTS idx_dept_members_user ON department_members(user_id)`},
+
+		// ── Pillar 4: Immutable Evidence Ledger (Cryptographic Chaining) ──────
+		{
+			name: "add_ledger_chain_fields_to_ticket_events",
+			sql: `ALTER TABLE ticket_events
+				ADD COLUMN IF NOT EXISTS previous_hash TEXT,
+				ADD COLUMN IF NOT EXISTS hash TEXT`,
+		},
+		{
+			name: "idx_events_hash",
+			sql: `CREATE INDEX IF NOT EXISTS idx_events_hash ON ticket_events(hash)`,
+		},
 	}
 	for _, m := range migrations {
 		if _, err := db.Exec(m.sql); err != nil {

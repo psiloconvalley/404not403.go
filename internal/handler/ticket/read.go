@@ -169,3 +169,44 @@ func (h *Handler) Search(w http.ResponseWriter, r *http.Request) {
 		"count":   len(tickets),
 	})
 }
+
+
+// Verify handles GET /api/orgs/{orgID}/tickets/{ticketID}/verify
+func (h *Handler) Verify(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		writeError(w, http.StatusMethodNotAllowed, "use GET")
+		return
+	}
+
+	userID := middleware.GetUserID(r)
+	if userID == "" {
+		writeError(w, http.StatusUnauthorized, "not authenticated")
+		return
+	}
+
+	// Path: /api/orgs/{orgID}/tickets/{ticketID}/verify
+	path := strings.TrimPrefix(r.URL.Path, "/api/orgs/")
+	parts := strings.SplitN(path, "/tickets/", 2)
+	if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
+		writeError(w, http.StatusBadRequest, "invalid path")
+		return
+	}
+	orgID := parts[0]
+	ticketParts := strings.Split(parts[1], "/verify")
+	if len(ticketParts) == 0 || ticketParts[0] == "" {
+		writeError(w, http.StatusBadRequest, "invalid ticket_id")
+		return
+	}
+	ticketID := ticketParts[0]
+
+	valid, report, err := h.svc.VerifyTicketLedger(r.Context(), orgID, ticketID)
+	if err != nil {
+		writeError(w, shared.DomainErrStatus(err), err.Error())
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]any{
+		"valid":  valid,
+		"report": report,
+	})
+}

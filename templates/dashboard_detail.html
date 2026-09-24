@@ -57,8 +57,22 @@
             </div>
 
             <div class="detail-card detail-card-muted">
-                <div class="detail-card-header">Activity</div>
-                <div id="event-trail" class="event-trail"></div>
+                <div class="detail-card-header" style="display:flex; justify-content:space-between; align-items:center;">
+                    <span>Evidence Ledger & Activity</span>
+                    <button id="btn-verify-ledger" onclick="verifyLedger()" class="btn btn-ghost btn-sm" style="color: var(--accent); border: 1px solid var(--border-bright);">
+                        <svg class="icon icon-sm" style="margin-right:0.25rem;"><use href="/static/icons/sprite.svg#icon-shield"></use></svg> Verify Ledger
+                    </button>
+                </div>
+                
+                <!-- Ledger Status Alert Banner -->
+                <div id="ledger-status-banner" style="margin-top: 0.5rem; padding: 0.75rem; border-radius: 4px; display: none; border: 1px solid var(--border);">
+                    <div style="display: flex; align-items: center; justify-content: space-between;">
+                        <span id="ledger-status-text" style="font-size: 0.85rem; font-weight: 600;"></span>
+                        <span id="ledger-status-sub" style="font-size: 0.75rem; color: var(--text-muted);"></span>
+                    </div>
+                </div>
+
+                <div id="event-trail" class="event-trail" style="margin-top: 1rem;"></div>
             </div>
         </main>
     </div>
